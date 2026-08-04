@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
+  <title id="title">Dentix icon</title>
+  <desc id="desc">Rounded square badge with a bold monogram D and a small accent node, in the Dentix brand teal palette</desc>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#eef9fa"/>
+  <text x="30" y="43" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-weight="800" font-size="34" fill="#187381">D</text>
+  <circle cx="46" cy="20" r="4" fill="#48afbe"/>
+</svg>
