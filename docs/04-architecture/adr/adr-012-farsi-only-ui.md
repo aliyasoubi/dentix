@@ -43,4 +43,4 @@ adding a locale later is a configuration + translation-resource task, per the he
 - Runtime locale/direction switching code, the en-US resource pipeline, English templates, and Jalali/Gregorian display-toggle UI are removed from scope.
 - Docs referencing "Persian and English critical workflows" now read "Persian critical workflows"; affected files carry a banner pointing here rather than being rewritten wholesale.
 - Reintroducing English (or any second locale/LTR) requires a replacement ADR and budget for translation, LTR visual QA, and bilingual print templates.
-- The package keeps the historical name "Bilingual …" in the master document lineage; the v1 product is Farsi-only.
+- The package keeps the historical name "Bilingual …" from earlier planning; the v1 product is Farsi-only.

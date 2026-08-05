@@ -15,7 +15,7 @@ This matrix ensures the design captures useful principles from CareStack, Curve 
 | Planned future care              | Open Dental uses planned appointments and tracker                                                         | Planned Appointment and Follow-up Center                                               | R2/R4       | Planned-but-unscheduled visits appear in one queue          |
 | Broken or unscheduled follow-up  | Open Dental uses unscheduled lists; Curve reports unscheduled treatment                                   | Unified Follow-up Center with source category and due date                             | R4          | Overdue and unscheduled items are actionable from one page  |
 | Flexible operational data        | Open Dental exposes explicit states and supports data access/customization                                | Stable internal codes, documented REST API, exports, configurable catalogs/templates   | R1-R6       | Office can export complete structured patient record        |
-| Modern bilingual UX              | Not a primary differentiator of the three references                                                      | Native Persian/English runtime design, RTL/LTR, bilingual documents                    | R1 onward   | Same critical workflows pass in both languages              |
+| Modern, correct Farsi UX          | Not a primary differentiator of the three references                                                      | Native Farsi-only, RTL-only design (ADR-012) with i18n hedges for a possible future locale | R1 onward   | Critical workflows pass the Persian acceptance suite         |
 
 ## Design conclusion
 

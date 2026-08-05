@@ -3,11 +3,8 @@
 ## Environments
 
   - Local development
-
   - Shared development/integration
-
   - Staging with fictional or approved anonymized data
-
   - Production
 
 Production and non-production use separate accounts, secrets, databases, object stores, and identity clients.
@@ -15,32 +12,21 @@ Production and non-production use separate accounts, secrets, databases, object 
 ## Build artifacts
 
   - Versioned Angular static bundle
-
   - Versioned API container
-
   - Versioned worker container
-
   - Immutable database migration set
-
   - SBOM and dependency scan results
 
 ## Deployment sequence
 
-81. Validate configuration and secrets.
-
-82. Take or verify recent recoverable backup for risky database changes.
-
-83. Apply backward-compatible migration.
-
-84. Deploy API/worker.
-
-85. Deploy web bundle.
-
-86. Run smoke tests.
-
-87. Monitor errors, latency, jobs, and database health.
-
-88. Complete post-deploy verification.
+1. Validate configuration and secrets.
+2. Take or verify recent recoverable backup for risky database changes.
+3. Apply backward-compatible migration.
+4. Deploy API/worker.
+5. Deploy web bundle.
+6. Run smoke tests.
+7. Monitor errors, latency, jobs, and database health.
+8. Complete post-deploy verification.
 
 ## Migration policy
 

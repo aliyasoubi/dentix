@@ -9,21 +9,13 @@ Provide one consistent model for long-running treatment rather than separate com
 Required fields:
 
   - Patient
-
   - Journey type
-
   - Responsible dentist
-
   - Start date
-
   - Current stage
-
   - Next action summary
-
   - Next-action due date
-
   - Status: Planned, Active, On hold, Completed, Cancelled
-
   - Linked treatment-plan items, appointments, procedures, tasks, lab orders, notes, and documents
 
 Every active journey SHOULD have either a future appointment or an open task. Exceptions require an explicit “no next action required” reason and review date.
@@ -34,15 +26,11 @@ Every active journey SHOULD have either a future appointment or an open task. Ex
 
 Default stages:
 
-41. Assessment
-
-42. Surgery
-
-43. Healing
-
-44. Restoration
-
-45. Maintenance
+1. Assessment
+2. Surgery
+3. Healing
+4. Restoration
+5. Maintenance
 
 Optional structured placement fields include site, manufacturer/system, model, diameter, length, lot/serial number, placement date, torque, graft/membrane note, and restorative components.
 
@@ -50,13 +38,10 @@ Optional structured placement fields include site, manufacturer/system, model, d
 
 Default stages:
 
-46. Records and planning
-
-47. Active treatment
-
-48. Finishing
-
-49. Retention
+1. Records and planning
+2. Active treatment
+3. Finishing
+4. Retention
 
 Progress entry fields include appliance type, arch, aligner number, aligners delivered, wire/appliance notes, cooperation, oral hygiene, progress assessment, next action, and recommended interval.
 
@@ -64,17 +49,12 @@ Progress entry fields include appliance type, arch, aligner number, aligners del
 
 Default stages:
 
-50. Preparation
-
-51. Impression/scan
-
-52. Laboratory
-
-53. Try-in
-
-54. Delivery
-
-55. Review
+1. Preparation
+2. Impression/scan
+3. Laboratory
+4. Try-in
+5. Delivery
+6. Review
 
 ### Custom
 
@@ -85,21 +65,13 @@ Authorized administrators may define a small ordered stage list and task templat
 Fields:
 
   - Patient
-
   - Optional journey, appointment, encounter, lab order, or recall link
-
   - Type
-
   - Assigned user or role queue
-
   - Due date and optional due time
-
   - Priority
-
   - Description
-
   - Status: Open, Done, Skipped
-
   - Completion note
 
 Tasks are operational records, not project-management objects. No subtasks, dependencies graph, story points, or general Kanban builder are required.
@@ -109,21 +81,13 @@ Tasks are operational records, not project-management objects. No subtasks, depe
 Views:
 
   - Today
-
   - Overdue
-
   - Upcoming
-
   - Unscheduled treatment
-
   - Planned appointments
-
   - Lab work
-
   - Missed/cancelled appointments
-
   - Active journeys without next action
-
   - Recall due
 
 Rows show patient, category, stage/context, action, due date, assignee, and priority. A side panel supports completion, reassignment, patient contact logging, and appointment creation.
@@ -133,29 +97,19 @@ Rows show patient, category, stage/context, action, due date, assignee, and prio
 Fields:
 
   - Patient, dentist, laboratory
-
   - Journey and procedure link
-
   - Tooth, arch, or region
-
   - Work type, material, shade
-
   - Date prepared, sent, expected, received, ready, delivered
-
   - Linked delivery appointment
-
   - Instructions, notes, files, and communication events
-
   - Status: Preparing, Sent, Received, Ready, Delivered, Revision required, Cancelled
 
 Rules:
 
   - A revision records reason and may create a new expected date.
-
   - Ready requires a recorded quality check user and time.
-
   - Appointment cards show readiness.
-
   - Lab communication may be recorded manually; direct laboratory integration is not required.
 
 ## Recall
@@ -166,16 +120,11 @@ Recall is routine repeating care and remains distinct from journey tasks. A comp
 
 The system may create tasks from approved templates when a domain event occurs. Examples:
 
-  - Implant placed -\> post-operative call and clinical review tasks
-
-  - Journey enters Healing -\> healing assessment task
-
-  - Lab order sent -\> expected-return check
-
-  - Lab order received -\> quality-check task
-
-  - Ortho visit completed -\> next-visit task
-
-  - Appointment no-show -\> contact task
+  - Implant placed → post-operative call and clinical review tasks
+  - Journey enters Healing → healing assessment task
+  - Lab order sent → expected-return check
+  - Lab order received → quality-check task
+  - Ortho visit completed → next-visit task
+  - Appointment no-show → contact task
 
 Automation MUST be visible, idempotent, auditable, and suppressible by authorized configuration.

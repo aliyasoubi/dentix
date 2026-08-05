@@ -1,6 +1,6 @@
 # Document Control
 
-This master document is generated from the Markdown files in the implementation package. The Markdown files are the preferred version-controlled source. When content changes, update the source document and regenerate the master document.
+The Markdown files under `docs/` are the version-controlled source of truth for this implementation package. When content changes, update the relevant Markdown file directly — there is no separate master document to regenerate.
 
 | **Field**         | **Value**                          |
 | ----------------- | ---------------------------------- |

@@ -7,15 +7,10 @@ The system MUST provide day, multi-day, week, provider, and operatory views. The
 ## Iranian calendar and time rules
 
   - The office timezone defaults to Asia/Tehran and is explicit in configuration.
-
   - Users may enter and view schedule dates in Jalali or Gregorian form according to preference; both views represent the same canonical date/time.
-
   - APIs exchange RFC 3339 timestamps and Gregorian ISO dates. Jalali strings are presentation/input values and are converted at the application boundary.
-
   - The selected calendar system MUST be visible in date pickers and printed schedules.
-
   - Iranian official holidays and office-specific closures are configurable; holiday data is versioned rather than hard-coded permanently.
-
   - Day, week, and chronological orientation remain consistent when switching RTL/LTR or Jalali/Gregorian presentation.
 
 ## Appointment model
@@ -26,14 +21,12 @@ An appointment includes patient, provider, operatory, appointment type, start in
 
 Primary path:
 
-Requested -\> Scheduled -\> Confirmed -\> Arrived -\> Seated -\> In treatment -\> Completed
+Requested → Scheduled → Confirmed → Arrived → Seated → In treatment → Completed
 
 Alternate terminal or transfer states:
 
   - Cancelled
-
   - No-show
-
   - Rescheduled, linked to the replacement appointment
 
 Every status transition MUST record user, time, previous state, new state, and reason when required.
@@ -45,17 +38,11 @@ The scheduler MUST enforce provider and operatory availability, blocked time, ho
 ## Interaction requirements
 
   - Quick-create from an empty time slot
-
   - Drag to reschedule
-
   - Resize to change duration
-
   - Keyboard access for all actions
-
   - Immediate display of validation and conflict reasons
-
   - Undo for a recently completed low-risk reschedule when no dependent change occurred
-
   - Optimistic visual feedback only when server conflict handling remains authoritative
 
 ## Planned appointments
@@ -79,17 +66,12 @@ Appointments linked to a lab order MUST display the lab state. The UI MUST warn 
 ## Performance targets
 
   - Initial visible schedule under normal load: p95 below 2 seconds
-
   - Drag feedback: below 100 ms locally
-
   - Conflict response after save request: p95 below 500 ms on supported office network, excluding external services
 
 ## Acceptance examples
 
   - Two receptionists rescheduling the same appointment cannot silently overwrite each other.
-
   - A cancelled appointment retains the original slot, reason, and replacement link.
-
-  - Persian and English views preserve the same chronological calendar orientation and do not mirror clinical or time semantics incorrectly.
-
+  - Chronological calendar orientation does not mirror in RTL; clinical and time semantics are never affected by layout direction.
   - Entering one appointment in Jalali view and reopening it in Gregorian view resolves to the same stored instant in Asia/Tehran.

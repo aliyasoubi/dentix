@@ -1,6 +1,6 @@
 # Design Review — Gap Analysis and Improvement Plan
 
-**Reviewed:** Dental_PMS_Implementation_Master v0.2.0 (baseline 2026-08-02)
+**Reviewed:** Dentix specification v0.2.0 (baseline 2026-08-02)
 **Review date:** 2026-08-03
 **Verdict:** Strong baseline — clear scope with explicit exclusions, ADR discipline, RFC 2119 requirements, and correct early treatment of the two hardest problems (Jalali/RTL and rial/toman with immutable records). The gaps below are what stands between a good specification and a buildable project. Each gap states what was found, why it matters, and what was done or should be done.
 
@@ -38,7 +38,7 @@ The baseline defines contracts but not implementations for several foundational 
 | C1 | No walking-skeleton milestone — roadmap jumps from prototype (R0) to full platform (R1) | The five riskiest technologies (RTL Material, Jalali adapter, OIDC, print pipeline, hosting) would first meet reality mid-R1 under feature pressure | Added `07-plans/release-0.5-walking-skeleton.md` gating R1 |
 | C2 | No risk register | Governance reviews approvals but nothing tracks likelihood/impact/mitigation over time | Added `07-plans/risks.md` (14 risks) with release-boundary review rule |
 | C3 | No estimates, team-size assumptions, or timeline | R0–R7 with this scope is plausibly 12–24+ months for a small team; the office should see that before committing; governance sign-offs assume people who must be named | Recommend: after R0, estimate per release and name the package owner (currently "To be assigned" in document-control) |
-| C4 | Docx was the master; spec now split to markdown | The document itself says markdown is the preferred source — this package makes that true; regenerate the docx from `docs/` when a stakeholder copy is needed | This repository structure; `document-control.md` retained |
+| C4 | Historical spec was a single master document; content now lives entirely in markdown | The Markdown files under `docs/` are the sole, version-controlled source of truth — no separate master document exists to keep in sync | This repository structure; `document-control.md` retained |
 | C5 | Training/change management thin (one bullet in R6/R7) | Reception adoption decides pilot success as much as code quality | Added training tasks to R6/R7 plans; risk R-11 (pilot fatigue) |
 | C6 | Governance requires dentist/manager/legal approvals but no named people or cadence | Unowned approvals become bottlenecks discovered at gate time | Recommend: name approvers in `document-control.md` at R0 exit; legal sign-off tracked as risk R-13 and hard R7 entry gate |
 
@@ -47,7 +47,7 @@ The baseline defines contracts but not implementations for several foundational 
 1. Stack versions (Angular 22, Node 24 LTS, PostgreSQL 18) are current as of the baseline — pin exact patches in-repo (risk R-12).
 2. The five-concept core model (plan / journey / task / lab order / recall) is the best idea in the document — resist any future pressure to add per-specialty modules; the traceability matrix already defends this.
 3. The rial/toman "no silent rounding" rule and the bigint-rial mandate are exactly right; the property-based test requirement in the test strategy is the correct enforcement — keep it a release gate.
-4. Numbered-list artifacts from the docx conversion (continuous numbering across sections) are cosmetic and can be cleaned opportunistically as files are edited.
+4. Formatting artifacts from the original document split (continuous list numbering across sections, unfenced diagrams/code, escaped characters) have been cleaned up across `docs/`.
 
 ## Priority order to act
 

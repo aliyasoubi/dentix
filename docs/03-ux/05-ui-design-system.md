@@ -80,7 +80,6 @@ Angular Material is infrastructure, not the final visual identity.
 
 ---
 
-
 ## 2.1 Configuration-Driven Language, Direction, and Money
 
 ### Decision summary
@@ -255,10 +254,10 @@ The implementation must distinguish:
 1. **Application interface language**  
    Loaded from office configuration.
 
-2. **Patient communication language**  
+1. **Patient communication language**  
    Stored per patient and used for receipts, reminders, forms, and patient-facing documents.
 
-3. **User-entered clinical language**  
+1. **User-entered clinical language**  
    Stored exactly as entered and never automatically translated.
 
 **v1 revision (ADR-012):** all patient documents ship Persian-only. The per-patient communication-language field is retained in the data model so English or bilingual templates can be reintroduced later by a replacement ADR without schema change.

@@ -11,34 +11,22 @@ Use semantic versioning for the product API and release artifacts. Database migr
 ## Release gates
 
   - Product acceptance criteria approved
-
   - Security and dependency scans pass
-
   - Architecture boundary checks pass
-
   - Database migration reviewed
-
   - English and Persian critical end-to-end suites pass
-
   - Visual regression reviewed for custom dental components and printed documents
-
   - Backup and rollback readiness confirmed
-
   - Training and support notes prepared
 
 ## Pilot rollout
 
-97. Internal fictional-data testing
-
-98. Selected staff with non-production data
-
-99. Parallel workflow with controlled real patients if legally approved
-
-100. Read-only verification of migrated history
-
-101. Limited production modules
-
-102. Expand only after reconciliation and user sign-off
+1. Internal fictional-data testing
+2. Selected staff with non-production data
+3. Parallel workflow with controlled real patients if legally approved
+4. Read-only verification of migrated history
+5. Limited production modules
+6. Expand only after reconciliation and user sign-off
 
 ## Incident response during release
 

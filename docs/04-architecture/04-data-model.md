@@ -5,16 +5,11 @@
 Most business tables include:
 
   - UUID primary key
-
-  - office\_id
-
-  - created\_at, created\_by
-
-  - updated\_at, updated\_by for mutable drafts/configuration
-
+  - `office_id`
+  - `created_at`, `created_by`
+  - `updated_at`, `updated_by` for mutable drafts/configuration
   - version for optimistic concurrency
-
-  - optional archived\_at
+  - optional `archived_at`
 
 Signed clinical and posted financial records use append-only or version tables rather than ordinary updates.
 
@@ -23,126 +18,78 @@ Signed clinical and posted financial records use append-only or version tables r
 ### Identity and office
 
   - office
-
-  - user\_account
-
+  - `user_account`
   - provider
-
   - role
-
   - permission
-
-  - user\_role
-
-  - role\_permission
-
+  - `user_role`
+  - `role_permission`
   - operatory
 
 ### Patient
 
   - patient
-
-  - patient\_address
-
-  - patient\_identifier
-
-  - patient\_name
-
-  - patient\_contact
-
-  - patient\_relationship
-
-  - patient\_alert
-
-  - patient\_alias
-
-  - patient\_merge\_event
+  - `patient_address`
+  - `patient_identifier`
+  - `patient_name`
+  - `patient_contact`
+  - `patient_relationship`
+  - `patient_alert`
+  - `patient_alias`
+  - `patient_merge_event`
 
 ### Scheduling
 
   - appointment
-
-  - appointment\_status\_event
-
-  - appointment\_type
-
-  - provider\_availability
-
-  - schedule\_block
-
-  - planned\_appointment
-
-  - waitlist\_entry
-
-  - recall\_definition
-
-  - recall\_instance
+  - `appointment_status_event`
+  - `appointment_type`
+  - `provider_availability`
+  - `schedule_block`
+  - `planned_appointment`
+  - `waitlist_entry`
+  - `recall_definition`
+  - `recall_instance`
 
 ### Clinical
 
   - encounter
-
-  - clinical\_note\_version
-
-  - medical\_history\_version
-
+  - `clinical_note_version`
+  - `medical_history_version`
   - finding
-
   - diagnosis
-
-  - procedure\_record
-
-  - tooth\_state\_event
-
-  - perio\_exam
-
-  - perio\_measurement
+  - `procedure_record`
+  - `tooth_state_event`
+  - `perio_exam`
+  - `perio_measurement`
 
 ### Treatment continuity
 
-  - treatment\_plan
-
-  - treatment\_plan\_version
-
-  - treatment\_plan\_phase
-
-  - treatment\_plan\_item
-
-  - treatment\_decision\_event
-
-  - treatment\_journey
-
-  - journey\_stage\_event
-
-  - follow\_up\_task
-
+  - `treatment_plan`
+  - `treatment_plan_version`
+  - `treatment_plan_phase`
+  - `treatment_plan_item`
+  - `treatment_decision_event`
+  - `treatment_journey`
+  - `journey_stage_event`
+  - `follow_up_task`
   - laboratory
-
-  - lab\_order
-
-  - lab\_order\_status\_event
+  - `lab_order`
+  - `lab_order_status_event`
 
 ### Finance
 
-  - ledger\_entry
-
-  - payment\_allocation
-
+  - `ledger_entry`
+  - `payment_allocation`
   - receipt
-
-  - day\_end\_close
+  - `day_end_close`
 
 ### Documents and platform
 
   - document
-
-  - document\_version
-
+  - `document_version`
   - communication
-
-  - outbox\_event
-
-  - audit\_event
+  - `outbox_event`
+  - `audit_event`
 
 ## Money
 
@@ -150,40 +97,29 @@ Signed clinical and posted financial records use append-only or version tables r
 > minor-unit integer amount **plus** `currency CHAR(3) NOT NULL DEFAULT 'IRR'`. v1 behavior is
 > unchanged (single currency); the column removes the future multi-currency ledger migration.
 
-Canonical currency is Iranian rial (IRR). Persist monetary values as signed bigint rial amounts, such as amount\_rial, with domain range checks. Toman is a display/input unit and is not a second stored currency; one toman converts to ten rials exactly. Fee, treatment-plan, receipt, and ledger snapshots retain canonical rial values and the display unit used on issued documents. Future multi-currency support requires a replacement ADR and migration.
+Canonical currency is Iranian rial (IRR). Persist monetary values as signed bigint rial amounts, such as `amount_rial`, with domain range checks. Toman is a display/input unit and is not a second stored currency; one toman converts to ten rials exactly. Fee, treatment-plan, receipt, and ledger snapshots retain canonical rial values and the display unit used on issued documents. Future multi-currency support requires a replacement ADR and migration.
 
 ## Dates
 
   - Instants: timestamptz, stored in UTC
-
   - Office business date: date
-
   - Durations: integer minutes where applicable
-
   - Office timezone: IANA zone identifier, default Asia/Tehran
-
   - User display calendar preference: Jalali or Gregorian
-
   - Canonical persisted dates remain Gregorian/UTC
 
 ## Text and translations
 
-Configurable bilingual entities use stable base rows plus translation rows, for example procedure\_catalog and procedure\_catalog\_translation(locale, name, description).
+Configurable bilingual entities use stable base rows plus translation rows, for example `procedure_catalog` and `procedure_catalog_translation`(locale, name, description).
 
 ## Indexing priorities
 
   - Normalized patient search values, including canonical Iranian mobile and optional national code
-
   - Appointment office/provider/operatory time ranges
-
   - Open tasks by due date and assignee
-
   - Active journeys by stage and next-action date
-
   - Lab orders by expected date and status
-
   - Ledger entries by patient/business date
-
   - Audit events by patient, actor, entity, and time
 
 ## Concurrency

@@ -41,37 +41,23 @@ Receives security and business audit events and provides controlled query access
 ## Key invariants
 
   - Signed clinical content is never overwritten.
-
   - Posted ledger entries are never updated or deleted.
-
   - Appointment overlap requires policy-compliant override.
-
   - Active journeys should have a next action.
-
   - Lab-dependent appointments expose readiness.
-
   - Plan versions presented to patients remain reproducible.
-
   - Patient merge retains source identity and history.
 
 ## Aggregate candidates
 
   - Patient
-
   - Appointment
-
   - Encounter
-
   - TreatmentPlan
-
   - TreatmentJourney
-
   - LabOrder
-
   - LedgerAccount/PatientLedger
-
   - RecallInstance
-
   - FollowUpTask
 
 Large clinical timelines and reports are read models, not aggregates.
@@ -79,29 +65,17 @@ Large clinical timelines and reports are read models, not aggregates.
 ## Domain event examples
 
   - PatientCreated
-
   - AppointmentScheduled
-
   - AppointmentNoShowRecorded
-
   - EncounterSigned
-
   - ProcedureCompleted
-
   - TreatmentPlanPresented
-
   - TreatmentItemAccepted
-
   - JourneyStageChanged
-
   - FollowUpTaskCompleted
-
   - LabOrderSent
-
   - LabOrderMarkedReady
-
   - PaymentPosted
-
   - LedgerEntryReversed
 
 ## Example event reaction

@@ -7,25 +7,17 @@ An encounter is created from an appointment or manually for an authorized clinic
 States:
 
   - Draft
-
   - In review
-
   - Signed
-
   - Amended
-
   - Entered in error
 
 ## Clinical notes
 
   - Drafts MAY autosave.
-
   - Signing MUST be explicit and associated with an eligible provider.
-
   - Signed text MUST be immutable.
-
   - Amendment MUST retain original content, amendment content, author, timestamp, and reason.
-
   - Templates MAY provide structured fields and optional phrases but must not silently insert unreviewed clinical claims.
 
 ## Medical and dental history
@@ -37,15 +29,10 @@ History submissions are versioned. An encounter records which version the clinic
 The odontogram MUST support:
 
   - Permanent, primary, and mixed dentition
-
   - FDI/ISO and Universal display systems
-
   - Stable internal anatomical identifiers independent of numbering scheme
-
   - Tooth-level and surface-level findings and procedures
-
   - Existing, proposed, accepted, scheduled, in-progress, completed, referred, declined, and entered-in-error states
-
   - Missing, impacted, implant, pontic, crown, root canal, restoration, caries, fracture, mobility, and observation concepts
 
 Implementation SHOULD use interactive SVG layers. Meaning MUST not depend on color alone.
@@ -58,17 +45,12 @@ The system MUST support six sites per tooth and configurable charting order for 
 
 Completing a procedure MUST:
 
-35. Validate provider and tooth/surface requirements.
-
-36. Link to encounter and any treatment-plan item.
-
-37. Record completion date and author.
-
-38. Optionally create a draft patient charge according to office configuration.
-
-39. Update journey progress when applicable.
-
-40. Never change a signed note silently.
+1. Validate provider and tooth/surface requirements.
+2. Link to encounter and any treatment-plan item.
+3. Record completion date and author.
+4. Optionally create a draft patient charge according to office configuration.
+5. Update journey progress when applicable.
+6. Never change a signed note silently.
 
 ## Clinical timeline
 
@@ -77,11 +59,7 @@ The timeline combines encounters, signed notes, amendments, findings, completed 
 ## Safety requirements
 
   - No hard deletion of signed clinical data.
-
   - Concurrency conflicts are visible.
-
   - Patient identity remains visible during charting.
-
   - Switching patients with unsaved draft data requires explicit handling.
-
   - Tooth/surface mappings have unit and visual regression tests.

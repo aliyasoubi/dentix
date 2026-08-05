@@ -1,7 +1,6 @@
 # ADR-001: Start with a Modular Monolith
 
   - **Status:** Accepted
-
   - **Date:** 2026-08-02
 
 ## Context
@@ -15,11 +14,8 @@ Build one NestJS deployable application with explicit modules, one PostgreSQL da
 ## Consequences
 
   - Simpler deployment, debugging, backup, and transaction handling
-
   - Lower operational cost
-
   - Module boundaries require architecture tests and review
-
   - Future extraction remains possible when a real scaling or isolation requirement exists
 
 ## Rejected
