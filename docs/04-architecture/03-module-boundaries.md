@@ -33,6 +33,7 @@ module/
   - Infrastructure implements ports.
   - Presentation converts transport input into application commands and queries.
   - Angular contains presentation and client orchestration, not authoritative dental or financial rules.
+  - Allowed cross-module dependencies and data ownership are defined in `07-context-module-map.md`.
 
 ## Controller rules
 
@@ -45,13 +46,15 @@ A use case:
 1. Loads required aggregates through repositories.
 2. Performs authorization with object context.
 3. Invokes domain behavior.
-4. Commits one transaction.
-5. Writes outbox/audit events.
+4. Commits authoritative writes for one owning module in one transaction.
+5. Appends outbox/audit facts in that transaction.
 6. Returns a transport-independent result.
 
 ## Persistence rules
 
 ORM records are not exposed as domain entities or API responses. Explicit mappers protect the domain from persistence changes.
+
+Cross-module behavior follows `08-transaction-event-semantics.md`. A use case never imports another module's repository.
 
 ## Shared kernel
 

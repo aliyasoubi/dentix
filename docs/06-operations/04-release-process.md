@@ -14,7 +14,7 @@ Use semantic versioning for the product API and release artifacts. Database migr
   - Security and dependency scans pass
   - Architecture boundary checks pass
   - Database migration reviewed
-  - English and Persian critical end-to-end suites pass
+  - Farsi/RTL critical end-to-end suites pass
   - Visual regression reviewed for custom dental components and printed documents
   - Backup and rollback readiness confirmed
   - Training and support notes prepared

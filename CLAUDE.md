@@ -1,12 +1,12 @@
-# CLAUDE.md — Dentix (Bilingual Single-Office Dental PMS)
+# CLAUDE.md — Dentix (Farsi-First Single-Office Dental PMS)
 
-Guidance for AI-assisted development in this repository. The authoritative spec lives in `docs/` — when in doubt, the spec wins; when the spec is wrong, change the spec in the same PR.
+Guidance for AI-assisted development in this repository. Document authority and conflict resolution follow `docs/document-control.md`; correct conflicting active documents in the same change.
 
 ## What this is
 
 **Dentix** is a custom dental practice management system for one Iranian dental office. **Farsi-only (fa-IR) RTL UI with Jalali-only date presentation (ADR-012)**; Gregorian/UTC canonical storage; rial/toman money. Covers patients, scheduling, clinical charting, treatment planning, treatment journeys, follow-up, lab orders, recall, patient ledger, documents, communications, fixed reports.
 
-**Explicitly excluded (never implement, even if asked casually):** insurance/claims, general accounting, payroll, e-prescribing, native imaging drivers, card vaulting, AI diagnosis, marketing automation, native mobile apps, multi-location billing, custom report builder. See `docs/01-product/03-scope-and-exclusions.md`.
+**Explicitly excluded in v1 (do not implement, even if asked casually):** inventory/stock management (deferred — an existing standalone system covers it; see the deferred list in `docs/01-product/03-scope-and-exclusions.md`), insurance/claims, general accounting, payroll, e-prescribing, native imaging drivers, card vaulting, AI diagnosis, marketing automation, native mobile apps, multi-location billing, custom report builder. See `docs/01-product/03-scope-and-exclusions.md`.
 
 ## Stack
 
@@ -14,7 +14,7 @@ Guidance for AI-assisted development in this repository. The authoritative spec 
 - Backend: NestJS on Node.js 24 LTS — modular monolith (NOT microservices, per ADR-001).
 - Database: PostgreSQL 18. Redis + BullMQ for background jobs. S3-compatible encrypted object storage.
 - API: REST + OpenAPI at `/api/v1`; Angular client generated/type-checked from the contract.
-- Auth: OIDC + MFA (provider per ADR-007).
+- Auth: OIDC + MFA with the server-side BFF session in `docs/04-architecture/09-authentication-session-architecture.md`; provider per ADR-007.
 - Pin exact dependency versions; update through review only.
 
 ## Non-negotiable invariants
@@ -23,7 +23,7 @@ Guidance for AI-assisted development in this repository. The authoritative spec 
 2. **Dates:** UTC instants and Gregorian ISO dates are canonical in DB and API (RFC 3339). The UI presents and accepts Jalali only (ADR-012), converted at the boundary. Office timezone is explicit `Asia/Tehran`, never inferred from the browser. Never persist Jalali strings as domain dates.
 3. **Immutability:** signed clinical records and posted ledger entries are never updated or deleted. Clinical corrections = amendments; financial corrections = reversals + new entries (ADR-004).
 4. **RTL:** the UI is RTL-only, but still use CSS logical properties, never hard-coded left/right (ADR-012 hedge). Chronology, dental anatomy, and tooth orientation do NOT mirror in RTL. Wrap dynamic Latin names/codes/phones in bidi isolation — the Latin patient-name field is retained.
-5. **i18n hedge (ADR-012):** UI is fa-IR only, but no hardcoded UI strings in components — all strings live in externalized translation resources; backend returns locale-neutral error codes. **All code is English**: identifiers, schema, API fields, config keys, error codes, logs, comments. Farsi exists only in `i18n/fa-IR/*.json` and DB translation rows (see docs/04-architecture/06-configuration-catalog.md).
+5. **Localization boundary (ADR-012):** UI is fa-IR only, but no hardcoded UI strings in components—product-authored UI prose lives in translation resources and backend errors use locale-neutral codes. **All code is English**: identifiers, schema, API fields, config keys, error codes, logs, and comments. Configurable business labels use DB translation rows. Patient names and clinical/user-entered text are stored exactly as entered and may be Farsi.
 6. **Normalization is for search, never display:** retain original entered text (names, phones, digits); store canonical normalized values alongside for search/dedup.
 7. **Authorization:** endpoint AND object-level checks on every mutation. Signing, exports, refunds require recent authentication. All sensitive actions produce audit events.
 8. **State changes** go through explicit transition/action endpoints (`POST .../transitions`, `.../sign`, `.../reversals`), not generic PATCH.
@@ -31,20 +31,24 @@ Guidance for AI-assisted development in this repository. The authoritative spec 
 ## Architecture rules (enforced — see docs/04-architecture/03-module-boundaries.md)
 
 - Module layout: `domain/` (no NestJS/ORM/vendor imports) → `application/` (use cases, ports) → `infrastructure/` (port implementations) → `presentation/` (controllers).
-- Modules communicate via application ports and domain events (transactional outbox), never each other's repositories.
+- Module ownership/dependencies follow `docs/04-architecture/07-context-module-map.md`.
+- Cross-module behavior follows `docs/04-architecture/08-transaction-event-semantics.md`; never import another module's repository.
 - ORM records never leak into domain entities or API responses — explicit mappers.
 - One use case = one transaction + outbox/audit writes.
 - Strict TypeScript, no `any` outside audited adapters, exhaustive state handling, stable error codes (backend returns codes, UI owns localized wording).
 
 ## Working conventions for AI agents
 
+- All implementation follows the slice workflow in `docs/08-implementation/01-workflow.md`: read the slice's spec references, write the failing tests first, implement inside the module layout, run the canonical verification commands, then tick the plan checkbox. The current release's slices live in `docs/08-implementation/02-slices-*.md`.
 - Before implementing a feature, read the relevant `docs/02-requirements/*.md` section and the current release plan in `docs/07-plans/`.
+- Document authority follows `docs/document-control.md`; an Accepted ADR cannot be overridden by stale detailed text.
 - A decision that contradicts an accepted ADR requires a replacement ADR — do not code around it.
 - ADR-006…011 are Proposed: resolve them before building on the affected area.
 - Every feature ships in Persian only (ADR-012), but Jalali↔Gregorian round-trip tests and rial/toman exactness tests are required wherever dates or money appear. Include Latin-name/mixed-script fixtures in list, print, and message tests.
 - Definition of Done: `docs/05-quality/04-definition-of-done.md`. Requirements use MUST/SHOULD/MAY per RFC 2119.
 - Test data is always fictional; never real patient data in dev/test.
 - No PHI or secrets in logs, URLs, commits, or error messages.
+- No real patient data anywhere until the Real-Data Authorization Gate in `docs/05-quality/01-security-privacy.md` is approved.
 
 ## Key documents
 
@@ -59,6 +63,10 @@ Guidance for AI-assisted development in this repository. The authoritative spec 
 | Table/column conventions | docs/04-architecture/04-data-model.md |
 | What is config vs invariant | docs/04-architecture/06-configuration-catalog.md |
 | API conventions | docs/04-architecture/05-api-guidelines.md |
+| Module ownership | docs/04-architecture/07-context-module-map.md |
+| Transactions/events | docs/04-architecture/08-transaction-event-semantics.md |
+| Browser sessions | docs/04-architecture/09-authentication-session-architecture.md |
 | Current work | docs/07-plans/README.md |
+| How to execute and verify work | docs/08-implementation/01-workflow.md |
 | Known gaps & open decisions | docs/00-review/design-review-gap-analysis.md |
 | Risks | docs/07-plans/risks.md |

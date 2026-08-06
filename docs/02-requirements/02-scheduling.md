@@ -7,11 +7,11 @@ The system MUST provide day, multi-day, week, provider, and operatory views. The
 ## Iranian calendar and time rules
 
   - The office timezone defaults to Asia/Tehran and is explicit in configuration.
-  - Users may enter and view schedule dates in Jalali or Gregorian form according to preference; both views represent the same canonical date/time.
+  - Users enter and view schedule dates in Jalali form. The presentation boundary converts to canonical Gregorian dates and UTC instants.
   - APIs exchange RFC 3339 timestamps and Gregorian ISO dates. Jalali strings are presentation/input values and are converted at the application boundary.
-  - The selected calendar system MUST be visible in date pickers and printed schedules.
+  - Date pickers and printed schedules MUST identify dates as Jalali.
   - Iranian official holidays and office-specific closures are configurable; holiday data is versioned rather than hard-coded permanently.
-  - Day, week, and chronological orientation remain consistent when switching RTL/LTR or Jalali/Gregorian presentation.
+  - Day, week, and chronological orientation remain chronological in the RTL interface; time direction is not mirrored.
 
 ## Appointment model
 
@@ -74,4 +74,4 @@ Appointments linked to a lab order MUST display the lab state. The UI MUST warn 
   - Two receptionists rescheduling the same appointment cannot silently overwrite each other.
   - A cancelled appointment retains the original slot, reason, and replacement link.
   - Chronological calendar orientation does not mirror in RTL; clinical and time semantics are never affected by layout direction.
-  - Entering one appointment in Jalali view and reopening it in Gregorian view resolves to the same stored instant in Asia/Tehran.
+  - Entering a Jalali appointment date stores the expected canonical instant and reopening it reproduces the same Jalali date/time in `Asia/Tehran`.

@@ -4,11 +4,27 @@
 
 Before production use, the office must identify the applicable jurisdiction and complete a documented privacy and security risk assessment. This package is an engineering baseline, not legal advice.
 
+## Real-Data Authorization Gate
+
+No real patient data may be copied, exported, imported, scanned, migrated, used for a parallel ledger, placed in staging, or processed by a third party until this gate is approved. Pseudonymized data remains real data unless the approved reviewer determines that re-identification is not reasonably possible.
+
+The gate requires:
+
+1. Named data controller/product owner, privacy approver, technical custodian, and incident contact.
+2. Applicable jurisdiction, retention duties, patient-access/correction rules, and legal-hold behavior.
+3. Accepted hosting model and approved locations for database, object storage, backups, identity, monitoring, and support access.
+4. Approved migration purpose, source inventory, minimum necessary fields, access list, transfer method, deletion schedule, and reconciliation procedure.
+5. Approved providers and contracts for any party processing patient data.
+6. Encryption/key custody, backup recovery, breach response, audit access, and staff confidentiality controls.
+7. Written approval identifying the permitted environments, data set, time window, and responsible operator.
+
+Release 0 discovery may inspect workflows and record source metadata without copying patient content. Development, automated tests, demos, screenshots, and routine staging use deterministic fictional data until the gate explicitly permits otherwise.
+
 ## Identity
 
-  - OIDC/OAuth 2.0 based authentication
+  - OIDC-backed backend-for-frontend session per `04-architecture/09-authentication-session-architecture.md`
   - MFA for all users with patient access
-  - Short-lived access tokens or secure server sessions
+  - Provider tokens retained server-side; Angular stores no access or refresh tokens
   - Secure recovery and administrative reset process
   - Active-session visibility and revocation
   - Account lockout/throttling without enabling denial-of-service abuse
@@ -51,7 +67,7 @@ Audit data is append-only to ordinary application users and protected from tampe
   - Validate all input at trust boundaries
   - Parameterized database access
   - Output encoding and CSP
-  - CSRF defense according to authentication design
+  - Session-bound CSRF defense on unsafe requests
   - Secure file-upload scanning and content validation
   - SSRF protection for external URL features
   - Rate limiting and abuse detection

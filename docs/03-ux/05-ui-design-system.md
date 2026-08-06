@@ -1,60 +1,35 @@
 ---
-title: Curve-Inspired Dental PMS UI Design System
+title: Dentix UI Design System
 document_id: UX-DS-001
-version: 0.2.1
-status: Accepted for implementation (revised 2026-08-04 to align with ADR-012)
+version: 0.4.1
+status: Accepted for implementation
 owner: Frontend Engineering
 target_path: docs/03-ux/05-ui-design-system.md
 applies_to:
   - Angular 22
   - Angular Material/CDK
   - "v1: Farsi-only UI, RTL-only, Jalali-only presentation (ADR-012)"
-  - "Architecture ready for future locales (config-driven, no runtime switch)"
+  - "Locale-neutral boundaries retained for future replacement ADRs"
   - Desktop-first dental PMS
 ---
 
-# Curve-Inspired Dental PMS UI Design System
-
-> **Revision notes — v0.2.1 (2026-08-04), applied during integration into the docs package.**
-> The original v0.2.0 was written before ADR-012 (Farsi-only v1). The configuration-driven
-> localization architecture in this document is **adopted as the official mechanism** — it is
-> exactly the right hedge for going international later. Changes made in this revision:
->
-> 1. **Fallback locale is `fa-IR`, not `en-US`.** v1 maintains only fa-IR translation resources
->    (ADR-012). An unmaintained en-US fallback would show untranslated or stale English text —
->    worse than failing loudly. CI missing-key checks + key-plus-admin-warning replace runtime
->    fallback. The en-US directory structure remains documented for future reactivation.
-> 2. **Shell diagram fixed:** the original toolbar sketch showed a `FA/EN` control, contradicting
->    its own "no toolbar language switch" rule. Removed.
-> 3. **Patient documents are Persian-only in v1** (ADR-012). The per-patient communication-language
->    field is retained in the data model as a hedge, but no English/bilingual templates ship in v1.
-> 4. **Money display of non-divisible rials must not throw:** original `fromCanonicalRials` threw an
->    error for display paths. Revised rule — *entry* in a toman form rejects with validation;
->    *display* falls back to an explicitly labeled rial rendering. A display path must never crash.
-> 5. **Font order corrected** in the Material theme (Vazirmatn before Inter for a Farsi-first UI)
->    and the `html[lang="fa"]` selector fixed to match `fa-IR`.
-> 6. **JSON transport note added:** API money values are JSON-safe integers; `bigint` is an
->    in-memory choice, not a wire format.
-> 7. Calendar references: all date presentation is Jalali-only in v1 through the calendar-adapter
->    interface (ADR-012); this document's date examples are presentational.
->
-> Items needing office/owner confirmation are marked **[CONFIRM]**.
+# Dentix UI Design System
 
 ## 1. Purpose
 
-This document defines the implementation-ready UI/UX design system for the bilingual single-office dental PMS.
+This document defines the implementation-ready UI/UX design system for Dentix.
 
 The design direction adopts the following principles:
 
-- Curve-like workflow simplicity and patient-centered navigation
+- Workflow simplicity and patient-centered navigation
 - Angular Material/CDK for behavior, accessibility, forms, overlays, focus, drag-and-drop, and bidirectionality
 - A custom visual system rather than default Angular Material styling
 - Farsi-first (fa-IR, RTL) at the component and layout level; architecture ready for additional locales (ADR-012)
 - Compact clinical and operational screens without visual clutter
 - Restrained, purposeful motion
-- A code-first prototype process using Storybook instead of Figma **[CONFIRM: replaces the Figma-style prototype assumed in Release 0]**
+- A code-first prototype process using Storybook instead of Figma
 
-This document defines original product behavior and visual rules. It does not reproduce proprietary screens, artwork, source code, or terminology from Curve Dental or any other vendor.
+This document defines the product's interaction and visual rules.
 
 ---
 
@@ -70,8 +45,8 @@ Angular 22
 ├── Custom product components
 ├── Custom dental components
 ├── Storybook
-├── Configuration-driven localization (fa-IR only in v1; ADR-012)
-└── RTL-first layout (LTR capability preserved via logical properties)
+├── Externalized Farsi resources (fa-IR only in v1; ADR-012)
+└── RTL-first layout with CSS logical properties
 ```
 
 Do not mix Angular Material with PrimeNG, NG-ZORRO, or another full UI component suite.
@@ -80,41 +55,30 @@ Angular Material is infrastructure, not the final visual identity.
 
 ---
 
-## 2.1 Configuration-Driven Language, Direction, and Money
+## 2.1 Locale, Direction, and Money
 
 ### Decision summary
 
-For the single-office product, language and monetary presentation are office-level configuration rather than frequently changed toolbar preferences.
+The v1 locale, direction, and calendar are fixed product decisions. The office may configure the default money display/input unit.
 
 Approved defaults:
 
 ```yaml
 localization:
-  defaultLocale: fa-IR
-  fallbackLocale: fa-IR   # v1 ships fa-IR only (ADR-012); see revision note 1
+  locale: fa-IR
+  direction: rtl
+  calendar: JALALI
 
 money:
-  canonicalCurrency: IRR
-  defaultUnit: TOMAN   # [CONFIRM: office default unit — toman assumed]
+  defaultUnit: TOMAN
   showUnitLabel: true
 ```
 
 The application must not place a persistent Persian/English switch button in the main toolbar.
 
-An authorized administrator selects the application language and default money unit in Administration settings. The configuration is loaded before the main application is rendered. A change takes effect after reload or a new user session.
+The v1 application locale is fixed to `fa-IR`. An authorized administrator selects the default money unit. Public bootstrap configuration is loaded before the main application renders; money-unit changes take effect after reload or a new session.
 
-### Why configuration is preferred
-
-This product serves one dental office whose primary working language is Persian. A toolbar language switch would:
-
-- Add an action that most staff never need
-- Increase the chance of accidental direction changes during clinical work
-- Complicate testing and state preservation
-- Make mixed-language screenshots and support incidents harder to reproduce
-- Consume valuable toolbar space
-- Suggest that every workflow must be switched repeatedly during the day
-
-Configuration-driven language keeps the interface predictable while retaining English support for another deployment or a future office policy change.
+The fixed locale keeps the v1 interface and test matrix predictable. Locale-neutral code boundaries are retained for a future replacement ADR.
 
 ### RTL-first design
 
@@ -122,19 +86,13 @@ Persian is the primary design direction.
 
 The interface must be designed and tested RTL-first rather than created in LTR and mirrored at the end.
 
-When `defaultLocale` is `fa-IR`, application startup must set:
+Application startup must set:
 
 ```html
 <html lang="fa-IR" dir="rtl">
 ```
 
-When configured for English:
-
-```html
-<html lang="en-US" dir="ltr">
-```
-
-Direction is derived from the locale and must not be maintained as an unrelated user setting.
+Direction is derived from the fixed locale and must not be maintained as an unrelated user setting.
 
 RTL affects:
 
@@ -174,38 +132,24 @@ Avoid feature-level hard-coded `left` and `right` unless the property describes 
 
 ### Translation resource files
 
-All static user-interface text must be loaded from translation resource files. Angular templates and TypeScript components must not contain duplicated Persian and English labels.
+All static user-interface text must be loaded from translation resource files. Angular templates and TypeScript components must not hardcode user-facing Persian prose.
 
 Recommended structure:
 
 ```text
-public/i18n/
-├── fa-IR/
-│   ├── common.json
-│   ├── navigation.json
-│   ├── patients.json
-│   ├── scheduling.json
-│   ├── clinical.json
-│   ├── treatment.json
-│   ├── follow-up.json
-│   ├── laboratory.json
-│   ├── ledger.json
-│   ├── reports.json
-│   ├── administration.json
-│   └── errors.json
-└── en-US/
-    ├── common.json
-    ├── navigation.json
-    ├── patients.json
-    ├── scheduling.json
-    ├── clinical.json
-    ├── treatment.json
-    ├── follow-up.json
-    ├── laboratory.json
-    ├── ledger.json
-    ├── reports.json
-    ├── administration.json
-    └── errors.json
+public/i18n/fa-IR/
+├── common.json
+├── navigation.json
+├── patients.json
+├── scheduling.json
+├── clinical.json
+├── treatment.json
+├── follow-up.json
+├── laboratory.json
+├── ledger.json
+├── reports.json
+├── administration.json
+└── errors.json
 ```
 
 Example:
@@ -215,16 +159,6 @@ Example:
   "patient.search.placeholder": "جستجوی نام، شماره بیمار یا موبایل",
   "patient.actions.create": "ثبت بیمار جدید",
   "patient.alerts.critical": "هشدار پزشکی مهم"
-}
-```
-
-English equivalent:
-
-```json
-{
-  "patient.search.placeholder": "Search by name, patient number, or mobile",
-  "patient.actions.create": "Register patient",
-  "patient.alerts.critical": "Critical medical alert"
 }
 ```
 
@@ -247,20 +181,15 @@ Use parameterized messages:
 }
 ```
 
-### Three separate language concerns
+### Language boundaries
 
 The implementation must distinguish:
 
-1. **Application interface language**  
-   Loaded from office configuration.
+1. **Application interface language:** fixed to `fa-IR` and loaded from product translation resources.
+2. **Patient communication language:** stored per patient for future use; v1 always selects approved Persian templates.
+3. **User-entered clinical language:** stored exactly as entered and never automatically translated.
 
-1. **Patient communication language**  
-   Stored per patient and used for receipts, reminders, forms, and patient-facing documents.
-
-1. **User-entered clinical language**  
-   Stored exactly as entered and never automatically translated.
-
-**v1 revision (ADR-012):** all patient documents ship Persian-only. The per-patient communication-language field is retained in the data model so English or bilingual templates can be reintroduced later by a replacement ADR without schema change.
+All patient documents ship Persian-only. The per-patient communication-language field is retained for a future replacement ADR but has no v1 template-selection effect.
 
 ### Static text versus configurable dental content
 
@@ -313,7 +242,7 @@ Conceptual startup sequence:
 ```text
 Load application configuration
         ↓
-Resolve configured locale
+Validate fixed v1 locale (`fa-IR`)
         ↓
 Load common translation resources
         ↓
@@ -328,7 +257,7 @@ Render application shell
 Lazy-load feature translations as routes open
 ```
 
-If the configured locale resource cannot be loaded (v1 revision — no second maintained locale exists):
+If the `fa-IR` resource cannot be loaded:
 
 1. Record a technical error without patient information.
 2. Retry loading the fa-IR resource; if a single namespace fails, render stable keys in a clearly broken style rather than silent English text.
@@ -341,11 +270,11 @@ Example configuration:
 ```json
 {
   "localization": {
-    "defaultLocale": "fa-IR",
-    "fallbackLocale": "fa-IR"
+    "locale": "fa-IR",
+    "direction": "rtl",
+    "calendar": "JALALI"
   },
   "money": {
-    "canonicalCurrency": "IRR",
     "defaultUnit": "TOMAN",
     "showUnitLabel": true
   }
@@ -400,7 +329,6 @@ Configuration:
 
 ```typescript
 interface MoneyConfiguration {
-  canonicalCurrency: 'IRR';
   defaultUnit: MoneyDisplayUnit;
   showUnitLabel: true;
 }
@@ -449,7 +377,7 @@ function fromCanonicalRials(
   if (amountInRials % BigInt(RIALS_PER_TOMAN) !== BigInt(0)) {
     // ENTRY paths: reject with a validation message.
     // DISPLAY paths: never throw — fall back to an explicitly
-    // labeled rial rendering (see revision note 4).
+    // labeled rial rendering.
     throw new Error('AMOUNT_NOT_REPRESENTABLE_AS_WHOLE_TOMAN');
   }
 
@@ -465,9 +393,8 @@ function formatMoney(amountInRials: bigint, unit: MoneyDisplayUnit): FormattedMo
 }
 ```
 
-> **Transport note (revision 6):** the API exchanges money as JSON-safe integer `amountRial`
-> values. Validate `amountRial <= Number.MAX_SAFE_INTEGER` at the boundary; `bigint` is an
-> in-memory representation choice, not a wire format.
+> The API exchanges `amountRial` as a decimal string. The generated client converts it to
+> `bigint`; financial values are never parsed to JavaScript `number` for arithmetic.
 
 Do not use JavaScript floating-point numbers for financial calculations.
 
@@ -508,8 +435,6 @@ The equivalent canonical value may be shown on payment, refund, reversal, and fe
 
 Only an authorized administrator may change:
 
-- Application locale
-- Fallback locale
 - Default money unit
 
 A change must record:
@@ -520,7 +445,7 @@ A change must record:
 - Timestamp
 - Reason when required
 
-Changing locale or money display unit must produce a configuration audit event.
+Changing the money display unit must produce a configuration audit event.
 
 The system should warn that changing the money unit affects display and entry conventions but not stored values.
 
@@ -529,9 +454,7 @@ The system should warn that changing the money unit affects display and entry co
 Language and direction:
 
 - With `fa-IR`, the first authenticated screen renders RTL with Persian text.
-- With `en-US`, the same build renders LTR with English text.
 - No top-toolbar language switch is present.
-- Changing locale in Administration takes effect after reload or a new session.
 - Missing translation keys fail CI.
 - Missing production translation files trigger fallback and an administrative warning.
 - Dental anatomy and chronological time are not mirrored in RTL.
@@ -552,7 +475,6 @@ Money:
 Add tests for:
 
 - Persian default startup
-- English configured startup
 - Correct document `lang` and `dir`
 - Feature translation lazy loading
 - Missing-file fallback
@@ -566,7 +488,7 @@ Add tests for:
 - Very large values
 - Non-divisible rial-to-toman cases
 - Receipts and reports in configured units
-- Patient-facing language independent from application locale
+- Patient communication language does not change the v1 Farsi template
 
 ---
 
@@ -750,7 +672,7 @@ Required Storybook stories should include at least:
 
 ```text
 PatientHeader
-├── Persian (primary; English variants deferred per ADR-012)
+├── Default Farsi/RTL
 ├── Critical alert
 ├── Active implant journey
 ├── Restricted balance
@@ -906,12 +828,11 @@ The fonts must be deployed through the application’s approved asset and licens
 
 ### 7.3 Typography rules
 
-- Do not automatically uppercase English labels.
 - Use no more than three font weights on one screen.
 - Use tabular numerals for money, appointment times, tooth numbers, periodontal values, and reports.
 - Technical identifiers, codes, email addresses, phone numbers, and URLs remain LTR.
 - Avoid centered body text.
-- Persian body content may use slightly larger line height than compact English labels.
+- Farsi body text uses the defined line-height tokens and must not clip diacritics.
 - Do not automatically transliterate names.
 
 ---
@@ -1058,8 +979,7 @@ Clinical work must be entered through patient context rather than a global Clini
 - Navigation contains no more than seven primary destinations.
 - Sidebar supports expanded and collapsed states.
 - The application shell does not expose an everyday language-switch button.
-- The active application language is loaded from office configuration during startup.
-- Changing the configured language requires an application reload or new session.
+- The shell validates and applies fixed `fa-IR`/RTL bootstrap values before rendering.
 - The shell uses quiet neutral surfaces.
 - Avoid simultaneous global search, page search, and patient search controls unless clearly separated by context.
 
@@ -1661,7 +1581,7 @@ Ownership rules:
 - Radius
 - Elevation
 - Motion
-- RTL/LTR utilities
+- RTL and mixed-script utilities
 - Startup configuration loader
 - Translation resource loader and missing-key checks
 - Canonical rial money utilities
@@ -1693,7 +1613,7 @@ Global patient search
 → Check in
 ```
 
-This slice establishes shell behavior, search behavior, patient context, forms, status, side panels, notifications, RTL/LTR, and motion.
+This slice establishes shell behavior, search behavior, patient context, forms, status, side panels, notifications, RTL, and motion.
 
 ### Stage 4 — Scheduler
 
@@ -1757,9 +1677,9 @@ A UI feature is complete only when:
 
 ### Language and direction
 
-- The configured application locale loads before the shell renders.
+- The fixed `fa-IR` resource and public bootstrap configuration load before the shell renders.
 - Persian (fa-IR) works as the sole v1 configuration; RTL renders correctly.
-- LTR/English checks are deferred until a replacement ADR reintroduces a second locale; CSS logical properties are still mandatory in review.
+- CSS logical properties are mandatory even though v1 is RTL-only.
 - No everyday toolbar language switch is introduced.
 - Mixed-script content works.
 - Long Persian names do not break the layout.
@@ -1799,7 +1719,7 @@ A UI feature is complete only when:
 - Interaction tests exist for critical behavior.
 - Visual regression coverage exists for custom components.
 - The component does not contain authoritative dental or financial business rules.
-- RTL/LTR visual tests pass.
+- RTL visual tests pass.
 
 ---
 
@@ -1836,7 +1756,7 @@ Do not begin with a decorative dashboard.
 
 The approved UI direction is:
 
-> Curve-inspired workflow simplicity, Angular Material/CDK behavior, an original restrained teal clinical design system, compact desktop density, persistent patient context, contextual side-panel interactions, configuration-driven localization (fa-IR only in v1, per ADR-012), RTL-first design, canonical rial storage, configured rial/toman entry and presentation, and restrained native CSS motion.
+> Workflow simplicity, Angular Material/CDK behavior, a restrained teal clinical design system, compact desktop density, persistent patient context, contextual side-panel interactions, a Farsi-only v1 locale, RTL-first design, canonical rial storage, configured rial/toman presentation, and restrained native CSS motion.
 
 The system should be judged primarily by:
 

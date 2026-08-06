@@ -5,7 +5,7 @@
 
 ## Tasks
 - [ ] Data import tools for the migration sources inventoried in R0; validation and rejection reporting
-- [ ] Migration rehearsal on full real-data extract in isolated environment; reconciliation report (see docs/02-requirements/09-data-migration.md)
+- [ ] After the Real-Data Authorization Gate is approved, rehearse migration on the minimum authorized real-data extract in an isolated environment; otherwise use generated migration fixtures
 - [ ] Structured full-patient-record export
 - [ ] Fixed report suite with documented inclusion logic; async execution for large reports
 - [ ] Persian print templates and consent acknowledgment flow with template versioning and hashes
@@ -17,4 +17,4 @@
 
 ## Exit criteria
 - Production readiness review passes (all release gates in 06-operations/04)
-- Migration rehearsal reconciles; rollback plan approved
+- Authorized migration rehearsal reconciles; rollback and post-rehearsal deletion plans approved

@@ -13,8 +13,8 @@ committing to feature development. Every item here is a known project risk (see 
 - [ ] One end-to-end slice: login via OIDC → create a "patient" (name in Persian + optional Latin) → stored in Postgres via migration-managed schema → listed with search → audit event written
 - [ ] Angular Material theme per UX-DS-001 §24 (Vazirmatn-first typography, density -1) rendering the slice in fa-IR RTL (single locale per ADR-012; strings externalized as a hedge)
 - [ ] Storybook running with tokens + first Ds components (UX-DS-001 §28 list starts here: DsStatusChip, DsMoneyDisplay)
-- [ ] Startup configuration loader: locale/money config fetched before shell render (UX-DS-001 §2.1)
-- [ ] Working Jalali/Gregorian date picker bound to a canonical Gregorian value; round-trip test across Nowruz and a Jalali leap year
+- [ ] Public bootstrap loader validates fixed Farsi/RTL/Jalali values and configured money unit before shell render
+- [ ] Working Jalali date picker bound to a canonical Gregorian value; round-trip test across Nowruz and a Jalali leap year
 - [ ] Rial/toman money input component: toman entry ×10 to canonical integer rial; unit label always rendered
 - [ ] One generated PDF (e.g., a dummy receipt) with embedded Persian font, RTL text shaping verified (feeds ADR-009 print pipeline decision)
 - [ ] OpenAPI generated from NestJS and consumed to type the Angular client

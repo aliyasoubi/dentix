@@ -2,7 +2,7 @@
 
 ## Vision statement
 
-Create the simplest trustworthy bilingual dental PMS for one office: fast enough for reception, clinically safe enough for dentists, transparent enough for management, and maintainable enough for a long-lived engineering product.
+Create the simplest trustworthy Farsi-first dental PMS for one office: fast enough for reception, clinically safe enough for dentists, transparent enough for management, and maintainable enough for a long-lived engineering product.
 
 ## Target office
 
@@ -60,9 +60,9 @@ Clinical drafts may autosave. Signing is explicit. Signed content is immutable a
 
 Posted charges and payments cannot be edited in place. Corrections use reversals and new postings.
 
-### Bilingual by architecture
+### Localized without contaminating the domain
 
-Persian, RTL, name scripts, Jalali/Gregorian dates, Iranian contact formats, rial/toman presentation, printed documents, and mixed-script content are designed at the domain and component level.
+The v1 interface is Farsi-only and RTL-only. Jalali presentation, Iranian contact formats, rial/toman presentation, printed documents, and mixed-script content are handled at explicit application boundaries. Domain data and APIs remain locale-neutral.
 
 ### Data belongs to the office
 

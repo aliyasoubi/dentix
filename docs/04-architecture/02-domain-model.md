@@ -2,6 +2,8 @@
 
 ## Bounded contexts
 
+The authoritative ownership and dependency map is `07-context-module-map.md`.
+
 ### Patient Registry
 
 Owns patient identity, contact data, relationships, alerts, and duplicate/merge rules.
@@ -48,7 +50,7 @@ Receives security and business audit events and provides controlled query access
   - Plan versions presented to patients remain reproducible.
   - Patient merge retains source identity and history.
 
-## Aggregate candidates
+## Aggregate roots
 
   - Patient
   - Appointment
@@ -56,7 +58,7 @@ Receives security and business audit events and provides controlled query access
   - TreatmentPlan
   - TreatmentJourney
   - LabOrder
-  - LedgerAccount/PatientLedger
+  - PatientLedger
   - RecallInstance
   - FollowUpTask
 
@@ -80,4 +82,4 @@ Large clinical timelines and reports are read models, not aggregates.
 
 ## Example event reaction
 
-ProcedureCompleted may update a linked plan item, advance a journey, and create a draft charge. These reactions must be idempotent and auditable.
+`ProcedureCompleted` is committed by Clinical. Treatment Planning, Treatment Continuity, and Patient Finance react through the outbox with the semantics defined in `08-transaction-event-semantics.md`.

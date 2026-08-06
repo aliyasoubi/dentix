@@ -1,7 +1,5 @@
 # Motion and Accessibility Guidelines
 
-> **Scope change 2026-08-03 (ADR-012):** v1 is Farsi-only, RTL-only, Jalali-only presentation. Read every "Persian and English" / "RTL/LTR" / "Jalali/Gregorian presentation" requirement in this file as Persian / RTL / Jalali for the UI. Canonical Gregorian/UTC storage rules are unchanged. English-specific items are deferred until a replacement ADR reintroduces a second locale.
-
 ## Motion goals
 
 Motion communicates continuity, state change, and location. It must not slow clinical work or decorate dense screens unnecessarily.
@@ -59,7 +57,7 @@ Honor prefers-reduced-motion. Functional feedback must remain available without 
 
   - Automated axe checks in component and end-to-end tests
   - Keyboard-only acceptance scenarios
-  - Screen-reader smoke tests in English and Persian
+  - Screen-reader smoke tests in Farsi, including mixed Persian/Latin content
   - High-contrast and zoom testing
   - Reduced-motion testing
   - Manual verification of custom SVG and grid components

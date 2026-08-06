@@ -11,8 +11,10 @@
 - [ ] Walk each role through the prototype for their own workflows; record friction
 - [ ] Agree the permission matrix (01-product/04) and retention rules with the office manager
 - [ ] Draft migration source map and data-quality risk list (feeds risks.md)
+- [ ] Name the privacy approver and document the jurisdiction/hosting questions required by the Real-Data Authorization Gate; do not copy patient content during discovery
 
 ## Exit criteria
 - Prototype approved by dentist, receptionist, assistant, and office manager
 - Terminology sheet signed off in Persian
 - Migration source inventory documented
+- Real-data gate owner and approval path documented

@@ -34,7 +34,7 @@ Use expand-and-contract migrations for changes requiring multiple deployments. A
 
 ## Configuration
 
-Configuration includes office timezone (default Asia/Tehran), canonical currency (IRR), default money display unit (RIAL or TOMAN), UI/date calendar preferences, Iranian holiday calendar source, supported locales, feature flags, reminder providers, object storage, identity provider, retention settings, and thresholds. Secrets are never stored in ordinary configuration files.
+Configuration includes office timezone (default `Asia/Tehran`), default money display unit (`RIAL` or `TOMAN`), Iranian holiday source, feature flags, reminder providers, object storage, identity provider, retention settings, and thresholds. The v1 public bootstrap fixes locale to `fa-IR`, direction to `rtl`, and calendar presentation to `JALALI`. Secrets are never stored in ordinary configuration files.
 
 ## Rollback
 

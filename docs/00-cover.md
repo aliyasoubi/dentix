@@ -1,14 +1,14 @@
 # Cover
 
 **DENTIX**
-**Bilingual Single-Office Dental PMS**
+**Farsi-First Single-Office Dental PMS**
 
 **Implementation Documentation Package**
 
-Curve-like usability • CareStack-like continuity • Open Dental-like flexibility
+Fast daily workflows • Connected treatment continuity • Auditable clinical and financial records
 
-Version 0.2.0
-Baseline: August 2, 2026 · Named Dentix: August 4, 2026
+Version 0.4.1
+Baseline: August 6, 2026
 Status: Concept approved for detailed design
 
 Farsi (fa-IR) • RTL • Jalali presentation / Gregorian-UTC canonical • Rial / Toman (ADR-012)

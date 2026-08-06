@@ -48,11 +48,11 @@ The first product provides curated fixed reports with documented definitions. It
 
 ## Report requirements
 
-  - Date/time interpretation uses Asia/Tehran office timezone and business-date rules. Reports support Jalali and Gregorian presentation without changing inclusion logic.
+  - Date/time interpretation uses the configured office timezone and business-date rules. UI and print present Jalali dates; inclusion logic uses canonical Gregorian dates and UTC instants.
   - Report definitions include inclusion, exclusion, and status logic.
   - Financial reports support exact reconciliation to ledger entries.
   - Exports follow permission rules and create audit events.
   - Column labels are presented in Persian.
-  - Printed and exported reports declare the calendar system used for displayed dates.
+  - Printed reports identify Jalali dates. Structured machine exports use documented Gregorian ISO dates and RFC 3339 timestamps.
   - Every financial report declares rial or toman in its title/header and is calculated from canonical rial values.
   - Large reports run asynchronously and notify the user when ready.

@@ -45,9 +45,11 @@ A merge operation MUST:
 
 1. Require explicit source and destination selection.
 2. Display conflicts for demographic fields.
-3. Move related appointments, encounters, plans, journeys, tasks, documents, and ledger records transactionally.
-4. Retain the source patient as a merged alias.
-5. Create a detailed audit event.
+3. Atomically establish the canonical patient mapping and prevent new writes to the source patient.
+4. Coordinate affected modules through the durable merge process in `04-architecture/08-transaction-event-semantics.md`.
+5. Retain the source patient as a discoverable merged alias; signed clinical and posted financial history is not rewritten.
+6. Show merge progress and failures to authorized users until every required module acknowledges completion.
+7. Create detailed audit events for request, module handling, failure, retry, and completion.
 
 ## Relationships
 

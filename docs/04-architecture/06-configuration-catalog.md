@@ -1,7 +1,7 @@
 # Configuration Catalog
 
 - **Status:** Accepted 2026-08-04. Defines what is configuration, at which layer, and what is deliberately NOT configuration.
-- **Language rule:** all code, schemas, API fields, config keys, error codes, logs, and comments are **English**. Farsi appears in exactly two places: frontend i18n resource files (static UI text) and database translation rows (configurable business content). Nothing else.
+- **Language rule:** code, schemas, API fields, config keys, error codes, logs, and comments are English. Product-authored Farsi UI prose lives in frontend translation resources; configurable Farsi business labels/templates live in database translation rows. Patient names, addresses, and clinical/user-entered text are stored exactly as entered and are not translated.
 
 ## The four configuration layers
 
@@ -24,12 +24,11 @@ Changed by an authorized administrator; every change produces an audit event (pr
 
 | Group | Keys | v1 value / notes |
 |---|---|---|
-| Localization | `locale` | `fa-IR` (only maintained locale per ADR-012) |
-| | `calendarDisplay` | `JALALI` (only v1 adapter; Gregorian display later = new adapter + this key) |
+| Localization | `locale` | `fa-IR` (fixed in v1 per ADR-012) |
+| | `calendarDisplay` | `JALALI` (fixed in v1) |
 | | `timezone` | `Asia/Tehran` (IANA; config, never hardcoded in logic) |
 | | `holidayCalendar` | versioned Iranian holiday data + office closures |
-| Money | `canonicalCurrency` | `IRR` — read-only in v1; changing it requires a replacement ADR |
-| | `displayUnit` | `RIAL` \| `TOMAN` (IRR-specific display concept; changing it never touches stored values) |
+| Money | `displayUnit` | `RIAL` \| `TOMAN` (changing it never touches stored values) |
 | Patients | `nationalCodeValidation` | on/off; absence never blocks registration |
 | | `duplicateDetectionThresholds` | scoring cutoffs for warning queue |
 | Scheduling | office hours, appointment types, default durations, operatories, conflict-override policy | office-editable |
@@ -40,15 +39,15 @@ Changed by an authorized administrator; every change produces an audit event (pr
 
 ### Layer 3 — User preferences (per user, low-risk, not audited beyond normal history)
 
-Default calendar view (day/week/provider), default landing page, density where offered, optional money display-unit override (spec 02-requirements/06), table column widths. User preferences may never override Layer-2 policy or any invariant.
+Default calendar view (day/week/provider), default landing page, density where offered, optional money display-unit override, and table column widths. User preferences may never override Layer-2 policy or any invariant.
 
 ### Layer 4 — Frontend bootstrap config (public JSON, fetched before shell render)
 
-Read-only projection of Layer 2 needed before authentication: `locale`, `dir` (derived from locale), `calendarDisplay`, `timezone`, `money.displayUnit`, API base URL, app version. **No secrets, ever.** See UX-DS-001 §2.1 for the startup sequence.
+Read-only projection needed before authentication: fixed v1 `locale`, `dir`, and `calendarDisplay`; configured `timezone` and `money.displayUnit`; API base URL; and app version. **No secrets, ever.** See UX-DS-001 §2.1 for the startup sequence.
 
 ## Deliberately NOT configuration (invariants — changing these means changing code + ADR)
 
-- Canonical storage rules: UTC instants, Gregorian ISO dates, integer minor-unit money.
+- Canonical storage rules: UTC instants, Gregorian ISO dates, integer rial money (`IRR`).
 - Domain state machines (appointment lifecycle, encounter states, plan states, ledger entry types).
 - Immutability rules (ADR-004), permission semantics, audit coverage.
 - Tooth numbering internals (display system FDI/Universal is a clinical setting, but anatomical identifiers are code).
@@ -63,20 +62,6 @@ Read-only projection of Layer 2 needed before authentication: `locale`, `dir` (d
 | Backend messages | Never prose — stable English codes (`APPOINTMENT_CONFLICT`) + safe parameters; frontend maps code → Farsi text | Adding a locale later is frontend-only; logs stay searchable |
 | Clinical free text | Stored exactly as entered, never translated | Safety (ADR-003/012) |
 
-## Currency extensibility (future USD and others)
+## Excluded configuration
 
-v1 remains single-currency IRR (ADR-005). To make future multi-currency a bounded change instead of a refactor:
-
-1. **Schema hedge (adopt now):** every money column stores minor-unit integer `amount` **plus** `currency CHAR(3) NOT NULL DEFAULT 'IRR'`. Zero behavioral cost in v1; eliminates the future ledger migration.
-2. The `Money` value object in code already carries `{ amount, currency }`; arithmetic across different currencies throws.
-3. `displayUnit` (RIAL/TOMAN) is defined per currency — it is an IRR presentation concept, not a generic one. A future USD shows dollars, untouched by rial/toman logic.
-4. What multi-currency does NOT get for free (and why it still needs a replacement ADR): exchange rates, mixed-currency balances and reconciliation, per-currency receipt formats. The hedge makes the door cheap to open, not open.
-
-## Scale path summary (no full refactor required)
-
-| Future need | What changes | What doesn't |
-|---|---|---|
-| Add a language (e.g., English) | New `i18n/en-US/*.json`, DB translation rows, replacement ADR for ADR-012, LTR visual QA | Code, schema, API |
-| Add a calendar display (Gregorian) | New calendar adapter + `calendarDisplay` option | Storage (already Gregorian/UTC) |
-| Add a currency | Replacement ADR for ADR-005, rate/receipt logic | Ledger schema (currency column exists), Money type |
-| Second office / other timezone | `office_id` already on rows; timezone already config | Domain logic |
+A second application locale, another calendar presentation, or another currency is not activated through configuration in v1. Each requires a replacement ADR and the corresponding code, schema, migration, and verification work. Configuration must not advertise an unsupported option.

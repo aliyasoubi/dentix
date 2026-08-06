@@ -7,12 +7,12 @@ A feature is Done only when:
   - Requirement and acceptance criteria are approved.
   - Scope and exclusions are respected.
   - Persian wording is reviewed.
-  - Jalali/Gregorian behavior and rial/toman unit presentation are defined where the feature handles dates or money.
+  - Jalali presentation, canonical Gregorian/UTC conversion, and rial/toman unit behavior are defined where the feature handles dates or money.
   - Role and permission behavior is defined.
 
 ## Design
 
-  - Responsive and RTL/LTR states are designed.
+  - Responsive and RTL states are designed.
   - Empty, loading, error, conflict, and permission-denied states exist.
   - Keyboard and reduced-motion behavior are specified.
 
@@ -28,7 +28,7 @@ A feature is Done only when:
 
   - Unit, integration, API, component, and relevant end-to-end tests pass.
   - Persian critical paths pass.
-  - Applicable Jalali/Gregorian equivalence and canonical rial/toman tests pass.
+  - Applicable Jalali round-trip/canonical-date and rial/toman exactness tests pass.
   - Accessibility checks pass or approved exceptions are recorded.
   - Performance impact is measured for critical screens.
 

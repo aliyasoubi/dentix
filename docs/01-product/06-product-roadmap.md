@@ -60,7 +60,7 @@ Exit: Fictional patient data can be managed securely with correct Jalali dates (
   - Receipts, statements, balances, daily reconciliation with explicit rial/toman units
   - Production and collections reports
 
-**Exit:** Parallel ledger pilot reconciles exactly with current office records.
+**Exit:** An authorized parallel ledger reconciles exactly with current office records, or fictional reconciliation passes while the Real-Data Authorization Gate remains closed.
 
 ## Release 6 - Operational completeness
 

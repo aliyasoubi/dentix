@@ -79,6 +79,13 @@ The following are not in the approved product scope:
   - Public marketplace
   - Custom report builder
 
+## Deferred, not permanently excluded
+
+Recorded product-owner decision (2026-08-06): the following are out of v1 scope but earmarked for future evaluation rather than permanently rejected. Bringing either in requires the scope control rule below plus the normal requirement/ADR process.
+
+  - **Inventory/stock management.** A working standalone NestJS/TypeORM inventory backend for this office already exists (items, suppliers, FEFO batches, append-only stock ledger, expiry alerts) and continues operating as a separate system for now. Its ledger-style design is compatible with this architecture, so the expected future path is folding it in as an `inventory` bounded context/module per `04-architecture/03-module-boundaries.md` and `04-architecture/07-context-module-map.md`.
+  - **Insurance and claims.** Remains fully excluded from v1 (see list above); future evaluation only.
+
 ## Boundary clarifications
 
 ### Patient finance versus accounting
@@ -87,7 +94,7 @@ The PMS owns the patient subledger. It does not own rent, payroll, supplier expe
 
 ### Iranian localization boundary
 
-Iranian localization is part of the approved core scope, not a later translation layer. The application uses Asia/Tehran as the default office timezone, supports Jalali and Gregorian date presentation, and preserves Gregorian/UTC values for APIs and storage. Optional national-code validation and address formatting are office-configurable and do not make a national identifier mandatory.
+Iranian localization is part of the approved core scope, not a later translation layer. The application uses `Asia/Tehran` as the default office timezone and presents Jalali dates only in v1 while preserving Gregorian/UTC values for APIs and storage. Optional national-code validation and address formatting are office-configurable and do not make a national identifier mandatory.
 
 ### Rial and toman boundary
 

@@ -2,7 +2,7 @@
 
 Standard architecture reference for building Dentix, structured on the [arc42](https://arc42.org) template. This is the single entry point a developer opens to understand the system and the order to build it in.
 
-**This document synthesizes and cross-references the detailed spec — it does not replace it.** Where a claim here and a detailed file in `docs/` ever disagree, the detailed file wins (per `CLAUDE.md`); file an issue and correct this document in the same PR. Section headers link to the files that carry the full detail.
+**This document is an entry point and does not replace authoritative specifications.** Conflict resolution follows `docs/document-control.md`; an Accepted ADR cannot be overridden by a stale requirement, summary, or release plan.
 
 ---
 
@@ -49,15 +49,15 @@ Full detail: `01-product/03-scope-and-exclusions.md`.
 | Jobs/cache | Redis + BullMQ |
 | Object storage | S3-compatible, encrypted |
 | API | REST + OpenAPI at `/api/v1`; Angular client generated/type-checked from the contract |
-| Auth | OIDC + MFA (provider per ADR-007, still Proposed) |
+| Auth | OIDC + MFA with server-side BFF session; provider per ADR-007 |
 
 Pin exact dependency versions; update through review only. Full detail: `CLAUDE.md`, `04-architecture/01-system-architecture.md`.
 
 ### 2.2 Organizational / regulatory constraints
 
 - One domestic Iranian office; foreign SaaS dependencies (IdPs, cloud, SMS) may be unreliable or restricted — hosting (ADR-010) and provider choices (ADR-007, ADR-011) must assume this.
-- No legal sign-off on data jurisdiction exists yet — tracked as risk R-13, hard gate before Release 7 (real patient data).
-- All code — identifiers, schema, API fields, config keys, error codes, logs, comments — is English. Farsi exists only in `i18n/fa-IR/*.json` and DB translation rows.
+- The Real-Data Authorization Gate is required before any patient-data extract, migration rehearsal, parallel ledger, third-party processing, or pilot.
+- Code, schema, API fields, config keys, error codes, logs, and comments are English. Product-authored Farsi prose lives in UI resources or configurable DB translations; user-entered demographic and clinical text is stored exactly as entered.
 
 ### 2.3 Open decisions that block implementation in their area
 
@@ -108,42 +108,15 @@ External systems: OIDC identity provider (auth), SMS/email provider (reminders, 
 
 ### 5.1 Module list (level 1)
 
-Identity and access · Office administration · Patients · Scheduling · Clinical encounters · Odontogram and periodontal charting · Procedure catalog · Treatment planning · Treatment journeys · Follow-up and recall · Lab orders · Patient ledger · Documents · Communications · Reporting · Audit · Integrations
+The authoritative bounded-context/module catalog, data ownership, and dependency map is `04-architecture/07-context-module-map.md`. Odontogram/perio remain inside Clinical; follow-up remains inside Treatment Continuity; Reporting is read-only; Integrations contains adapters rather than domain policy.
 
-Each module owns its bounded context (see `04-architecture/02-domain-model.md` for the nine contexts: Patient Registry, Scheduling, Clinical, Treatment Planning, Treatment Continuity, Laboratory, Patient Finance, Documents and Communications, Audit). Modules call each other only through application ports and domain events — never through another module's repository.
+### 5.2 Internal module layout (level 2)
 
-### 5.2 Internal module layout (level 2 — use this for every module)
-
-```
-module/
-  domain/
-    entities/
-    value-objects/
-    services/
-    events/
-    repositories/
-  application/
-    commands/
-    queries/
-    use-cases/
-    dto/
-    ports/
-  infrastructure/
-    persistence/
-    messaging/
-    external/
-    mappers/
-  presentation/
-    http/
-    websocket/
-```
-
-Dependency direction is one-way: `domain` imports nothing framework-specific → `application` imports `domain` and defines ports → `infrastructure` implements those ports → `presentation` translates transport input into commands/queries. Full detail and code-quality rules: `04-architecture/03-module-boundaries.md`.
+Every module uses the same four-layer layout — `domain/` → `application/` → `infrastructure/` → `presentation/` — with one-way dependencies (domain imports nothing framework-specific). The authoritative directory tree, dependency rules, controller/use-case rules, and code-quality rules are `04-architecture/03-module-boundaries.md`; they are not duplicated here.
 
 ### 5.3 Data model (level 3)
 
-Table groups: Identity and office, Patient, Scheduling, Clinical, Treatment continuity, Finance, Documents and platform. Common columns on business tables: UUID primary key, `office_id`, `created_at`/`created_by`, `updated_at`/`updated_by` (mutable records), `version` (optimistic concurrency), optional `archived_at`. Signed clinical and posted financial records use append-only/version tables instead of ordinary updates.
-Full detail (complete table list, indexing priorities, concurrency rules): `04-architecture/04-data-model.md`.
+The logical data model assigns every table to one owning module and defines tenant integrity, cardinalities, immutability, money/date contracts, concurrency, retention, outbox/idempotency, and core constraints. Full detail: `04-architecture/04-data-model.md`.
 
 ---
 
@@ -153,7 +126,7 @@ Full detail (complete table list, indexing priorities, concurrency rules): `04-a
 
 ```mermaid
 flowchart LR
-    U[Browser - Angular] -->|HTTPS REST/OpenAPI| API[NestJS API]
+    U[Browser - Angular] -->|HTTPS BFF session + REST/OpenAPI| API[NestJS API]
     API --> DB[(PostgreSQL)]
     API --> OBJ[Encrypted Object Storage]
     API --> REDIS[(Redis)]
@@ -165,20 +138,13 @@ flowchart LR
     API --> OBS[Logs, Metrics, Traces]
 ```
 
-### 6.2 Use-case execution pattern (every write path follows this)
+### 6.2 Use-case execution pattern
 
-1. Controller extracts auth context, validates input, dispatches a command/query — no business logic in controllers.
-2. Use case loads required aggregates through repositories.
-3. Use case performs authorization with object context (endpoint checks alone are never sufficient).
-4. Use case invokes domain behavior.
-5. Use case commits one transaction.
-6. Use case writes outbox/audit events in the same transaction.
-7. Use case returns a transport-independent result; presentation maps it to the HTTP response.
+Every write path follows the single canonical controller/use-case pattern in `04-architecture/03-module-boundaries.md`: controllers only validate and dispatch; the use case loads aggregates, authorizes with object context, invokes domain behavior, commits one owning module's writes plus outbox/audit facts in one transaction, and returns a transport-independent result.
 
 ### 6.3 Example event reaction
 
-`ProcedureCompleted` may update a linked treatment-plan item, advance a treatment journey, and create a draft charge — each reaction is idempotent and auditable, processed by workers off the transactional outbox, not inline in the triggering request.
-Full detail: `04-architecture/02-domain-model.md` (domain event list), `04-architecture/01-system-architecture.md`.
+`ProcedureCompleted` commits the clinical fact first. Treatment Planning, Treatment Continuity, and Patient Finance react idempotently through the outbox. Failures are visible, retryable, and reconciled; they never roll back the clinical fact. Full detail: `04-architecture/08-transaction-event-semantics.md`.
 
 ---
 
@@ -212,7 +178,7 @@ Full detail: `06-operations/01-deployment.md`, `06-operations/02-backup-recovery
 
 ### 8.1 Money
 
-Canonical unit is the Iranian rial, stored as signed bigint (`amount_rial`), plus a `currency CHAR(3) NOT NULL DEFAULT 'IRR'` hedge column on every money field. Toman is display/input only: 1 toman = exactly 10 rials, converted at the application boundary, never with JS floats. Every displayed amount carries an explicit rial/toman label; conversions never silently round. ADR-005.
+Canonical unit is the Iranian rial, stored as signed bigint (`amount_rial`). Toman is display/input only: 1 toman = exactly 10 rials, converted at the application boundary, never with JS floats. API values are decimal strings converted to `bigint`. Every displayed amount carries an explicit rial/toman label; conversions never silently round. Multi-currency is excluded from v1. ADR-005.
 
 ### 8.2 Dates and calendar
 
@@ -232,7 +198,7 @@ Signed clinical records and posted ledger entries are never updated or deleted. 
 | Layer | Where | Example |
 |---|---|---|
 | 1. Deployment | env/secret manager, never in DB or sent to frontend | DB connection, OIDC client secret |
-| 2. Office | DB, admin UI, every change audited | locale, calendar display, procedure fees |
+| 2. Office | DB, admin UI, every change audited | timezone, money display unit, procedure fees |
 | 3. User preference | per user, low-risk | default calendar view, density |
 | 4. Frontend bootstrap | public JSON, fetched pre-render, no secrets ever | locale, dir, timezone, API base URL |
 
@@ -262,6 +228,7 @@ Full detail: `01-product/04-roles-and-permissions.md`, `05-quality/01-security-p
 | 010 | Hosting and operations model | **Proposed — blocking gate before any deployment** |
 | 011 | SMS/email provider | **Proposed — accept during Release 2 planning** |
 | 012 | Farsi-only UI, Jalali-only presentation | Accepted — supersedes ADR-003, amends ADR-005's presentation clauses |
+| 013 | OIDC-backed backend-for-frontend session | Accepted |
 
 A decision that contradicts an Accepted ADR requires a replacement ADR — do not code around it. Full ADR text: `04-architecture/adr/`.
 
@@ -282,7 +249,7 @@ Full detail: `05-quality/02-test-strategy.md`, `05-quality/03-acceptance-criteri
 
 ### 10.3 Security baseline
 
-OIDC/OAuth2 + MFA for all patient-accessing users, least-privilege endpoint+object authorization, recent-auth requirement for signing/export/high-risk finance actions, TLS everywhere, encryption at rest, no PHI in logs/URLs/commits, OWASP ASVS as the verification framework.
+OIDC + MFA with a server-side BFF session, least-privilege endpoint+object authorization, recent-auth requirement for signing/export/high-risk finance actions, session-bound CSRF protection, TLS everywhere, encryption at rest, no PHI in logs/URLs/commits, and OWASP ASVS verification. Real data is prohibited until the Real-Data Authorization Gate is approved.
 Full detail: `05-quality/01-security-privacy.md`.
 
 ---
@@ -298,67 +265,33 @@ Full detail: `05-quality/01-security-privacy.md`.
 | R-06 | Immutability design flaw only found after real data exists | Property-based tests in R5; parallel run before cutover |
 | R-07 | Key-person dependency on a small team | Docs-as-code (this repo); ADR for every decision; runbooks in R6 |
 | R-11 | Pilot fatigue running two systems in parallel | Short scoped parallel window; visible reception wins first |
-| R-13 | No named legal jurisdiction review for patient data | Hard entry gate before Release 7 |
+| R-13 | Real-data authorization is not approved when R5/R6 work needs it | Prohibit extracts and use fictional data until the gate closes |
 
 Full register (16 risks, owners, triggers): `07-plans/risks.md`. Reviewed at every release boundary.
 
-### 11.2 Known specification gaps (from the design review)
+### 11.2 Remaining readiness work
 
-No stable requirement IDs yet (recommend PAT-001, SCH-001… assigned in R0); Iranian holiday data source/ownership undefined; offline/degraded-mode behavior only partially specified; no named package owner or approvers yet in `document-control.md`.
-Full detail: `00-review/design-review-gap-analysis.md`.
+Stable requirement IDs, confirmed NFRs/client environment, Iranian holiday ownership, complete migration mapping, and named approvers remain Release 0 outputs. ADR-006 through ADR-010 remain walking-skeleton decisions. Full status: `00-review/design-review-gap-analysis.md`.
 
 ---
 
 ## 12. How to Build This — Implementation Order
 
-Do not start a release before the previous release's exit gate is signed off. Each release plan under `07-plans/` states its goal, in-scope spec sections, task checklist, and exit criteria.
-
-| # | Release | What gets built | Exit gate |
-|---|---|---|---|
-| 0 | Discovery | Prototype (patient header, schedule, odontogram, Follow-up Center, ledger); confirm terminology and permission matrix; inventory migration sources | Clickable prototype approved by office staff |
-| 0.5 | **Walking skeleton** | Accept ADR-006/007/008/009 with working proofs: Jalali round-trip fixtures, a dummy bilingual-safe receipt through the chosen print pipeline, OIDC+MFA login, one real persisted+mapped entity end to end | Risk stack proven end-to-end — **do not skip this** |
-| 1 | Foundation | Monorepo/CI/migrations, auth+roles+permissions, design tokens + Farsi RTL shell, Jalali date adapter, rial/toman primitives, patient registry, audit framework | Fictional patients managed securely with correct Jalali dates and rial/toman amounts |
-| 2 | Front office | Calendar/appointment lifecycle, availability/blocks/holidays, check-in/waitlist/recall, basic reminders | Reception runs a full fictional day without spreadsheets |
-| 3 | Clinical core | Encounters, findings/diagnoses, note draft/sign/amend, SVG odontogram, perio exam | Dentist documents common appointment types safely |
-| 4 | Treatment continuity | Procedure/fee catalog, versioned treatment plans, treatment journeys, follow-up tasks, lab orders | Long-running care has visible next actions |
-| 5 | Patient finance | Charges/payments/discounts/refunds/reversals, receipts/statements, day-end reconciliation | Parallel ledger pilot reconciles exactly |
-| 6 | Operational completeness | Import/export tools, fixed report suite, print templates, security hardening, restore drills, accessibility audit | Production readiness review passes |
-| 7 | Pilot | Limited-user parallel operation, training, go/no-go gates | Office approves phased production adoption |
+Releases run R0 → R0.5 (walking skeleton) → R1 … R7. The authoritative release scope is `01-product/06-product-roadmap.md`; the per-release plan files and exit gates are indexed in `07-plans/README.md`; execution happens as testable vertical slices per `08-implementation/01-workflow.md`. A release does not start before the previous release's exit gate is signed off.
 
 **First concrete steps for a developer starting today:**
 1. Read `00-review/design-review-gap-analysis.md` for open decisions and gaps in priority order.
-2. Accept ADR-010 (hosting) — it shapes everything operational and gates deployment.
+2. Accept ADR-010 (hosting) — it shapes everything operational and gates deployment. A recommended decision is drafted in `04-architecture/adr/adr-010-hosting-operations.md`.
 3. Run Release 0 discovery, including the migration source inventory and NFR confirmation.
-4. Build the Release 0.5 walking skeleton and accept ADR-006/007/008/009 with proofs — this is the highest-leverage risk reduction in the whole roadmap.
+4. Build the Release 0.5 walking skeleton via `08-implementation/02-slices-release-0.5.md`, accepting ADR-006/007/008/009 through their drafted acceptance checklists — the highest-leverage risk reduction in the whole roadmap.
 5. Only then start Release 1 feature work against §5–§8 of this document.
 
 ---
 
 ## 13. Glossary
 
-| Term | Definition |
-|---|---|
-| Appointment | Reserved time for a patient, provider, and operatory |
-| Encounter | The clinical visit record for what occurred during one visit |
-| Finding | An observed clinical condition, optionally linked to a tooth, surface, arch, or region |
-| Procedure | A clinical service proposed, scheduled, in progress, or completed |
-| Treatment plan | A versioned proposal containing procedures, phases, fees, and patient decisions |
-| Treatment journey | A longitudinal container for multi-visit care with stages, tasks, appointments, procedures, documents, and lab orders |
-| Journey stage | The current treatment milestone, such as Healing or Active Treatment |
-| Follow-up task | A dated action assigned to a staff member, optionally linked to a patient, journey, appointment, lab order, or encounter |
-| Lab order | Work sent to an external dental laboratory, tracked until delivery or revision |
-| Recall | A recurring clinical follow-up due after a configured interval |
-| Planned appointment | A recommended next visit that has not necessarily been booked |
-| Unscheduled treatment | Accepted or clinically ready treatment with no future appointment |
-| Patient ledger | The immutable subledger of patient charges, payments, discounts, adjustments, refunds, and reversals |
-| Draft clinical record | Editable clinical content not yet signed |
-| Signed clinical record | Finalized content that cannot be overwritten; correction requires an amendment |
-| Office business date | The date used for day-end reporting in the office timezone |
-| Native name | The patient or user name in the person's original script, commonly Persian |
-| Latin name | An explicitly supplied Latin-script name; not an automatic transliteration |
-
-Full glossary: `01-product/07-glossary.md`.
+The authoritative domain glossary is `01-product/07-glossary.md`; definitions are not duplicated here.
 
 ---
 
-*Version 0.2.0 · Baseline 2026-08-02 · This document added 2026-08-05, synthesized from the files listed under each section.*
+*Version 0.4.1 · Baseline 2026-08-06.*

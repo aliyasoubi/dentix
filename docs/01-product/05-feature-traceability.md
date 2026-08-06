@@ -1,22 +1,17 @@
-# Reference-Product Feature Traceability
+# Product Capability Traceability
 
-## Purpose
+This matrix links business outcomes to the owning module, release, and acceptance signal. It does not define behavior; detailed requirements remain authoritative.
 
-This matrix ensures the design captures useful principles from CareStack, Curve Dental, and Open Dental without copying proprietary source code, screens, artwork, or terminology.
-
-| **User need**                    | **Reference observation**                                                                                 | **Our simplified implementation**                                                      | **Release** | **Acceptance signal**                                       |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------- |
-| Fast daily operation             | Curve emphasizes intuitive charting, scheduling, and treatment workflow                                   | Persistent patient context, quick actions, keyboard support, minimal modal use         | R2-R4       | Common workflows meet interaction budgets                   |
-| Treatment-to-schedule continuity | Curve describes procedures flowing from treatment planning into scheduling                                | Treatment-plan item can create a planned or booked appointment without re-entry        | R4          | Tooth, procedure, provider, and duration transfer correctly |
-| Connected clinical operations    | CareStack presents charting, treatment planning, lab, and implant tracking in one PMS                     | Linked encounter, plan, journey, task, lab order, and ledger domains                   | R3-R5       | Patient timeline displays all linked events                 |
-| Implant activity tracking        | CareStack provides implant activity timeline and identification tracking                                  | Implant journey template with placement data, stages, tasks, and maintenance recall    | R4          | Every active implant case has visible stage and next action |
-| Ortho progress                   | CareStack uses case status, objectives, visit notes, aligner milestones; Open Dental has ortho case/chart | Ortho journey template plus structured progress entries                                | R4          | Visit progress and next interval retained chronologically   |
-| Lab readiness                    | CareStack and Open Dental track lab cases; Open Dental links cases to appointments                        | Lightweight Lab Order with expected date, readiness status, and appointment dependency | R4          | Schedule warns when dependent lab order is not ready        |
-| Planned future care              | Open Dental uses planned appointments and tracker                                                         | Planned Appointment and Follow-up Center                                               | R2/R4       | Planned-but-unscheduled visits appear in one queue          |
-| Broken or unscheduled follow-up  | Open Dental uses unscheduled lists; Curve reports unscheduled treatment                                   | Unified Follow-up Center with source category and due date                             | R4          | Overdue and unscheduled items are actionable from one page  |
-| Flexible operational data        | Open Dental exposes explicit states and supports data access/customization                                | Stable internal codes, documented REST API, exports, configurable catalogs/templates   | R1-R6       | Office can export complete structured patient record        |
-| Modern, correct Farsi UX          | Not a primary differentiator of the three references                                                      | Native Farsi-only, RTL-only design (ADR-012) with i18n hedges for a possible future locale | R1 onward   | Critical workflows pass the Persian acceptance suite         |
-
-## Design conclusion
-
-The PMS must not create a separate complex module for every specialty. Implant, orthodontic, prosthetic, and custom long-running care are Treatment Journey templates sharing the same task, timeline, appointment, document, and lab infrastructure.
+| Business outcome | Owning module(s) | Release | Acceptance signal |
+|---|---|---|---|
+| Fast registration and patient retrieval | Patients | R1 | Returning patient is found and opened without duplicate creation |
+| Reliable daily scheduling | Scheduling | R2 | Reception completes a fictional day without spreadsheets or silent conflicts |
+| Safe clinical documentation | Clinical | R3 | Signed records are immutable and amendments preserve the original |
+| Treatment flows to scheduling without re-entry | Treatment Planning, Scheduling | R4 | Procedure, anatomy, provider preference, and duration transfer correctly |
+| Long-running care has a visible next action | Treatment Continuity | R4 | Every active journey has an appointment, open task, or reviewed exception |
+| Laboratory readiness is visible before delivery visits | Laboratory, Scheduling | R4 | Schedule warns about non-ready dependent lab work and records overrides |
+| Patient finance reconciles exactly | Patient Finance | R5 | Ledger, allocations, reversals, receipts, and day close reconcile in rials |
+| Patient documents are controlled and reproducible | Documents | R6 | Version, hash, scan state, access, and acknowledgment history are retained |
+| Transactional communication is reliable and auditable | Communications | R2/R6 | One intent creates bounded delivery attempts without duplicate sends |
+| Complete structured data remains portable | Reporting, all owners | R6 | Authorized export is complete, documented, and audited |
+| Farsi/RTL operation is safe and accessible | UI across all modules | R1 onward | Persian critical paths pass RTL, mixed-script, keyboard, and visual tests |

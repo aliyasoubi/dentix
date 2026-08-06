@@ -17,5 +17,5 @@
 
 ## Exit criteria
 - Reception operates a full fictional day without spreadsheets
-- Jalali-entered and Gregorian-viewed appointments resolve to the same stored instant
+- Jalali appointment input round-trips through the expected canonical stored instant
 - Cancelled appointment retains slot, reason, and replacement link

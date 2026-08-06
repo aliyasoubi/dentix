@@ -1,7 +1,5 @@
 # Test Strategy
 
-> **Scope change 2026-08-03 (ADR-012):** v1 is Farsi-only, RTL-only, Jalali-only presentation. Read every "Persian and English" / "RTL/LTR" / "Jalali/Gregorian presentation" requirement in this file as Persian / RTL / Jalali for the UI. Canonical Gregorian/UTC storage rules are unchanged. English-specific items are deferred until a replacement ADR reintroduces a second locale.
-
 ## Test pyramid
 
 ### Unit tests
@@ -18,11 +16,11 @@ OpenAPI compatibility, generated client, authorization matrix, error codes, idem
 
 ### Component tests
 
-Angular forms, direction switching, focus behavior, custom schedule cards, patient header, task panel, and ledger controls.
+Angular forms, RTL focus behavior, custom schedule cards, patient header, task panel, and ledger controls.
 
 ### End-to-end tests
 
-Critical user journeys in English and Persian:
+Critical user journeys in the Farsi/RTL interface:
 
   - Register/search patient
   - Schedule/reschedule/cancel/no-show
@@ -58,13 +56,13 @@ Property-based tests ensure reversals return the prior balance, allocations sum 
 
 Simulate simultaneous appointment edits, treatment-plan updates, note edits, task completion, and ledger operations.
 
-### Bilingual and visual
+### Farsi, RTL, and visual
 
-  - RTL/LTR screenshots for critical screens
+  - RTL screenshots for critical screens
   - PDF/print visual regression
   - Mixed Persian-English content
   - Persian/Latin digit entry
-  - Jalali/Gregorian schedule and print equivalence
+  - Jalali input/display mapped to the expected canonical Gregorian/UTC values
   - Explicit rial/toman labels and exact displayed totals
   - Font fallback and clipping checks
 

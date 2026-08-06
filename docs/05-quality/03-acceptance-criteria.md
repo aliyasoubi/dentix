@@ -1,10 +1,8 @@
 # Cross-Product Acceptance Criteria
 
-> **Scope change 2026-08-03 (ADR-012):** v1 is Farsi-only, RTL-only, Jalali-only presentation. Read every "Persian and English" / "RTL/LTR" / "Jalali/Gregorian presentation" requirement in this file as Persian / RTL / Jalali for the UI. Canonical Gregorian/UTC storage rules are unchanged. English-specific items are deferred until a replacement ADR reintroduces a second locale.
-
 ## Patient and search
 
-  - User can register a patient with Persian-only, English-only, or both names.
+  - User can register a patient with a Persian/native name and an optional Latin-script name.
   - Search normalizes common Persian/Arabic character variants without altering displayed data.
   - Duplicate warning appears for configured high-confidence matches.
   - Equivalent 09..., +98..., and Persian-digit Iranian mobile forms resolve to the same canonical search value.
@@ -16,7 +14,7 @@
   - Every status transition appears in appointment history.
   - Planned appointments and no-shows create actionable follow-up items according to configuration.
   - Lab-dependent appointments display readiness and risk warnings.
-  - The same appointment entered in Jalali mode and viewed in Gregorian mode retains the identical stored instant in Asia/Tehran.
+  - A Jalali appointment input maps to the expected canonical stored instant and round-trips to the same Jalali date/time in `Asia/Tehran`.
   - Configured Iranian holidays and office closures are visible and enforced by scheduling policy.
 
 ## Clinical
@@ -53,6 +51,6 @@
 
   - All critical actions are keyboard accessible.
   - Reduced-motion setting is honored.
-  - Critical pages pass supported browser zoom and RTL/LTR visual checks.
-  - Critical date and print screens pass both Jalali and Gregorian presentation checks.
+  - Critical pages pass supported browser zoom and RTL visual checks.
+  - Critical date and print screens pass Jalali presentation and canonical Gregorian/UTC conversion checks.
   - Common workflow interaction budgets are met or exceptions approved.

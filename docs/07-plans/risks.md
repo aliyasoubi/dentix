@@ -1,32 +1,22 @@
 # Risk Register
 
-Status: living document. Review at every release boundary. Severity = likelihood × impact (H/M/L).
+Review this register at every release boundary. Severity is likelihood × impact.
 
-| ID | Risk | L | I | Mitigation | Trigger / early warning | Owner |
+| ID | Risk | L | I | Mitigation | Trigger | Owner |
 |---|---|---|---|---|---|---|
-| R-01 | RTL + Angular Material theming proves harder than expected; custom components (scheduler, odontogram, perio grid) misbehave in RTL | M | H | RTL-first development; walking skeleton proves RTL early; visual regression for both directions in CI | RTL bugs found late in component work | Frontend lead |
-| R-02 | Jalali/Gregorian adapter defects corrupt dates (leap years, Nowruz, DST history) | M | H | Single tested adapter chosen in ADR-008; round-trip fixture suite; canonical Gregorian/UTC storage means UI bugs never corrupt stored data | Any round-trip test failure | Backend lead |
-| R-03 | Sanctions/network restrictions block npm, Docker Hub, cloud services, or foreign SaaS from Iran | H | H | Decide hosting model early (ADR-010); local registry mirror/cache; prefer self-hostable OSS (Keycloak, MinIO, local SMS providers); vendor lock-in review per dependency | Registry/CDN failures during setup | Tech lead |
-| R-04 | Single office server = single point of failure; RPO 15 min / RTO 4 h not achievable with chosen hosting | M | H | ADR-010 must state achievable objectives; offsite encrypted backup in separate failure domain; documented degraded-mode (paper fallback) procedures | Restore drill misses targets | Ops owner |
-| R-05 | Data migration quality: legacy spreadsheets/paper produce duplicates and wrong balances | H | H | R0 source inventory; dedicated migration spec (02-requirements/09); rehearsal + reconciliation before pilot; parallel ledger run in R5/R7 | Rehearsal reconciliation mismatches | Office manager + dev |
-| R-06 | Immutability design flaw discovered after real data exists (amendments/reversals can't express a needed correction) | L | H | Property-based tests in R5; parallel run before cutover; entered-in-error state defined for clinical records | Support cases needing manual DB edits | Backend lead |
-| R-07 | Key-person dependency: small team, one office, long roadmap | H | M | Docs-as-code (this repo); ADRs for every decision; runbooks in R6; avoid exotic tech | Bus-factor review at each release | Sponsor |
-| R-08 | SMS delivery: Iranian provider requirements (sender IDs, template pre-approval, delivery reliability) delay reminders | M | M | ADR-011 provider selection with fallback; reminders are R2 but not on the critical path of any exit gate; communication history tolerates failed sends | Provider onboarding stalls | Dev |
-| R-09 | Scope creep: insurance, accounting, imaging, or multi-location requests reopen excluded domains | H | M | Scope control rule (01-product/03) enforced at planning; exclusion list is contractual | Feature requests referencing excluded domains | Product owner |
-| R-10 | Odontogram/perio performance or accessibility fails on office hardware | M | M | Performance budget tests on representative hardware in R3; SVG layer optimization; keyboard-first perio verified early | p95 charting interactions over budget | Frontend lead |
-| R-11 | Pilot fatigue: staff run two systems in parallel and disengage | M | H | Keep parallel window short and scoped; train early; visible wins for reception first (R2 order); office manager owns pilot schedule | Declining pilot usage stats | Office manager |
-| R-12 | Recommended stack versions (Angular 22 / Node 24 / PG 18) drift or have unpatched issues by build time | L | M | Pin exact patches in repo; normal dependency update process per 01-product/01 | CVE reports; EOL announcements | Tech lead |
-| R-13 | No named legal jurisdiction review for patient data (governance requires it before real data) | M | H | Treat legal sign-off as a hard R7 entry gate; track as open item from day one | Pilot date approaches without sign-off | Sponsor |
-| R-14 | Persian PDF/print rendering (fonts, shaping, bidi) fails in receipts and clinical printouts | M | M | Print pipeline decided in ADR-009 and proven in walking skeleton; print visual regression suite | First failed bilingual receipt render | Frontend lead |
-
-## Update 2026-08-03 — ADR-012 (Farsi-only UI, Jalali-only presentation)
-
-Changed risk profile:
-
-| ID | Change |
-|---|---|
-| R-01 | **Reduced.** No runtime RTL/LTR switching and no dual-direction test matrix. RTL-only remains a risk for custom components (scheduler, odontogram, perio grid) — RTL-first development and visual regression stay mandatory. |
-| R-02 | **Unchanged.** Jalali-only UI still converts at the boundary to canonical Gregorian/UTC; the round-trip fixture suite remains a release gate. Removing the Gregorian display toggle removes one class of equivalence bug, not the conversion risk. |
-| R-14 | **Reduced.** Print pipeline now targets Persian-only templates; still requires shaping/font/bidi proof in the walking skeleton (Latin names appear inside Persian receipts). |
-| R-15 | **NEW.** Future need for English UI (foreign patients, investor/partner demos, selling the product to other offices) forces a costly retrofit if hedges erode. L: M, I: M. Internationalization is a stated future direction (ADR-012), so hedges are mandatory and CI-enforced: no hardcoded UI strings (lint rule), CSS logical properties only, locale-neutral backend codes, calendar-adapter interface, IANA timezone in config. Reintroduction of a locale requires a replacement ADR. Owner: Tech lead. |
-| R-16 | **NEW.** Mixed-script defects now surface only in production-like data (Latin names, codes, phone numbers embedded in Persian RTL text) since no LTR mode exists to expose them. L: M, I: L. Mitigation: bidi-isolation unit tests with Latin-name fixtures in every list, header, print, and SMS template. Owner: Frontend lead. |
+| R-01 | Custom scheduler, odontogram, or perio components misbehave in RTL | M | H | RTL-first Storybook and visual/keyboard tests in the walking skeleton | RTL defects found after feature integration | Frontend lead |
+| R-02 | Jalali conversion defects corrupt displayed or entered dates | M | H | One adapter; shared leap-year/Nowruz/timezone fixtures; canonical Gregorian/UTC storage | Any round-trip mismatch | Tech lead |
+| R-03 | Sanctions/network restrictions block registries, cloud, or foreign SaaS | H | H | Decide ADR-010 early; cache dependencies; prefer self-hostable/runtime-local services | Setup or production dependency unreachable from Iran | Tech lead |
+| R-04 | Hosting cannot achieve RPO 15 minutes/RTO 4 hours | M | H | Accepted hosting/operator model, separate failure-domain backup, restore drills, downtime procedure | Restore misses target | Ops owner |
+| R-05 | Migration creates duplicate patients or incorrect balances | H | H | Source inventory, field mapping, dedup queue, authorized rehearsal, monetary reconciliation, controlled cutover | Rehearsal mismatch/rejected-row spike | Office manager + developer |
+| R-06 | Amendment/reversal model cannot express a required correction | L | H | Domain examples and property tests before real data; controlled parallel verification | Request for manual database edit | Clinical/finance approvers |
+| R-07 | Single-developer dependency delays delivery or recovery | H | M | Small stack, docs-as-code, automated builds, ADRs, runbooks, tested restore | No alternate operator can follow runbook | Product owner |
+| R-08 | Iranian messaging-provider registration or delivery is delayed | M | M | ADR-011, early sender/template registration, bounded retry/fallback, manual contact queue | Provider onboarding or delivery SLA fails | Developer |
+| R-09 | Insurance, accounting, imaging, AI, or multi-location requests expand scope | H | M | Enforce scope-control rule and measurable release outcome | Request reintroduces excluded domain | Product owner |
+| R-10 | Odontogram/perio performance or accessibility fails on office hardware | M | M | R3 performance/keyboard tests on the approved hardware baseline | Interaction budget or accessibility test fails | Frontend lead |
+| R-11 | Staff disengage during parallel operation | M | H | Short authorized pilot window, training, reception-first wins, daily issue triage | Declining usage or unreconciled paper work | Office manager |
+| R-12 | Pinned Angular/Node/PostgreSQL versions drift or gain critical CVEs | L | M | Exact patch pins, automated scanning, scheduled update review | Security advisory or approaching EOL | Tech lead |
+| R-13 | Privacy/legal approval is unavailable before real-data work | M | H | Name approver in R0; close Real-Data Authorization Gate before any extract, R5 parallel ledger, or R6 rehearsal | Any request to copy patient data without written scope approval | Product owner |
+| R-14 | Persian PDF shaping, font embedding, or mixed-script bidi fails | M | M | Prove ADR-009 with receipt/consent fixtures and visual regression | Print fixture changes shape, clips, or reorders text | Frontend lead |
+| R-15 | Future locale work becomes a rewrite because boundaries erode | M | M | Externalized strings, CSS logical properties, locale-neutral APIs, calendar/number adapters, architecture linting | Hardcoded Farsi or direction-dependent domain logic | Tech lead |
+| R-16 | Latin names/codes/phones render incorrectly inside RTL content | M | M | Bidi-isolation utilities and mixed-script fixtures in UI, print, and messages | Misordered or ambiguous identifier | Frontend lead |

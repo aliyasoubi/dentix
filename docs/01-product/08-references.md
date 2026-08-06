@@ -1,35 +1,22 @@
-# Reference Sources
+# Normative Technical and Clinical References
 
-The sources below informed the product and technical decisions. They are references, not specifications for copying proprietary behavior.
+Only standards and implementation documentation that constrain engineering behavior are retained here. Product requirements remain in `02-requirements/` and do not depend on vendor marketing material.
 
-## Dental product references
+## Technical
 
-1. CareStack, “Features,” including clinical charting, treatment planning, implant tracker, and lab case management: https://carestack.com/dental-software/features
-2. CareStack, “Implant Tracker”: https://carestack.com/dental-software/features/implant-tracker
-3. CareStack, “Lab Case Management”: https://carestack.com/dental-software/features/lab-case-management
-4. CareStack, “Orthodontists”: https://carestack.com/who-we-serve/specialists/orthodontists
-5. Curve Dental, “Treatment Planning”: https://www.curvedental.com/treatment-plan
-6. Curve Dental, “Powerful Dental Reports,” including references to unscheduled treatment and pending lab cases: https://www.curvedental.com/dental-report-software
-7. Curve Dental, “Treatment Planning Made Easy”: https://www.curvedental.com/treatment-planning-made-easy-with-curve
-8. Open Dental, “Lab Case Edit”: https://www.opendental.com/manual/labcaseedit.html
-9. Open Dental, “Planned Appointment”: https://www.opendental.com/manual/apptplanned.html
-10. Open Dental, “Ortho Case”: https://www.opendental.com/manual/orthocase.html
-11. Open Dental, “Ortho Chart”: https://www.opendental.com/manual/orthochart.html
+1. Angular release support: https://angular.dev/reference/releases
+2. Angular accessibility: https://angular.dev/best-practices/a11y
+3. Angular Material DateAdapter: https://material.angular.dev/components/datepicker
+4. NestJS documentation: https://docs.nestjs.com/introduction
+5. NestJS OpenAPI: https://docs.nestjs.com/openapi/introduction
+6. Node.js releases: https://nodejs.org/en/about/previous-releases
+7. PostgreSQL documentation: https://www.postgresql.org/docs/current/
+8. OWASP Application Security Verification Standard: https://owasp.org/www-project-application-security-verification-standard/
+9. OAuth 2.0 Security Best Current Practice: https://www.rfc-editor.org/rfc/rfc9700
+10. OpenID Connect Core: https://openid.net/specs/openid-connect-core-1_0.html
 
-## Technical references
+## Clinical notation
 
-1. Angular, release support table: https://angular.dev/reference/releases
-2. Angular, accessibility best practices and Material/CDK accessibility support: https://angular.dev/best-practices/a11y
-3. Angular, drag-and-drop guide: https://angular.dev/guide/drag-drop
-4. Angular Material, Datepicker and DateAdapter: https://material.angular.dev/components/datepicker
-5. NestJS documentation: https://docs.nestjs.com/introduction
-6. NestJS OpenAPI documentation: https://docs.nestjs.com/openapi/introduction
-7. Node.js release status: https://nodejs.org/en/about/previous-releases
-8. PostgreSQL current documentation: https://www.postgresql.org/docs/current/
-9. OWASP Application Security Verification Standard: https://owasp.org/www-project-application-security-verification-standard/
+1. ISO 3950 — Designation system for teeth and areas of the oral cavity: https://www.iso.org/standard/68292.html
 
-## Clinical notation references
-
-1. ISO 3950 Dentistry - Designation system for teeth and areas of the oral cavity: https://www.iso.org/standard/68292.html
-
-The implementation team must verify licensing before including any proprietary dental code set, terminology database, clinical image library, or vendor integration.
+Licensing must be verified before adopting a proprietary procedure-code set, terminology database, clinical image library, font, or vendor SDK.

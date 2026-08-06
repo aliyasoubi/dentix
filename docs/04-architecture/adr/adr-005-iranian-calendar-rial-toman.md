@@ -5,7 +5,7 @@
 
 ## Context
 
-The first product is intended for a domestic Iranian dental office while retaining Persian and English operation. Date and money ambiguity would create scheduling, reporting, and patient-finance risk if treated as a late presentation concern.
+The first product is intended for a domestic Iranian dental office. Date and money ambiguity would create scheduling, reporting, and patient-finance risk if treated as a late presentation concern.
 
 ## Decision
 
@@ -23,7 +23,7 @@ The first product is intended for a domestic Iranian dental office while retaini
 
 ## Consequences
 
-  - Angular date controls require a tested Jalali/Gregorian adapter and visible calendar mode.
+  - Angular date controls require a tested Jalali adapter, explicit Jalali labeling, and canonical round-trip fixtures.
   - Business logic and APIs remain independent of formatted Jalali strings.
   - Financial domain objects expose canonical rial amounts; localized formatting remains outside the domain.
   - Treatment-plan and receipt snapshots retain the canonical rial value and issued display unit.

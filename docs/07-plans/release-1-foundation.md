@@ -7,7 +7,7 @@
 - [ ] Authentication: OIDC, MFA, sessions, lockout, recovery (05-quality/01)
 - [ ] Roles, permission families, object-level authorization (01-product/04)
 - [ ] Design tokens and Layer-1/Layer-2 components (03-ux/02): patient header, status chip, money display, Persian text field with Latin-name support
-- [ ] Jalali/Gregorian adapter hardened: business-date rules for Asia/Tehran, versioned Iranian holiday configuration
+- [ ] Jalali adapter and canonical conversion hardened: business-date rules for Asia/Tehran and versioned Iranian holiday configuration
 - [ ] Iranian utilities: mobile normalization, optional national-code validation, address structure, Persian collation, digit normalization
 - [ ] Patient registry: identity, names (native/Latin), contacts, relationships, alerts, documents metadata
 - [ ] Patient search with Persian normalization rules (02-requirements/01 Search)

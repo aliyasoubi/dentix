@@ -48,9 +48,11 @@ Completing a procedure MUST:
 1. Validate provider and tooth/surface requirements.
 2. Link to encounter and any treatment-plan item.
 3. Record completion date and author.
-4. Optionally create a draft patient charge according to office configuration.
-5. Update journey progress when applicable.
+4. Publish the clinical completion fact for idempotent creation of an optional draft charge according to office configuration.
+5. Publish the fact for treatment-plan and journey progress evaluation.
 6. Never change a signed note silently.
+
+The clinical completion remains valid if a downstream automation fails. Failed charge/plan/journey reactions MUST be visible, retryable, and included in operational reconciliation.
 
 ## Clinical timeline
 

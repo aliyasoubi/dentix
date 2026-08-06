@@ -18,7 +18,7 @@ Required fields:
   - Status: Planned, Active, On hold, Completed, Cancelled
   - Linked treatment-plan items, appointments, procedures, tasks, lab orders, notes, and documents
 
-Every active journey SHOULD have either a future appointment or an open task. Exceptions require an explicit “no next action required” reason and review date.
+Every active journey MUST have either a future appointment, an open task, or an explicit “no next action required” reason with a review date. Scheduled reconciliation reports violations caused by delayed or failed cross-module processing.
 
 ## Journey templates
 

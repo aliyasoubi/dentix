@@ -1,66 +1,12 @@
 # System Architecture
 
+Entry-point summaries of topology, deployable units, and solution strategy live in the software design document (`00-software-design-document.md`, §4–§7); they are intentionally not duplicated here. Authoritative detail is distributed as follows: module catalog and dependencies — `07-context-module-map.md`; communication, transactions, outbox — `08-transaction-event-semantics.md`; API style — `05-api-guidelines.md`; browser authentication — `09-authentication-session-architecture.md`.
+
+This file holds only the architecture facts owned nowhere else:
+
 ## Architecture style
 
-A modular monolith is the approved starting architecture. It provides strong transactional consistency and simpler deployment while preserving domain boundaries that may later be extracted if justified.
-
-## Runtime view
-
-```mermaid
-flowchart LR
-    U[Browser - Angular] -->|HTTPS REST/OpenAPI| API[NestJS API]
-    API --> DB[(PostgreSQL)]
-    API --> OBJ[Encrypted Object Storage]
-    API --> REDIS[(Redis)]
-    REDIS --> WORKER[Background Worker]
-    WORKER --> SMS[SMS Provider]
-    WORKER --> EMAIL[Email Provider]
-    IDP[OIDC Identity Provider] --> U
-    IDP --> API
-    API --> OBS[Logs, Metrics, Traces]
-```
-
-## Deployable units
-
-  - web: Angular static application
-  - api: NestJS modular monolith
-  - worker: same codebase or separate process for queued jobs
-  - PostgreSQL
-  - Redis
-  - Object storage
-  - Reverse proxy or managed ingress
-
-## Module list
-
-  - Identity and access
-  - Office administration
-  - Patients
-  - Scheduling
-  - Clinical encounters
-  - Odontogram and periodontal charting
-  - Procedure catalog
-  - Treatment planning
-  - Treatment journeys
-  - Follow-up and recall
-  - Lab orders
-  - Patient ledger
-  - Documents
-  - Communications
-  - Reporting
-  - Audit
-  - Integrations
-
-## Communication rules
-
-  - Modules call application ports, not each other’s repositories.
-  - Synchronous use cases handle operations requiring immediate consistency.
-  - Domain events trigger secondary work.
-  - A transactional outbox stores events atomically with domain changes.
-  - Workers process outbox and background jobs idempotently.
-
-## API style
-
-REST with OpenAPI is the primary interface. Resources use stable identifiers, versioned contracts, pagination, filtering, and consistent error codes. WebSocket or server-sent events may be used for schedule updates and notifications, but REST remains authoritative.
+A modular monolith is the approved starting architecture (ADR-001). It provides strong transactional consistency and simpler deployment while preserving domain boundaries that may later be extracted if justified.
 
 ## Tenancy and office model
 
@@ -68,4 +14,4 @@ The first product serves one office. Rows include `office_id` where appropriate 
 
 ## Availability target
 
-Initial target: business-hours reliability suitable for one office, with documented degraded modes and recovery. The system is not designed as a life-support or emergency-care device.
+Business-hours reliability suitable for one office (99.5%/month target per the NFRs), with documented degraded modes and recovery. The system is not designed as a life-support or emergency-care device.

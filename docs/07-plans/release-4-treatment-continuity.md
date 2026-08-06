@@ -4,7 +4,7 @@
 **Spec in scope:** 02-requirements/04-treatment-planning.md, 02-requirements/05-journeys-followup-labs-recall.md
 
 ## Tasks
-- [ ] Procedure and fee catalog with bilingual translation rows and effective-dated fees
+- [ ] Procedure and fee catalog with `fa-IR` translation rows and effective-dated fees
 - [ ] Versioned treatment plans: phases, items, alternatives, immutable presented snapshots
 - [ ] Patient decision recording; decision reversal as new event
 - [ ] Plan → planned/booked appointment handoff without re-entry
@@ -15,8 +15,10 @@
 - [ ] Event-driven task automation (visible, idempotent, auditable, suppressible)
 - [ ] Unscheduled accepted-treatment queue
 - [ ] Persian plan printout (ADR-012)
+- [ ] Complete and approve the Real-Data Authorization Gate before any Release 5 parallel ledger uses current patient records
 
 ## Exit criteria
 - Implant, ortho, crown/bridge, and custom workflows show visible next actions
 - Editing a draft plan never changes a presented version
 - Schedule warns when a dependent lab order is not Ready
+- Real-data processing is either explicitly authorized or Release 5 remains fictional-data-only

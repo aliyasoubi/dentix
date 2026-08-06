@@ -1,8 +1,8 @@
-# Dentix — Bilingual Single-Office Dental PMS Implementation Documentation Package
+# Dentix — Farsi-First Single-Office Dental PMS
 
-**Version:** 0.2.0
+**Version:** 0.4.1
 
-**Baseline date:** 2026-08-02
+**Baseline date:** 2026-08-06
 
 **Status:** Concept approved for detailed design; not yet production-approved
 
@@ -10,37 +10,19 @@
 
 This package is the implementation baseline for a custom, browser-based dental practice management system for one dental office. The product is designed for domestic Iranian operation with a Farsi-only, RTL-only interface (ADR-012), first-class Jalali date handling with Gregorian/UTC canonical storage, and unambiguous rial/toman money presentation. It deliberately excludes insurance, claims, payroll, general accounting, native imaging hardware, electronic prescribing, card vaulting, AI diagnosis, native mobile applications, and multi-location central billing.
 
-The design combines three product principles:
+The product principles are fast daily operation, connected patient workflows, explicit operational state, auditability, and data portability.
 
-  - **Curve Dental:** simple, fast, patient-centered daily workflows.
-  - **CareStack:** connected clinical, scheduling, laboratory, and follow-up workflows.
-  - **Open Dental:** transparent operational state, planned appointments, lab tracking, customization, auditability, and data portability.
+## Technology baseline
 
-These products are references for ideas only. The implementation must use original UX, terminology, source code, and visual design.
-
-## Recommended technology baseline
-
-  - Angular 22 with Angular Material and CDK
-  - A custom dental design system layered above Material/CDK
-  - NestJS on Node.js 24 LTS
-  - PostgreSQL 18
-  - REST APIs documented with OpenAPI
-  - Redis and BullMQ for scheduled reminders and background work
-  - Encrypted S3-compatible object storage for documents and basic images
-  - OIDC-based authentication with MFA
-  - Modular monolith architecture
-  - Canonical financial storage in Iranian rials with explicitly labeled rial/toman display
-  - Asia/Tehran office timezone, first-class Jalali UI/printing, and Gregorian/UTC canonical interchange
-
-Exact patch versions must be pinned in the repository and reviewed through the normal dependency update process.
+The authoritative stack and constraints table is `04-architecture/00-software-design-document.md` §2. Exact patch versions are pinned in the repository and updated only through review.
 
 ## Package map
 
 | **Folder**           | **Purpose**                                                         |
 | -------------------- | ------------------------------------------------------------------- |
-| docs/01-product      | Vision, scope, roles, source-product traceability, roadmap          |
+| docs/01-product      | Vision, scope, roles, capability traceability, roadmap              |
 | docs/02-requirements | Functional requirements by domain                                   |
-| docs/03-ux           | Information architecture, design system, bilingual and motion rules |
+| docs/03-ux           | Information architecture, Farsi/RTL design, motion and accessibility |
 | docs/04-architecture | System, domain, data, API, and architecture decisions               |
 | docs/05-quality      | Security, testing, acceptance, and definition of done               |
 | docs/06-operations   | Deployment, recovery, monitoring, and releases                      |
@@ -57,17 +39,12 @@ The system uses five connected concepts instead of separate mini-applications fo
 
 ## Implementation order
 
-1. Foundation, security, Iranian bilingual/date/money design system, and patient registry
-2. Scheduling, appointment lifecycle, waitlist, and recall
-3. Encounters, odontogram, notes, and periodontal charting
-4. Treatment planning, journeys, follow-up tasks, and lab orders
-5. Patient ledger, receipts, and fixed reports
-6. Documents, communications, export, hardening, migration, and pilot
+The release sequence is owned by `06-product-roadmap.md` (R0–R7) and indexed with exit gates in `../07-plans/README.md`; it is not duplicated here.
 
 ## Governance
 
   - Clinical terminology and workflows require dentist approval.
   - Financial ledger rules require office-manager approval.
-  - Privacy and security controls require jurisdiction-specific legal review before real patient data is processed.
+  - The Real-Data Authorization Gate must be approved before any real patient data is copied, imported, tested, or processed.
   - A decision that contradicts an approved ADR requires a replacement ADR.
   - Requirements use **MUST**, **SHOULD**, and **MAY** in the RFC 2119 sense.

@@ -1,12 +1,14 @@
 # Implementation Checklist
 
+Coarse progress tracker only. Task detail and sequencing are owned by the release plans in `07-plans/` and executed as slices per `08-implementation/`; if this list and a plan disagree, the plan wins.
+
 ## Foundation
 
 - [ ] Repository and monorepo conventions
 - [ ] Angular Material/CDK theme and tokens
 - [ ] Farsi (fa-IR) translation pipeline (ADR-012)
 - [ ] RTL and mixed-script utilities
-- [ ] Jalali/Gregorian date adapter and Asia/Tehran business-date rules
+- [ ] Jalali presentation adapter, canonical Gregorian/UTC conversion, and Asia/Tehran business-date rules
 - [ ] Iranian mobile, optional national-code, address, and Persian-collation utilities
 - [ ] Canonical rial money type and explicit rial/toman input/formatting components
 - [ ] NestJS modules and architecture linting
@@ -33,7 +35,7 @@
 ## Release readiness
 
 - [ ] Persian acceptance suite
-- [ ] Jalali/Gregorian equivalence and Iranian holiday suite
+- [ ] Jalali round-trip/canonical-date and Iranian holiday suite
 - [ ] Rial/toman exactness and unit-label suite
 - [ ] Permission matrix test suite
 - [ ] Clinical and financial immutability tests
@@ -41,5 +43,5 @@
 - [ ] Accessibility audit
 - [ ] Security verification
 - [ ] Restore drill
-- [ ] Migration rehearsal
+- [ ] Authorized real-data migration rehearsal or generated-fixture rehearsal while the gate remains closed
 - [ ] Staff training and rollback plan
