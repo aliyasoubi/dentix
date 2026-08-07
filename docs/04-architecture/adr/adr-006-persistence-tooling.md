@@ -24,8 +24,10 @@
 
 ## Acceptance checklist (Release 0.5 proofs)
 
-- [ ] One migration-managed table created, migrated up and down in CI against PostgreSQL 18.
-- [ ] One entity mapped ORM ↔ domain ↔ API through explicit mappers with zero ORM imports in `domain/` (verified by the architecture lint rule).
-- [ ] `FOR UPDATE SKIP LOCKED` outbox claim query working under two concurrent workers in an integration test.
-- [ ] `bigint` rial value round-trips DB → domain → API decimal string → DB without precision loss.
-- [ ] CI fails if an entity file exists that is not explicitly registered.
+- [x] One migration-managed table created, migrated up and down in CI against PostgreSQL 18. *(S2: `office` table; verified locally against real Postgres 18 and wired as a CI step — "Migration up / down / up".)*
+- [ ] One entity mapped ORM ↔ domain ↔ API through explicit mappers with zero ORM imports in `domain/` (verified by the architecture lint rule). *(S2 proved ORM ↔ domain — `OfficeMapper`, zero framework imports in `domain/` enforced by `lint:arch`. The ↔ API leg needs a controller/DTO, not built in S2.)*
+- [ ] `FOR UPDATE SKIP LOCKED` outbox claim query working under two concurrent workers in an integration test. *(Not attempted in S2 — no outbox consumer exists yet; per `00-build-sequencing.md`, the outbox schema lands when a real consumer needs it.)*
+- [ ] `bigint` rial value round-trips DB → domain → API decimal string → DB without precision loss. *(S6 — Money primitives.)*
+- [x] CI fails if an entity file exists that is not explicitly registered. *(S2: `scripts/check-entity-registration.ts`, proven against a real planted violation, wired into `lint:arch` and CI.)*
+
+**2 of 5 proven this slice. Status stays Proposed** — accepting the ADR is a governance call, not an implementation detail; see the human-review note in the S2 write-up.

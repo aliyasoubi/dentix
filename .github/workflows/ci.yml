@@ -8,6 +8,29 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18.0
+        env:
+          POSTGRES_DB: dentix
+          POSTGRES_USER: dentix
+          POSTGRES_PASSWORD: dentix_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dentix -d dentix"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: dentix
+      POSTGRES_USER: dentix
+      POSTGRES_PASSWORD: dentix_ci_only
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,13 +43,24 @@ jobs:
         run: npm ci
 
       # Canonical always-on gate (docs/08-implementation/01-workflow.md).
-      # lint:arch, test:int, and openapi:check join this list starting with
-      # the slices that introduce them (S2, S2, S8).
+      # openapi:check joins this list starting with S8.
       - name: Lint
         run: npm run lint
 
+      - name: Architecture lint (proves ADR-006)
+        run: npm run lint:arch
+
       - name: Unit tests
         run: npm run test
+
+      - name: Migration up / down / up (S2 Verify line)
+        run: |
+          npm run db:migrate
+          npm run db:migrate:down
+          npm run db:migrate
+
+      - name: Integration tests
+        run: npm run test:int
 
       - name: API contract tests
         run: npm run test:api

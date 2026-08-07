@@ -1,0 +1,36 @@
+{
+  "forbidden": [
+    {
+      "name": "no-domain-framework-imports",
+      "comment": "domain/ imports no NestJS, ORM, HTTP, Redis, or vendor SDK (03-module-boundaries.md)",
+      "severity": "error",
+      "from": { "path": "^src/modules/[^/]+/domain/" },
+      "to": { "path": "node_modules/(@nestjs|typeorm|express|ioredis|redis|pg)" }
+    },
+    {
+      "name": "no-application-framework-imports",
+      "comment": "application/ defines ports; it may depend on domain/, never on infrastructure or a framework directly (03-module-boundaries.md)",
+      "severity": "error",
+      "from": { "path": "^src/modules/[^/]+/application/" },
+      "to": {
+        "path": "node_modules/(@nestjs|typeorm|express|ioredis|redis|pg)|^src/modules/[^/]+/infrastructure/"
+      }
+    },
+    {
+      "name": "no-cross-module-internals",
+      "comment": "a module may only be reached through its own root export, never by importing another module's domain/application/infrastructure directly (07-context-module-map.md: 'Modules must not import another module's entities, repositories, ORM records, or internal services')",
+      "severity": "error",
+      "from": { "path": "^src/modules/([^/]+)/" },
+      "to": {
+        "path": "^src/modules/([^/]+)/(domain|application|infrastructure)/",
+        "pathNot": "^src/modules/$1/"
+      }
+    }
+  ],
+  "options": {
+    "tsPreCompilationDeps": true,
+    "tsConfig": { "fileName": "tsconfig.json" },
+    "doNotFollow": { "path": "node_modules" },
+    "exclude": { "path": "\\.spec\\.ts$" }
+  }
+}
