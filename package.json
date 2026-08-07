@@ -12,15 +12,20 @@
     "packages/*"
   ],
   "scripts": {
+    "prelint": "npm run build --workspace @dentix/kernel",
     "lint": "npm run lint --workspaces --if-present",
     "lint:arch": "npm run lint:arch --workspace apps/api",
+    "pretest": "npm run build --workspace @dentix/kernel",
     "test": "npm run test --workspaces --if-present",
+    "pretest:int": "npm run build --workspace @dentix/kernel",
     "test:int": "npm run test:int --workspace apps/api --if-present",
+    "pretest:api": "npm run build --workspace @dentix/kernel",
     "test:api": "npm run test:api --workspace apps/api --if-present",
     "test:e2e": "npm run test:e2e --workspace apps/web --if-present",
     "openapi:check": "npm run openapi:check --workspace apps/api --if-present",
     "db:migrate": "npm run db:migrate --workspace apps/api",
     "db:migrate:down": "npm run db:migrate:down --workspace apps/api",
+    "prebuild": "npm run build --workspace @dentix/kernel",
     "build": "npm run build --workspaces --if-present",
     "format": "prettier --check ."
   },

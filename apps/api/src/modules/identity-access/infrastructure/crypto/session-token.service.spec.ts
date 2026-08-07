@@ -30,4 +30,32 @@ describe("SessionTokenService", () => {
     const b = service.generateOpaqueToken();
     expect(service.hash(a)).not.toBe(service.hash(b));
   });
+
+  describe("generatePkcePair", () => {
+    it("produces a verifier RFC 7636 accepts as valid length (43-128 chars)", () => {
+      const { verifier } = service.generatePkcePair();
+      expect(verifier.length).toBeGreaterThanOrEqual(43);
+      expect(verifier.length).toBeLessThanOrEqual(128);
+    });
+
+    it("uses only the unreserved character set RFC 7636 requires", () => {
+      const { verifier } = service.generatePkcePair();
+      expect(verifier).toMatch(/^[A-Za-z0-9\-._~]+$/);
+    });
+
+    it("matches openid-client's own S256 challenge for the same verifier — not just my own math", async () => {
+      // Dynamic import: openid-client is ESM-only, see openid-client.adapter.ts.
+      const client = await import("openid-client");
+      const { verifier, challenge } = service.generatePkcePair();
+      const libraryChallenge = await client.calculatePKCECodeChallenge(verifier);
+      expect(challenge).toBe(libraryChallenge);
+    });
+
+    it("generates a distinct pair on each call", () => {
+      const a = service.generatePkcePair();
+      const b = service.generatePkcePair();
+      expect(a.verifier).not.toBe(b.verifier);
+      expect(a.challenge).not.toBe(b.challenge);
+    });
+  });
 });

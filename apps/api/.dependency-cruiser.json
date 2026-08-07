@@ -9,11 +9,11 @@
     },
     {
       "name": "no-application-framework-imports",
-      "comment": "application/ defines ports; it may depend on domain/, never on infrastructure or a framework directly (03-module-boundaries.md)",
+      "comment": "application/ defines ports; it may depend on domain/, never on a concrete infrastructure module or an infrastructure-specific framework package directly (03-module-boundaries.md). @nestjs/common is exempt: @Injectable/@Inject are DI composition, not a leaked infrastructure concern, and every layer needs them to participate in Nest's module system — unlike domain/, 03-module-boundaries.md never says application/ must be framework-free.",
       "severity": "error",
       "from": { "path": "^src/modules/[^/]+/application/" },
       "to": {
-        "path": "node_modules/(@nestjs|typeorm|express|ioredis|redis|pg)|^src/modules/[^/]+/infrastructure/"
+        "path": "node_modules/@nestjs/(?!common)|node_modules/(typeorm|express|ioredis|redis|pg)|^src/modules/[^/]+/infrastructure/"
       }
     },
     {

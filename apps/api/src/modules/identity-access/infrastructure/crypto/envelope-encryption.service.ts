@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { EncryptionPort } from "../../application/ports/encryption.port";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH_BYTES = 12;
@@ -17,7 +18,7 @@ const IV_LENGTH_BYTES = 12;
  * never sent to the frontend.
  */
 @Injectable()
-export class EnvelopeEncryptionService implements OnModuleInit {
+export class EnvelopeEncryptionService implements OnModuleInit, EncryptionPort {
   private key: Buffer | undefined;
 
   onModuleInit(): void {

@@ -26,6 +26,18 @@ describe("OidcAuthorizationRequest", () => {
     expect(() => createRequest("evil.example.com")).toThrow();
   });
 
+  it("rejects a protocol-relative path — browsers treat //host/path as an absolute URL to another origin", () => {
+    expect(() => createRequest("//evil.example.com/steal")).toThrow(/absolute same-origin path/i);
+  });
+
+  it("rejects a path carrying a backslash — some browsers normalize \\ to / before the origin check runs", () => {
+    expect(() => createRequest("/\\evil.example.com")).toThrow(/absolute same-origin path/i);
+  });
+
+  it("accepts an ordinary same-origin path with a query string", () => {
+    expect(() => createRequest("/patients?query=ali")).not.toThrow();
+  });
+
   it("expires after the configured TTL", () => {
     const request = createRequest();
     const afterTtl = new Date(now.getTime() + OIDC_AUTHORIZATION_REQUEST_TTL_MS + 1);

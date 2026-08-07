@@ -34,7 +34,16 @@ export class OidcAuthorizationRequest {
     readonly returnPath: string;
     readonly now: Date;
   }): OidcAuthorizationRequest {
-    if (!params.returnPath.startsWith("/")) {
+    // "//host/path" is protocol-relative — browsers resolve it as an
+    // absolute URL to a different origin, not a same-origin path, even
+    // though it passes a naive startsWith("/") check. A leading backslash
+    // gets the same rejection: some browsers normalize \ to / before
+    // resolving the URL, so "/\evil.com" can behave like "//evil.com".
+    const isSameOriginPath =
+      params.returnPath.startsWith("/") &&
+      !params.returnPath.startsWith("//") &&
+      !params.returnPath.startsWith("/\\");
+    if (!isSameOriginPath) {
       throw new Error("returnPath must be an absolute same-origin path");
     }
     return new OidcAuthorizationRequest({
