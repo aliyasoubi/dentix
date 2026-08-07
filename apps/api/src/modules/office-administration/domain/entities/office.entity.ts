@@ -24,6 +24,9 @@ export class Office {
     if (params.code.trim().length === 0) {
       throw new Error("Office code must not be empty");
     }
+    if (!Office.isValidIanaTimezone(params.timezone)) {
+      throw new Error(`Office timezone must be a valid IANA zone identifier, got: "${params.timezone}"`);
+    }
     return new Office({
       id: params.id,
       code: params.code,
@@ -51,5 +54,21 @@ export class Office {
 
   get version(): number {
     return this.props.version;
+  }
+
+  /**
+   * ADR-005 requires an explicit IANA zone (never inferred). A typo'd zone
+   * (e.g. "Asia/Teheran") would otherwise silently corrupt every business-
+   * date calculation for the office with no error at creation time. Uses
+   * Intl's built-in zone data rather than a hand-rolled allow-list — no new
+   * dependency, and it stays current with IANA's own database.
+   */
+  private static isValidIanaTimezone(timezone: string): boolean {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

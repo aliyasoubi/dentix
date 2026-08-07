@@ -9,27 +9,15 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:18.0
-        env:
-          POSTGRES_DB: dentix
-          POSTGRES_USER: dentix
-          POSTGRES_PASSWORD: dentix_ci_only
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U dentix -d dentix"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
+    # Matches docker-compose.yml's own defaults (no .env file in CI) so
+    # there's exactly one place that defines what "the dev/CI Postgres"
+    # looks like, instead of a second copy here that can silently drift.
     env:
       POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: 5433
       POSTGRES_DB: dentix
       POSTGRES_USER: dentix
-      POSTGRES_PASSWORD: dentix_ci_only
+      POSTGRES_PASSWORD: dentix_dev_only
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +29,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Start Postgres (docker-compose.yml, postgres service only)
+        run: |
+          docker compose up -d postgres
+          until docker compose ps postgres --format json | grep -q healthy; do
+            echo "waiting for postgres..."
+            sleep 2
+          done
 
       # Canonical always-on gate (docs/08-implementation/01-workflow.md).
       # openapi:check joins this list starting with S8.

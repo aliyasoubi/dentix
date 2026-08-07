@@ -24,7 +24,10 @@ export class TypeOrmOfficeRepository implements OfficeRepository {
     return record ? OfficeMapper.toDomain(record) : null;
   }
 
-  async save(office: Office): Promise<void> {
-    await this.repository.save(OfficeMapper.toOrmNew(office));
+  async create(office: Office): Promise<void> {
+    // .insert(), not .save(): insert-only at the TypeORM level too, not
+    // just by method naming — a duplicate id fails instead of silently
+    // overwriting created_at/created_by (see OfficeRepository.create).
+    await this.repository.insert(OfficeMapper.toOrmForInsert(office));
   }
 }

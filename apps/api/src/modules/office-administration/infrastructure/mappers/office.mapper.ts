@@ -13,7 +13,13 @@ export class OfficeMapper {
     });
   }
 
-  static toOrmNew(office: Office): OfficeOrmEntity {
+  /**
+   * Insert only — see OfficeRepository.create for why there is no
+   * toOrmForUpdate counterpart yet. created_at/created_by are set fresh
+   * here deliberately; version is left unset for TypeORM's @VersionColumn
+   * to initialize.
+   */
+  static toOrmForInsert(office: Office): OfficeOrmEntity {
     const record = new OfficeOrmEntity();
     record.id = office.id;
     record.code = office.code;
@@ -23,7 +29,6 @@ export class OfficeMapper {
     record.createdBy = null;
     record.updatedAt = new Date();
     record.updatedBy = null;
-    record.version = office.version;
     record.archivedAt = null;
     record.archivedBy = null;
     return record;

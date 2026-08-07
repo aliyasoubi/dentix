@@ -9,7 +9,7 @@ import { dirname, join, relative } from "path";
  * dependency graph to express something it isn't shaped for.
  */
 const SRC_DIR = join(__dirname, "..", "src");
-const ENTITIES_FILE = join(SRC_DIR, "persistence", "entities.ts");
+const ENTITIES_FILE = join(SRC_DIR, "persistence", "entity-registry.ts");
 
 function findOrmEntityFiles(dir: string): string[] {
   const found: string[] = [];
@@ -36,7 +36,7 @@ const unregistered = entityFiles.filter((file) => {
 });
 
 if (unregistered.length > 0) {
-  console.error("lint:arch — entity file(s) exist but are not registered in src/persistence/entities.ts:");
+  console.error("lint:arch — entity file(s) exist but are not registered in src/persistence/entity-registry.ts:");
   for (const file of unregistered) {
     console.error(`  - ${relative(SRC_DIR, file)}`);
   }

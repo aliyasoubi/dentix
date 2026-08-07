@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from "typeorm";
+import { Column, Entity, PrimaryColumn, VersionColumn } from "typeorm";
 
 /**
  * ORM shape only. Never imported outside infrastructure/ — domain/ and
@@ -34,7 +34,11 @@ export class OfficeOrmEntity {
   @Column({ name: "updated_by", type: "uuid", nullable: true })
   updatedBy!: string | null;
 
-  @Column({ type: "integer", default: 1 })
+  // TypeORM manages this: initialized to 1 on insert, incremented on every
+  // .save() of an existing row, and used for optimistic-lock checks when a
+  // caller passes { version } into save() (04-data-model.md: "version
+  // starts at 1 and increments on every successful mutation").
+  @VersionColumn()
   version!: number;
 
   @Column({ name: "archived_at", type: "timestamptz", nullable: true })

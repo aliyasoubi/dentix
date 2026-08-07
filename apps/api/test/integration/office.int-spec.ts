@@ -12,7 +12,7 @@ import { dataSourceOptions } from "../../src/persistence/data-source";
 // the ORM<->domain mapper round-trips, and the DB-level unique constraint
 // is real, not just declared in code.
 describe("Office persistence (integration)", () => {
-  let dataSource: DataSource;
+  let dataSource: DataSource | undefined;
   let repository: TypeOrmOfficeRepository;
 
   beforeAll(async () => {
@@ -23,8 +23,14 @@ describe("Office persistence (integration)", () => {
   });
 
   afterAll(async () => {
-    await dataSource.getRepository(OfficeOrmEntity).query('TRUNCATE TABLE "office"');
-    await dataSource.destroy();
+    // Guard: if beforeAll failed before initialize() resolved, dataSource
+    // is still assigned (declaration above) but never connected — skip
+    // cleanup rather than throwing a confusing secondary error that masks
+    // the real failure.
+    if (dataSource?.isInitialized) {
+      await dataSource.getRepository(OfficeOrmEntity).query('TRUNCATE TABLE "office"');
+      await dataSource.destroy();
+    }
   });
 
   it("round-trips an office through the mapper and back", async () => {
@@ -34,12 +40,15 @@ describe("Office persistence (integration)", () => {
       timezone: "Asia/Tehran",
     });
 
-    await repository.save(office);
+    await repository.create(office);
 
     const byId = await repository.findById(office.id);
     expect(byId?.code).toBe(office.code);
     expect(byId?.timezone).toBe("Asia/Tehran");
     expect(byId?.isActive).toBe(true);
+    // TypeORM's @VersionColumn initializes this on insert; nothing in the
+    // mapper sets it manually (regression check for the version-column fix).
+    expect(byId?.version).toBe(1);
 
     const byCode = await repository.findByCode(office.code);
     expect(byCode?.id).toBe(office.id);
@@ -50,9 +59,30 @@ describe("Office persistence (integration)", () => {
     const first = Office.create({ id: asUuid(randomUUID()), code, timezone: "Asia/Tehran" });
     const second = Office.create({ id: asUuid(randomUUID()), code, timezone: "Asia/Tehran" });
 
-    await repository.save(first);
+    await repository.create(first);
 
-    await expect(repository.save(second)).rejects.toThrow(/duplicate key value/i);
+    await expect(repository.create(second)).rejects.toThrow(/duplicate key value/i);
+  });
+
+  it("rejects re-creating the same office id instead of silently overwriting it", async () => {
+    // Regression test: create() must be insert-only. The bug this guards
+    // against — save() silently overwriting created_at/created_by on a
+    // second call for the same row — is exactly what .insert() (used
+    // instead of .save() in TypeOrmOfficeRepository) makes impossible.
+    const id = asUuid(randomUUID());
+    const original = Office.create({ id, code: `orig-${randomUUID().slice(0, 8)}`, timezone: "Asia/Tehran" });
+    const impostor = Office.create({
+      id,
+      code: `impostor-${randomUUID().slice(0, 8)}`,
+      timezone: "Asia/Tehran",
+    });
+
+    await repository.create(original);
+
+    await expect(repository.create(impostor)).rejects.toThrow(/duplicate key value/i);
+
+    const stillOriginal = await repository.findById(id);
+    expect(stillOriginal?.code).toBe(original.code);
   });
 
   it("returns null, not an error, for a non-existent office", async () => {
