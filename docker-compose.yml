@@ -1,0 +1,48 @@
+
+# Dev-only stack for Release 0.5 (S1). Deliberately does not include Redis,
+# BullMQ, or MinIO — see docs/07-plans/00-build-sequencing.md: those are
+# added when the first real async workflow (Redis/BullMQ, ~R2) or document
+# storage (MinIO, ~R6) actually needs them, not before.
+#
+# Keycloak runs its own embedded dev store (`start-dev`); it does not share
+# the `dentix` Postgres database. Realm configuration is built in S3
+# (ADR-007) — this file only brings the service up.
+
+services:
+  postgres:
+    image: postgres:18.0
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dentix}
+      POSTGRES_USER: ${POSTGRES_USER:-dentix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dentix_dev_only}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # Postgres 18's image changed convention: mount the parent dir, not
+      # .../data — it manages a major-version-specific subdirectory itself.
+      - dentix_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dentix} -d ${POSTGRES_DB:-dentix}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_dev_only}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dentix_postgres_data:

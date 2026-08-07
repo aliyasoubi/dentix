@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Canonical always-on gate (docs/08-implementation/01-workflow.md).
+      # lint:arch, test:int, and openapi:check join this list starting with
+      # the slices that introduce them (S2, S2, S8).
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: API contract tests
+        run: npm run test:api
+
+      - name: Build
+        run: npm run build

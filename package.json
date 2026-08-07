@@ -1,0 +1,33 @@
+{
+  "name": "dentix",
+  "private": true,
+  "version": "0.5.0",
+  "description": "Dentix — Farsi-first single-office dental PMS (monorepo root)",
+  "engines": {
+    "node": "24.x",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:arch": "npm run lint:arch --workspace apps/api",
+    "test": "npm run test --workspaces --if-present",
+    "test:int": "npm run test:int --workspace apps/api --if-present",
+    "test:api": "npm run test:api --workspace apps/api --if-present",
+    "test:e2e": "npm run test:e2e --workspace apps/web --if-present",
+    "openapi:check": "npm run openapi:check --workspace apps/api --if-present",
+    "db:migrate": "npm run db:migrate --workspace apps/api",
+    "db:migrate:down": "npm run db:migrate:down --workspace apps/api",
+    "build": "npm run build --workspaces --if-present",
+    "format": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.62.1",
+    "prettier": "3.3.3"
+  }
+}

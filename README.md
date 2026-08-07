@@ -9,18 +9,25 @@
 ```
 CLAUDE.md                  AI-assisted development guide (invariants, conventions)
 assets/brand/               Dentix logo — icon, EN/FA lockups, monochrome variant
+docker-compose.yml         Dev-only Postgres + Keycloak (see 00-build-sequencing.md for what's deliberately not here yet)
+apps/
+  api/                     NestJS modular monolith (ADR-001)
+  web/                     Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)
+packages/
+  kernel/                  Shared kernel: identifiers, result/error types (03-module-boundaries.md)
 docs/
   README.md                Executive implementation summary
-  00-review/               Current architecture readiness review
+  document-control.md      Authority, ownership, and change rules
+  open-decisions.md        Unresolved decisions and discovery gates only
   01-product/              Vision, scope, roles, traceability, roadmap, glossary, references
   02-requirements/         Functional requirements by domain (+ migration, NFR)
   03-ux/                   Information architecture, Farsi/RTL design, motion/a11y, brand identity
   04-architecture/         00-software-design-document.md  ← start here (standard build reference)
-                           System, contexts, transactions/events, data, API, sessions, configuration
+                           System, contexts, transactions/events, data, event catalog, sessions, configuration
     adr/                     Architecture decision records
   05-quality/              Security, test strategy, acceptance criteria, definition of done
   06-operations/           Deployment, backup/recovery, monitoring, release process, checklist
-  07-plans/                Execution plans per release (R0 … R7 + added R0.5) and risk register
+  07-plans/                00-build-sequencing.md (now vs. later), execution plans per release (R0 … R7 + added R0.5), risk register
   08-implementation/       AI execution layer: slice workflow, test layers, per-release testable slices
 ```
 
@@ -32,4 +39,20 @@ docs/
 4. Put this directory at the root of the product git repository so spec changes ride in the same PRs as code.
 5. Decisions that contradict an accepted ADR require a replacement ADR.
 
-Version 0.4.1 · Baseline 2026-08-06
+## Getting started (Release 0.5, slice S1)
+
+Prerequisites: Node 24 (`nvm use`, matching `.nvmrc`) and Docker.
+
+```bash
+npm install                        # installs all workspaces (apps/*, packages/*)
+cp .env.example .env               # dev-only credentials, see the file for why the Postgres port is 5433
+docker compose up -d               # Postgres 18 + Keycloak (dev mode) — nothing else yet, see 00-build-sequencing.md
+npm run lint && npm run test && npm run test:api   # S1's verification gate
+docker compose down                # when done
+```
+
+`npm run start:dev --workspace apps/api` serves the API on `:3000` (`/health` is unversioned; everything else sits under `/api/v1`). `npm run start --workspace apps/web` serves the Angular shell on `:4200`. Neither has real product behavior yet — S1 only proves the pipeline; the first real feature is S4.
+
+**S1 human check:** a person clones the repository fresh and reaches green CI (the four commands above, in order) using only this section — no undocumented steps.
+
+Version 0.5.0 · Baseline 2026-08-06
