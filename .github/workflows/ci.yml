@@ -18,6 +18,9 @@ jobs:
       POSTGRES_DB: dentix
       POSTGRES_USER: dentix
       POSTGRES_PASSWORD: dentix_dev_only
+      # CI-only throwaway key — protects nothing but ephemeral test data in
+      # this run. Real environments generate their own (see .env.example).
+      SESSION_ENCRYPTION_KEY: "-rh27R89xGUe8BzZy9sqm7waoMFsdVQYfycL_Zw7oZY"
 
     steps:
       - uses: actions/checkout@v4

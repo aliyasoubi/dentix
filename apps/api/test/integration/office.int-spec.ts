@@ -28,7 +28,9 @@ describe("Office persistence (integration)", () => {
     // cleanup rather than throwing a confusing secondary error that masks
     // the real failure.
     if (dataSource?.isInitialized) {
-      await dataSource.getRepository(OfficeOrmEntity).query('TRUNCATE TABLE "office"');
+      // CASCADE: office_user (identity-access, S3) now has a foreign key to
+      // office. A plain TRUNCATE of the referenced table fails outright.
+      await dataSource.getRepository(OfficeOrmEntity).query('TRUNCATE TABLE "office" CASCADE');
       await dataSource.destroy();
     }
   });
