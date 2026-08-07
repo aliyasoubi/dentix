@@ -1,6 +1,6 @@
 # ADR-008: Jalali Calendar Library and Angular DateAdapter
 
-- **Status:** Proposed — recommended decision below; accept during Release 0.5 only after the round-trip fixture suite passes
+- **Status:** Proposed — accept via the acceptance checklist below
 - **Constraint:** Jalali is presentation/input only; Gregorian/UTC stays canonical (ADR-005, ADR-012). All UI date presentation goes through one calendar-adapter interface.
 
 ## Recommended decision

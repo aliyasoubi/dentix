@@ -5,7 +5,7 @@
 
 ## Decision
 
-Use an OIDC-backed backend-for-frontend session. Angular never stores OIDC access or refresh tokens. NestJS completes the Authorization Code flow with PKCE, keeps provider tokens server-side, and issues an opaque first-party session cookie.
+Use an OIDC-backed backend-for-frontend session. Angular never stores OIDC access or refresh tokens. NestJS completes the Authorization Code flow with PKCE and issues an opaque first-party session cookie. Provider tokens are discarded after callback validation in v1 (ADR-014); server-side retention is added only when a proven trigger requires it.
 
 ## Login flow
 
@@ -32,7 +32,7 @@ The cookie contains only a random opaque identifier with at least 128 bits of en
 
 PostgreSQL is the source of truth for session identity, revocation, and auditability. Redis may cache session lookups but must not be the only copy.
 
-Each session records user, office, provider identity where applicable, authentication time, MFA/authentication context, created/last-seen/absolute-expiry times, permission version, revocation state, and a reference to an encrypted server-side provider-token record. Provider tokens are never returned to Angular or logged.
+Each session records user, office, provider identity where applicable, authentication time, MFA/authentication context, created/last-seen/absolute-expiry times, permission version, and revocation state. (When ADR-014's trigger is hit, a reference to an encrypted server-side provider-token record is added.) Provider tokens are never returned to Angular or logged.
 
 Initial policy values are office-configurable within security-approved bounds:
 

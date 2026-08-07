@@ -67,8 +67,10 @@ Business status values are stable English codes controlled by migrations or doma
 | `role_permission` | role/permission link; unique role-permission pair |
 | `user_permission_exception` | explicit grant/deny, reason, effective/expiry time; audited |
 | `user_session` | hashed session identifier, user/office, authentication context, created/seen/expiry/revoked times, permission version |
+| `oidc_authorization_request` | hashed state, encrypted nonce/PKCE verifier, allowed return path, created/expiry/used times; single-use and short-lived |
+| `provider_token_record` | session, encrypted minimum provider tokens, token type/scope, issued/expiry/revoked times, encryption-key version; one active record per session — **deferred, ADR-014; not created until a proven need (e.g. provider-initiated logout) arises** |
 
-System administrators do not receive clinical permissions implicitly. Disabling a user preserves historical authorship.
+Provider tokens use application-layer envelope encryption with a key outside PostgreSQL. Rotation rewrites records to the active key version; logout, revocation, expiry, and session cleanup delete or cryptographically erase token material while retaining non-secret audit facts. System administrators do not receive clinical permissions implicitly. Disabling a user preserves historical authorship.
 
 ## Office Administration
 
@@ -77,6 +79,12 @@ System administrators do not receive clinical permissions implicitly. Disabling 
 | `office` | `id`, unique `code`, `timezone`, active state |
 | `provider` | office provider profile, optional linked user, clinical eligibility, active state |
 | `operatory` | office-owned stable code/name, active state |
+| `office_hours_rule` | office, effective range, weekday, local open/close time; non-overlapping rules per weekday/effective version |
+| `office_closure` | office, local date/time range, reason, source, actor; versioned and audited |
+| `holiday_calendar_version` | office, source code/version, imported/approved actor/time, effective year, state; one approved version per office/year |
+| `holiday_date` | calendar version, Gregorian date, Farsi label, closure policy; unique version/date |
+
+Scheduling reads the approved office-hours/holiday policy synchronously before committing. Holiday imports never overwrite an approved version in place.
 
 ## Clinical catalog
 
@@ -99,12 +107,13 @@ Presented plans and completed procedures snapshot the catalog code/name/fee need
 | `patient_identifier` | patient, identifier type, original/normalized value; uniqueness is policy-controlled |
 | `patient_contact` | patient, contact type, original/normalized value, preferred and unavailable flags |
 | `patient_address` | patient, structured Iranian fields plus free-form lines |
-| `patient_relationship` | source patient, related patient/person, relationship type, financial-responsibility flag; no self-link |
+| `related_person` | office-scoped non-patient person, native/Latin name, contacts, address, active state; no clinical or ledger identity |
+| `patient_relationship` | source patient plus exactly one related patient or related person, relationship type, guardian/emergency/financial-responsibility flags; no self-link |
 | `patient_alert` | patient, category, severity, message, start/expiry, visibility scope |
 | `patient_alert_acknowledgment` | alert/user/time; append-only |
 | `patient_alias` | source patient identifier/number to canonical patient; unique source; no alias cycles |
 | `patient_merge_operation` | source, destination, state, requested/completed actor/time, reason; source and destination differ |
-| `patient_merge_module_status` | merge operation/module, state, attempts, error; unique operation-module pair |
+| `patient_merge_module_status` | merge operation, snapshotted participant/module and contract version, required flag, state, attempts, deadline, last error; unique operation-participant pair — **full multi-module coordination shape is the R4 target; R1 implements only `patient_alias` plus source-freeze, no participant rows** |
 
 A patient in `MERGING` or `MERGED` state rejects new authoritative writes. Historical signed/posted records retain their original patient ID and resolve through `patient_alias`.
 
@@ -116,6 +125,8 @@ A patient in `MERGING` or `MERGED` state rejects new authoritative writes. Histo
 | `appointment_status_event` | appointment, previous/new status, actor/time, reason, replacement appointment; append-only |
 | `appointment_conflict_override` | appointment, conflict type, conflicting IDs, actor/time, reason; append-only |
 | `appointment_type` | stable office code, name translation, default duration, active state |
+| `appointment_resource_reservation` | appointment, provider-or-operatory resource, `tstzrange`, exclusive flag, optional override; active exclusive rows use a GiST exclusion constraint per office/resource |
+| `appointment_procedure` | appointment, optional planned appointment and treatment-plan item, procedure/anatomy/provider/duration/journey snapshots; unique appointment/plan-item where linked |
 | `provider_availability` | provider, effective range, weekday/time range, timezone |
 | `schedule_block` | provider and/or operatory, time range, reason, actor |
 | `planned_appointment` | patient, source context, target date/range, procedure snapshot, provider preference, status |
@@ -124,7 +135,7 @@ A patient in `MERGING` or `MERGED` state rejects new authoritative writes. Histo
 | `recall_definition` | patient, type, interval policy, provider preference, communication policy, active state |
 | `recall_instance` | definition, due/grace dates, linked appointment, status, version |
 
-Authoritative conflict checking occurs in the Scheduling application service inside a transaction. It acquires transaction-scoped locks for the affected provider/operatory/date, checks availability, blocks, active appointments, and policy, then either rejects or records an authorized override. Concurrency tests must prove that simultaneous requests cannot bypass this check.
+Authoritative conflict checking occurs inside one Scheduling transaction. The application locks the affected resources in stable order, evaluates availability/closures/holidays and soft policy conflicts, then writes provider and operatory reservations. PostgreSQL exclusion constraints are the final guard against overlapping exclusive reservations. An authorized override creates an append-only override record and a non-exclusive reservation only for conflict types the approved policy declares overridable; hard conflicts remain non-overridable. Reschedule updates reservations atomically. Tests cover simultaneous create/reschedule requests and intervals spanning midnight.
 
 ## Clinical
 
@@ -230,9 +241,11 @@ Uploaded objects remain quarantined until content detection and malware scanning
 
 | Table | Key fields and constraints |
 |---|---|
-| `outbox_event` | event envelope, payload, created/available/published times, attempts, last error; unique `event_id` |
-| `processed_event` | consumer name/event ID, processed time, result; unique `(consumer_name, event_id)` |
+| `outbox_event` | event envelope, payload, created/available/published times, attempts, last error; unique `event_id` — kept from R1 (cheap, and the append point every later consumer needs), even though no consumer platform is built around it yet |
+| `processed_event` | consumer name/generation/event ID, processed time, result; unique `(consumer_name, consumer_generation, event_id)` |
+| `event_gap` | consumer, aggregate type/ID, expected/received aggregate version, held event ID, first/last seen, deadline, state; unique held consumer/event — **R6 target, see `07-plans/00-build-sequencing.md`** |
 | `idempotency_request` | office, actor, route/operation, key, request hash, response reference/status, expiry; unique scoped key |
+| `event_replay_operation` | requested event types/time range, mode, actor/reason, state, counts, started/completed times; audited — **R6 target, see `07-plans/00-build-sequencing.md`** |
 
 ## Audit
 
@@ -251,11 +264,11 @@ Outbox/event behavior is defined in `08-transaction-event-semantics.md`. Audit r
 ## Index baseline
 
 - Patient normalized name, mobile, identifier, email, and patient number.
-- Appointment provider/operatory/start/status and patient/start.
+- Appointment resource/time range, provider/operatory/start/status, treatment-item links, and patient/start.
 - Open planned appointments, waitlist, recall, tasks, journeys, and lab orders by due/expected date.
 - Clinical timeline by patient and authoritative time.
 - Ledger by patient/business date/posting time; allocations by payment and charge.
-- Outbox unpublished rows by available time; processed-event unique key.
+- Outbox unpublished rows by available time; processed-event unique key; open event gaps by deadline.
 - Audit by patient, actor, entity, action, and time.
 - Documents and communications by patient/time/state.
 

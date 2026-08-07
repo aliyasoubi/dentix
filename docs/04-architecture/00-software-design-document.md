@@ -61,7 +61,7 @@ Pin exact dependency versions; update through review only. Full detail: `CLAUDE.
 
 ### 2.3 Open decisions that block implementation in their area
 
-ADR-006 (persistence/ORM), ADR-007 (OIDC provider), ADR-008 (Jalali library), ADR-009 (print pipeline), ADR-010 (hosting) are **Proposed**, not Accepted. Do not build the affected area until each is accepted — see §9 and Release 0.5 in §11.
+ADR-006 (persistence/ORM), ADR-007 (OIDC provider), ADR-008 (Jalali library), ADR-009 (print pipeline), ADR-010 (hosting), and ADR-011 (messaging provider) are **Proposed**, not Accepted. Do not build the affected area until each is accepted — see §9 and Release 0.5 in §11.
 
 ---
 
@@ -116,7 +116,7 @@ Every module uses the same four-layer layout — `domain/` → `application/` �
 
 ### 5.3 Data model (level 3)
 
-The logical data model assigns every table to one owning module and defines tenant integrity, cardinalities, immutability, money/date contracts, concurrency, retention, outbox/idempotency, and core constraints. Full detail: `04-architecture/04-data-model.md`.
+The logical data model assigns every table to one owning module and defines tenant integrity, cardinalities, immutability, money/date contracts, concurrency, retention, outbox/idempotency, and core constraints. Full detail: `04-architecture/04-data-model.md`. Cross-module event contracts are `04-architecture/10-event-catalog.md`. Both describe the full target design; `07-plans/00-build-sequencing.md` governs what's built in which release.
 
 ---
 
@@ -229,6 +229,7 @@ Full detail: `01-product/04-roles-and-permissions.md`, `05-quality/01-security-p
 | 011 | SMS/email provider | **Proposed — accept during Release 2 planning** |
 | 012 | Farsi-only UI, Jalali-only presentation | Accepted — supersedes ADR-003, amends ADR-005's presentation clauses |
 | 013 | OIDC-backed backend-for-frontend session | Accepted |
+| 014 | Defer OIDC provider-token persistence (amends ADR-013) | **Proposed — accept when Release 1 session work starts** |
 
 A decision that contradicts an Accepted ADR requires a replacement ADR — do not code around it. Full ADR text: `04-architecture/adr/`.
 
@@ -271,7 +272,7 @@ Full register (16 risks, owners, triggers): `07-plans/risks.md`. Reviewed at eve
 
 ### 11.2 Remaining readiness work
 
-Stable requirement IDs, confirmed NFRs/client environment, Iranian holiday ownership, complete migration mapping, and named approvers remain Release 0 outputs. ADR-006 through ADR-010 remain walking-skeleton decisions. Full status: `00-review/design-review-gap-analysis.md`.
+Stable requirement IDs, confirmed NFRs/client environment, Iranian holiday ownership, complete migration mapping, and named approvers remain Release 0 outputs. ADR-006 through ADR-011's Proposed status in §9 and the register in `07-plans/risks.md` are the current source of truth for what remains open.
 
 ---
 
@@ -280,11 +281,11 @@ Stable requirement IDs, confirmed NFRs/client environment, Iranian holiday owner
 Releases run R0 → R0.5 (walking skeleton) → R1 … R7. The authoritative release scope is `01-product/06-product-roadmap.md`; the per-release plan files and exit gates are indexed in `07-plans/README.md`; execution happens as testable vertical slices per `08-implementation/01-workflow.md`. A release does not start before the previous release's exit gate is signed off.
 
 **First concrete steps for a developer starting today:**
-1. Read `00-review/design-review-gap-analysis.md` for open decisions and gaps in priority order.
+1. Review the ADR table in §9 for Proposed decisions and `07-plans/risks.md` for open risks, in priority order.
 2. Accept ADR-010 (hosting) — it shapes everything operational and gates deployment. A recommended decision is drafted in `04-architecture/adr/adr-010-hosting-operations.md`.
 3. Run Release 0 discovery, including the migration source inventory and NFR confirmation.
 4. Build the Release 0.5 walking skeleton via `08-implementation/02-slices-release-0.5.md`, accepting ADR-006/007/008/009 through their drafted acceptance checklists — the highest-leverage risk reduction in the whole roadmap.
-5. Only then start Release 1 feature work against §5–§8 of this document.
+5. Only then start Release 1 feature work. §5–§8 describe the full target architecture; `07-plans/00-build-sequencing.md` scopes what Release 1 actually builds toward it versus what waits for a later release.
 
 ---
 
@@ -294,4 +295,4 @@ The authoritative domain glossary is `01-product/07-glossary.md`; definitions ar
 
 ---
 
-*Version 0.4.1 · Baseline 2026-08-06.*
+*Version 0.5.0 · Baseline 2026-08-06.*

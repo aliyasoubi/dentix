@@ -4,7 +4,7 @@
 
 The Real-Data Authorization Gate in `05-quality/01-security-privacy.md` applies before any patient content is copied or processed. Release 0 may record source names, owners, formats, approximate volumes, and observed quality without extracting patient data.
 
-## To specify
+## Migration checklist
 1. **Sources:** every current data store — spreadsheets, paper records, messaging threads, any legacy software — with format, owner, volume, and quality assessment.
 2. **Mapping:** source field → target entity/field for patients, appointments (history), balances, and documents; rules for missing/ambiguous data.
 3. **Opening balances:** patient ledger MUST NOT fabricate history — define an explicit opening-balance entry type with source reference, entered as posted immutable entries on a defined cutover business date.

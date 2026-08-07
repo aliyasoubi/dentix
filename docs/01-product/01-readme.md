@@ -1,6 +1,6 @@
 # Dentix — Farsi-First Single-Office Dental PMS
 
-**Version:** 0.4.1
+**Version:** 0.5.0
 
 **Baseline date:** 2026-08-06
 

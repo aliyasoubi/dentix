@@ -5,7 +5,7 @@ The Markdown files under `docs/` are the version-controlled source of truth. The
 | Field | Value |
 |---|---|
 | Product | Dentix — Farsi-First Single-Office Dental PMS |
-| Document version | 0.4.1 |
+| Document version | 0.5.0 |
 | Baseline date | 2026-08-06 |
 | Product owner | Repository owner until formally delegated |
 | Clinical approver | Named dentist before Release 0 exit |
@@ -35,6 +35,7 @@ A lower-authority document must never reinterpret a higher-authority document. C
 | Security, tests, acceptance, definition of done | `05-quality/` |
 | Deployment, recovery, monitoring, releases | `06-operations/` |
 | Work sequence and exit gates | `07-plans/` |
+| Unresolved decisions and discovery gates | `open-decisions.md` |
 
 The software design document is an entry point and summary. It never overrides its linked authoritative document.
 
@@ -42,6 +43,6 @@ The software design document is an entry point and summary. It never overrides i
 
 - A decision that changes an Accepted ADR requires a replacement ADR.
 - A business behavior change updates its requirement and acceptance criteria together.
-- Architecture changes update the affected context map, data model, API/event contract, and tests in the same change.
+- Architecture changes update the affected context map, data model, API or event catalog, and tests in the same change.
 - Superseded operational text is removed from active documents; decision history remains in ADRs and Git history.
 - Real patient data is prohibited until the Real-Data Authorization Gate in `05-quality/01-security-privacy.md` is approved.

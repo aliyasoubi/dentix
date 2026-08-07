@@ -12,6 +12,8 @@
 
 ## Release 1 - Platform foundation
 
+Scope is deliberately a minimal foundation, not the full architecture — see `../07-plans/00-build-sequencing.md` for what's kept now versus deferred to later releases.
+
   - Monorepo, CI, environments, database migrations
   - Authentication, MFA, roles, permissions, sessions
   - Design tokens, Material/CDK foundation, Farsi-only RTL shell (ADR-012)

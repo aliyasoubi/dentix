@@ -2,11 +2,11 @@
 
 **Goal:** prove the entire high-risk technical stack end-to-end with one trivial feature before
 committing to feature development. Every item here is a known project risk (see risks.md).
-**Spec in scope:** 04-architecture/* (all), 03-ux/03-bilingual-rtl-guidelines.md
+**Spec in scope:** 04-architecture/* (all), 03-ux/03-bilingual-rtl-guidelines.md, `00-build-sequencing.md` (day-one stack is intentionally smaller than the full architecture)
 
 ## Tasks
 - [ ] Monorepo scaffold: Angular 22 app + NestJS API + shared types; pinned versions; CI running lint, test, build on every PR
-- [ ] Docker-compose dev environment: PostgreSQL 18, Redis, MinIO (S3-compatible), identity provider
+- [ ] Docker-compose dev environment: PostgreSQL 18 and a development identity provider only — Redis and MinIO are added later, when the first async workflow and document storage respectively actually need them (`00-build-sequencing.md`)
 - [ ] Decide and record ADR-006: ORM / migration tooling (see adr/adr-006-persistence-tooling.md)
 - [ ] Decide and record ADR-007: self-hosted OIDC provider (see adr/adr-007-oidc-provider.md)
 - [ ] Decide and record ADR-008: Jalali date adapter library (see adr/adr-008-jalali-adapter.md)

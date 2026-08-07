@@ -7,7 +7,7 @@
 
 Fast daily workflows • Connected treatment continuity • Auditable clinical and financial records
 
-Version 0.4.1
+Version 0.5.0
 Baseline: August 6, 2026
 Status: Concept approved for detailed design
 

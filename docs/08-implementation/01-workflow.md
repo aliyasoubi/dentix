@@ -13,6 +13,7 @@ Module:      <one owning module from 07-context-module-map.md>
 Builds:      <tables/commands/queries/components touched>
 Tests first: <the failing tests to write before implementation, by layer>
 Verify:      <exact commands that must pass>
+Human check: <what a person clicks/looks at in the running app to confirm the slice — steps + expected outcome>
 Done when:   <observable outcome + which plan checkbox this ticks>
 ```
 
@@ -21,12 +22,13 @@ A slice with no test list is not implementable — fix the slice definition firs
 ## The loop (every slice, no exceptions)
 
 1. **Read** the slice, then its `Spec:` references in full. Read the module's row in `04-architecture/07-context-module-map.md` and its tables in `04-data-model.md`.
-2. **Restate** the acceptance as a concrete test list before writing any code. If the spec is ambiguous or silent, record the question in `00-review/design-review-gap-analysis.md` under open questions and choose the most conservative reading — never invent behavior, never widen scope.
+2. **Restate** the acceptance as a concrete test list before writing any code. If the spec is ambiguous or silent, choose the most conservative reading — never invent behavior, never widen scope — and flag the question in the PR/commit description (step 7).
 3. **Write the failing tests** at the layers named in the slice. Run them; confirm they fail for the right reason.
 4. **Implement the smallest code that passes**, inside the module layout of `03-module-boundaries.md`. New tables require a migration in the same slice.
 5. **Verify** with the slice's commands, plus the always-on checks below. All green or the slice is not done.
-6. **Self-review** against the relevant Definition of Done sections (`05-quality/04-definition-of-done.md`) — for most slices: module placement, migration safety, OpenAPI updated, audit/observability, tests.
-7. **Record**: tick the checkbox in the release plan, note any deviation or open question in the PR/commit description.
+6. **Human check**: run the app and walk the slice's `Human check:` steps yourself, then hand the same steps to the human owner for sign-off. Automated green does not replace this — a slice with a UI or user-visible behavior is not done until a person has clicked through it. Slices with no user-visible surface (pure infrastructure) state that explicitly in their `Human check:` line instead of skipping it.
+7. **Self-review** against the relevant Definition of Done sections (`05-quality/04-definition-of-done.md`) — for most slices: module placement, migration safety, OpenAPI updated, audit/observability, tests.
+8. **Record**: tick the checkbox in the release plan, note any deviation or open question in the PR/commit description.
 
 **Stop conditions — halt and report instead of coding around:**
 - The change would contradict an Accepted ADR (needs a replacement ADR).

@@ -1,6 +1,6 @@
 # ADR-006: Persistence and Migration Tooling
 
-- **Status:** Proposed — recommended decision below; accept during Release 0.5 after the walking-skeleton proofs pass
+- **Status:** Proposed — accept via the acceptance checklist below
 - **Constraint:** the architecture (module boundaries, explicit mappers, migration-managed schema) is fixed; this ADR only selects the tool that implements it.
 
 ## Recommended decision

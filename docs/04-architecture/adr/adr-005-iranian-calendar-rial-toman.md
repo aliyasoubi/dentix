@@ -1,7 +1,7 @@
 # ADR-005: Iranian Calendar and Rial/Toman Representation
 
-  - Status: Accepted
-  - Date: 2026-08-02
+- **Status:** Accepted
+- **Date:** 2026-08-02
 
 ## Context
 

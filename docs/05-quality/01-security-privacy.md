@@ -24,7 +24,7 @@ Release 0 discovery may inspect workflows and record source metadata without cop
 
   - OIDC-backed backend-for-frontend session per `04-architecture/09-authentication-session-architecture.md`
   - MFA for all users with patient access
-  - Provider tokens retained server-side; Angular stores no access or refresh tokens
+  - Angular stores no access or refresh tokens; provider-token retention is deferred per ADR-014
   - Secure recovery and administrative reset process
   - Active-session visibility and revocation
   - Account lockout/throttling without enabling denial-of-service abuse

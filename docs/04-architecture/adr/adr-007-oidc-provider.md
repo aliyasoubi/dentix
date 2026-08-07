@@ -1,15 +1,7 @@
 # ADR-007: OIDC Identity Provider
 
-- **Status:** Proposed — must be accepted during Release 0.5
-- **Open decision:** select the self-hostable OIDC provider. The browser/API session pattern is already accepted in `../09-authentication-session-architecture.md`.
-
-## Options to evaluate
-1. **Keycloak (self-hosted)** — full OIDC + MFA (TOTP), admin UI, Persian localization possible; operational burden on a small team.
-2. **Ory Kratos/Hydra (self-hosted)** — lighter pieces, more assembly.
-3. **Custom NestJS auth** — rejected by default: re-implementing OIDC/MFA is a security risk and contradicts the baseline.
-
-## Decision drivers
-Self-hostable in-country, MFA support, provider logout/revocation, recovery flows, required authentication context, audit events, backup/restore, and upgrade cadence a small team can sustain.
+- **Status:** Proposed — accept via the acceptance checklist below
+- **Constraint:** select the self-hostable OIDC provider; must be self-hostable in-country with MFA, logout/revocation, and backup/restore a small team can sustain. The browser/API session pattern is already accepted in `../09-authentication-session-architecture.md`.
 
 ## Recommended decision
 

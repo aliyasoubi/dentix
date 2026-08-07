@@ -1,6 +1,6 @@
 # ADR-011: SMS/Email Messaging Provider
 
-- **Status:** Proposed — accept during Release 2 planning; sender-line registration must start earlier because onboarding lead time is a known risk (R-08)
+- **Status:** Proposed — accept via the acceptance checklist below; sender-line registration must start earlier per risk R-08
 - **Constraint:** Communications owns message intent/state; Integrations owns the vendor adapter (`07-context-module-map.md`). The provider is replaceable behind one port.
 
 ## Recommended decision

@@ -9,10 +9,13 @@ Plans state scope and gates; execution happens as ordered, individually testable
 slices defined per release in `../08-implementation/` (workflow, test layers, verification
 commands). Plans follow the release roadmap in `01-product/06-product-roadmap.md` (R0–R7), with one
 addition: **Release 0.5 — Walking Skeleton**, which proves the highest-risk technical stack
-end-to-end before feature work begins.
+end-to-end before feature work begins. `00-build-sequencing.md` governs what's in scope now versus
+deferred to a later release — the architecture docs in `04-architecture/` describe the full target
+design, not a Release 1 build list.
 
 | Plan | Release | Exit gate |
 |---|---|---|
+| 00-build-sequencing.md | cross-cutting | N/A — sequencing reference, not a release |
 | release-0-discovery.md | R0 | Clickable prototype approved by office staff |
 | release-0.5-walking-skeleton.md | R0.5 (added) | Risk stack proven end-to-end |
 | release-1-foundation.md | R1 | Fictional patients managed securely in Farsi/RTL |

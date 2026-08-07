@@ -14,4 +14,4 @@ The binding technical constraints (stack, ADR-fixed decisions) are the table in 
 
 ## Contents
 
-The folder-by-folder layout lives once, in the root `README.md`. Two folders added since the 0.3.0 baseline: `00-review/` (readiness review) and `08-implementation/` (AI execution workflow and per-release testable slices).
+The folder-by-folder layout lives once, in the root `README.md`.

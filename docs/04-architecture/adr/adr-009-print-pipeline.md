@@ -1,15 +1,7 @@
 # ADR-009: PDF and Print Pipeline
 
-- **Status:** Proposed — must be accepted during Release 0.5
-- **Open decision:** receipts, statements, plans, consents, and reports require Persian RTL PDFs with embedded fonts and correct mixed-script rendering.
-
-## Options to evaluate
-1. **Headless Chromium (Puppeteer/Playwright) HTML→PDF** — full CSS bidi/shaping support; reuse web templates; heavier runtime in the worker.
-2. **pdfmake / low-level PDF libs** — lighter; RTL shaping and bidi are historically weak; high risk for Persian.
-3. **Typst or LaTeX pipeline** — excellent typography; new toolchain and template language for the team.
-
-## Decision drivers
-Correct Persian shaping and bidi, font embedding (e.g., Vazirmatn), template versioning with content hashes (consents), visual regression testability, worker resource footprint.
+- **Status:** Proposed — accept via the acceptance checklist below
+- **Constraint:** receipts, statements, plans, consents, and reports require Persian RTL PDFs with embedded fonts, correct mixed-script rendering, and font embedding (e.g., Vazirmatn) with content-hash template versioning for consents.
 
 ## Recommended decision
 

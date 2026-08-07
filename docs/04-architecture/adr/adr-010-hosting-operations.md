@@ -1,6 +1,6 @@
 # ADR-010: Hosting and Operations Model
 
-- **Status:** Proposed — recommended decision below; blocking gate before any deployment
+- **Status:** Proposed — blocking gate before any deployment; accept via the acceptance checklist below
 - **Context:** one Iranian office; foreign cloud, registries, and SaaS may be unreliable or restricted from Iran (risk R-03); targets are RPO 15 min / RTO 4 h (NFRs); the operator is a very small team.
 
 ## Recommended decision

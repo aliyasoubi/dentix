@@ -98,7 +98,7 @@ Iranian localization is part of the approved core scope, not a later translation
 
 ### Rial and toman boundary
 
-The patient ledger and all fee snapshots store canonical values in Iranian rials (IRR). Users may enter and display values in rial or toman, but every input, screen, report, receipt, and export must identify the unit. One toman equals ten rials; conversion is exact and must never silently round or reinterpret an unlabeled value.
+The patient ledger and all fee snapshots store canonical values in Iranian rials (IRR); rial/toman conversion and display rules are defined once in ADR-005 and apply everywhere money appears.
 
 ### Images and documents
 

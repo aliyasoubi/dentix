@@ -65,8 +65,10 @@ Guidance for AI-assisted development in this repository. Document authority and 
 | API conventions | docs/04-architecture/05-api-guidelines.md |
 | Module ownership | docs/04-architecture/07-context-module-map.md |
 | Transactions/events | docs/04-architecture/08-transaction-event-semantics.md |
+| Event contracts | docs/04-architecture/10-event-catalog.md (full target set — see build sequencing for what's built now) |
 | Browser sessions | docs/04-architecture/09-authentication-session-architecture.md |
+| What's built now vs. deferred | docs/07-plans/00-build-sequencing.md |
 | Current work | docs/07-plans/README.md |
 | How to execute and verify work | docs/08-implementation/01-workflow.md |
-| Known gaps & open decisions | docs/00-review/design-review-gap-analysis.md |
+| Unresolved decisions | docs/open-decisions.md |
 | Risks | docs/07-plans/risks.md |
