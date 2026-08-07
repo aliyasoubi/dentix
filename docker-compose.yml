@@ -5,8 +5,13 @@
 # storage (MinIO, ~R6) actually needs them, not before.
 #
 # Keycloak runs its own embedded dev store (`start-dev`); it does not share
-# the `dentix` Postgres database. Realm configuration is built in S3
-# (ADR-007) — this file only brings the service up.
+# the `dentix` Postgres database. The `dentix` realm (ADR-007) is imported
+# from keycloak/dentix-realm.json on every startup — the file is the
+# reviewable, restorable source of truth; the container is disposable.
+# The dentix-bff client's secret is deliberately not in that file (never
+# commit a secret); Keycloak generates a fresh one on each import. After
+# first startup, fetch it once (see keycloak/README.md) and put it in
+# .env as OIDC_CLIENT_SECRET.
 
 services:
   postgres:
@@ -31,13 +36,15 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.7
     restart: unless-stopped
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_dev_only}
       KC_HEALTH_ENABLED: "true"
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
       interval: 5s
