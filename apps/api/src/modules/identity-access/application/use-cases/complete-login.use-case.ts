@@ -1,10 +1,9 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { asUuid, fail, ok, Result, Uuid } from "@dentix/kernel";
 import { randomUUID } from "crypto";
-import { AuditEvent } from "../../domain/entities/audit-event.entity";
+import { AuditEvent, AUDIT_EVENT_REPOSITORY } from "../../../audit/public-api";
+import type { AuditEventRepository } from "../../../audit/public-api";
 import { UserSession } from "../../domain/entities/user-session.entity";
-import { AUDIT_EVENT_REPOSITORY } from "../../domain/repositories/audit-event.repository";
-import type { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
 import { OFFICE_USER_REPOSITORY } from "../../domain/repositories/office-user.repository";
 import type { OfficeUserRepository } from "../../domain/repositories/office-user.repository";
 import { OIDC_AUTHORIZATION_REQUEST_REPOSITORY } from "../../domain/repositories/oidc-authorization-request.repository";
@@ -19,8 +18,8 @@ import { OIDC_CLIENT_PORT } from "../ports/oidc-client.port";
 import type { OidcClientPort } from "../ports/oidc-client.port";
 import { SESSION_TOKEN_PORT } from "../ports/session-token.port";
 import type { SessionTokenPort } from "../ports/session-token.port";
-import { UNIT_OF_WORK_PORT } from "../ports/unit-of-work.port";
-import type { UnitOfWorkPort } from "../ports/unit-of-work.port";
+import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
+import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 export type CompleteLoginErrorCode =
   | "INVALID_STATE"

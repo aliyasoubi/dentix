@@ -6,7 +6,7 @@ import { AuditEvent } from "../../domain/entities/audit-event.entity";
 import { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
 import { AuditEventMapper } from "../mappers/audit-event.mapper";
 import { AuditEventOrmEntity } from "./audit-event.orm-entity";
-import { repositoryFor } from "./typeorm-transaction";
+import { repositoryFor } from "../../../../platform/typeorm-transaction";
 
 @Injectable()
 export class TypeOrmAuditEventRepository implements AuditEventRepository {

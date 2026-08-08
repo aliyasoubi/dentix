@@ -1,16 +1,15 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { asUuid } from "@dentix/kernel";
 import { randomUUID } from "crypto";
-import { AuditEvent } from "../../domain/entities/audit-event.entity";
+import { AuditEvent, AUDIT_EVENT_REPOSITORY } from "../../../audit/public-api";
+import type { AuditEventRepository } from "../../../audit/public-api";
 import { UserSession } from "../../domain/entities/user-session.entity";
-import { AUDIT_EVENT_REPOSITORY } from "../../domain/repositories/audit-event.repository";
-import type { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
 import { USER_SESSION_REPOSITORY } from "../../domain/repositories/user-session.repository";
 import type { UserSessionRepository } from "../../domain/repositories/user-session.repository";
 import { OIDC_CLIENT_PORT } from "../ports/oidc-client.port";
 import type { OidcClientPort } from "../ports/oidc-client.port";
-import { UNIT_OF_WORK_PORT } from "../ports/unit-of-work.port";
-import type { UnitOfWorkPort } from "../ports/unit-of-work.port";
+import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
+import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 /**
  * 09-authentication-session-architecture.md, "Logout and revocation":

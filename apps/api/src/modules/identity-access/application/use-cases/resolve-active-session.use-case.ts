@@ -1,10 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { asUuid, fail, ok, Result } from "@dentix/kernel";
 import { randomUUID } from "crypto";
-import { AuditEvent } from "../../domain/entities/audit-event.entity";
+import { AuditEvent, AUDIT_EVENT_REPOSITORY } from "../../../audit/public-api";
+import type { AuditEventRepository } from "../../../audit/public-api";
 import { UserSession } from "../../domain/entities/user-session.entity";
-import { AUDIT_EVENT_REPOSITORY } from "../../domain/repositories/audit-event.repository";
-import type { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
 import { OFFICE_USER_REPOSITORY } from "../../domain/repositories/office-user.repository";
 import type { OfficeUserRepository } from "../../domain/repositories/office-user.repository";
 import { USER_ACCOUNT_REPOSITORY } from "../../domain/repositories/user-account.repository";
@@ -13,8 +12,8 @@ import { USER_SESSION_REPOSITORY } from "../../domain/repositories/user-session.
 import type { UserSessionRepository } from "../../domain/repositories/user-session.repository";
 import { SESSION_TOKEN_PORT } from "../ports/session-token.port";
 import type { SessionTokenPort } from "../ports/session-token.port";
-import { UNIT_OF_WORK_PORT } from "../ports/unit-of-work.port";
-import type { UnitOfWorkPort } from "../ports/unit-of-work.port";
+import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
+import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 export type ResolveSessionErrorCode =
   | "NO_SESSION"

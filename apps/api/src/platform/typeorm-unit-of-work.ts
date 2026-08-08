@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { TransactionContext } from "@dentix/kernel";
-import { UnitOfWorkPort } from "../../application/ports/unit-of-work.port";
+import { UnitOfWorkPort } from "./unit-of-work.port";
 import { TypeOrmTransactionContext } from "./typeorm-transaction";
 
 @Injectable()

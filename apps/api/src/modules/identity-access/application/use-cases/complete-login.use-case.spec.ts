@@ -8,11 +8,11 @@ import { UserSession } from "../../domain/entities/user-session.entity";
 import type { OidcAuthorizationRequestRepository } from "../../domain/repositories/oidc-authorization-request.repository";
 import type { UserAccountRepository } from "../../domain/repositories/user-account.repository";
 import type { OfficeUserRepository } from "../../domain/repositories/office-user.repository";
-import type { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
+import type { AuditEventRepository } from "../../../audit/public-api";
 import type { OidcClientPort, ExchangedIdentity } from "../ports/oidc-client.port";
 import type { SessionTokenPort } from "../ports/session-token.port";
 import type { EncryptionPort } from "../ports/encryption.port";
-import type { UnitOfWorkPort } from "../ports/unit-of-work.port";
+import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 describe("CompleteLoginUseCase — auth_time enforcement and mfaContext derivation", () => {
   const issuer = "https://kc.local/realms/test";

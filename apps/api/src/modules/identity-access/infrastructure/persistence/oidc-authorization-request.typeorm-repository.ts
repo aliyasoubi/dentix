@@ -6,7 +6,7 @@ import { OidcAuthorizationRequest } from "../../domain/entities/oidc-authorizati
 import { OidcAuthorizationRequestRepository } from "../../domain/repositories/oidc-authorization-request.repository";
 import { OidcAuthorizationRequestMapper } from "../mappers/oidc-authorization-request.mapper";
 import { OidcAuthorizationRequestOrmEntity } from "./oidc-authorization-request.orm-entity";
-import { repositoryFor } from "./typeorm-transaction";
+import { repositoryFor } from "../../../../platform/typeorm-transaction";
 
 @Injectable()
 export class TypeOrmOidcAuthorizationRequestRepository implements OidcAuthorizationRequestRepository {

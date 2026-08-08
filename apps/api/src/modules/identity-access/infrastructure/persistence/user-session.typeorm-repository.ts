@@ -6,7 +6,7 @@ import { UserSession } from "../../domain/entities/user-session.entity";
 import { UserSessionRepository } from "../../domain/repositories/user-session.repository";
 import { UserSessionOrmEntity } from "./user-session.orm-entity";
 import { UserSessionMapper } from "../mappers/user-session.mapper";
-import { repositoryFor } from "./typeorm-transaction";
+import { repositoryFor } from "../../../../platform/typeorm-transaction";
 
 @Injectable()
 export class TypeOrmUserSessionRepository implements UserSessionRepository {
