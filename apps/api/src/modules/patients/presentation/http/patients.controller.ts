@@ -20,6 +20,7 @@ interface CreatePatientRequestBody {
   readonly phone?: string | null;
   readonly contactUnavailable?: boolean;
   readonly sex?: PatientSex;
+  readonly dateOfBirth?: string | null;
 }
 
 /**
@@ -49,6 +50,7 @@ export class PatientsController {
       phone: body.phone,
       contactUnavailable: body.contactUnavailable,
       sex: body.sex,
+      dateOfBirth: body.dateOfBirth,
     });
     if (!result.ok) {
       throw new BadRequestException(result.code);

@@ -40,6 +40,7 @@ interface PatientSearchResultBody {
   readonly nativeName: string;
   readonly latinName: string | null;
   readonly phone: string | null;
+  readonly dateOfBirth: string | null;
 }
 
 // API-contract layer for S4 (02-slices-release-0.5.md). Same approach as
@@ -201,6 +202,69 @@ describe("Patients (API contract)", () => {
         .set("X-CSRF-Token", csrfToken)
         .send({ nativeName: "رضا احمدی", contactUnavailable: true });
       expect(response.status).toBe(201);
+    });
+
+    it("returns 400 INVALID_DATE_OF_BIRTH for a calendrically impossible date", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, dateOfBirth: "2025-02-30" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_DATE_OF_BIRTH");
+    });
+
+    it("returns 400 INVALID_DATE_OF_BIRTH for a date in the future", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, dateOfBirth: "2099-01-01" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_DATE_OF_BIRTH");
+    });
+
+    it("accepts a well-known date of birth and returns it unchanged from search", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const create = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        // 2024-03-20 = Nowruz (Farvardin 1, 1403) — the exact ADR-008 boundary
+        // date; also exercises the raw-SQL date_of_birth::text cast, which
+        // must survive round-trip regardless of the server process's own
+        // timezone (see the cast's comment in patient.typeorm-repository.ts).
+        .send({ nativeName: "سارا نوروزی", contactUnavailable: true, dateOfBirth: "2024-03-20" });
+      expect(create.status).toBe(201);
+      const createdId = (create.body as CreatePatientResponseBody).id;
+
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/patients?query=" + encodeURIComponent("سارا نوروزی"))
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+
+      expect(response.status).toBe(200);
+      const results = response.body as PatientSearchResultBody[];
+      const found = results.find((r) => r.id === createdId);
+      expect(found?.dateOfBirth).toBe("2024-03-20");
+    });
+
+    it("dateOfBirth is null in search results when not provided", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const create = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "بدون تاریخ تولد", contactUnavailable: true });
+      const createdId = (create.body as CreatePatientResponseBody).id;
+
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/patients?query=" + encodeURIComponent("بدون تاریخ تولد"))
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+
+      const results = response.body as PatientSearchResultBody[];
+      expect(results.find((r) => r.id === createdId)?.dateOfBirth).toBeNull();
     });
   });
 

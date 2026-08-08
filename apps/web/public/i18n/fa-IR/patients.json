@@ -6,6 +6,7 @@
   "patients.list.column.nativeName": "نام",
   "patients.list.column.latinName": "نام لاتین",
   "patients.list.column.phone": "موبایل",
+  "patients.list.column.dateOfBirth": "تاریخ تولد",
   "patients.list.empty": "بیماری یافت نشد.",
   "patients.list.empty.noQuery": "هنوز بیماری ثبت نشده است.",
 
@@ -13,6 +14,7 @@
   "patients.form.nativeName.label": "نام و نام خانوادگی (فارسی)",
   "patients.form.latinName.label": "نام لاتین (اختیاری)",
   "patients.form.phone.label": "شماره موبایل",
+  "patients.form.dateOfBirth.label": "تاریخ تولد (اختیاری)",
   "patients.form.contactUnavailable.label": "بیمار روش تماسی ندارد",
   "patients.form.sex.label": "جنسیت",
   "patients.form.sex.male": "مرد",
@@ -23,5 +25,6 @@
 
   "patients.form.error.NATIVE_NAME_REQUIRED": "وارد کردن نام فارسی الزامی است.",
   "patients.form.error.INVALID_PHONE": "شماره موبایل معتبر نیست.",
-  "patients.form.error.CONTACT_REQUIRED": "شماره موبایل وارد کنید یا «بیمار روش تماسی ندارد» را انتخاب کنید."
+  "patients.form.error.CONTACT_REQUIRED": "شماره موبایل وارد کنید یا «بیمار روش تماسی ندارد» را انتخاب کنید.",
+  "patients.form.error.INVALID_DATE_OF_BIRTH": "تاریخ تولد معتبر نیست."
 }

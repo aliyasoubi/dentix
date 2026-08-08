@@ -1,0 +1,17 @@
+{
+  "forbidden": [
+    {
+      "name": "no-direct-jalali-library-imports",
+      "comment": "ADR-008: date-fns-jalali may only be imported by the Material DateAdapter itself — everything else reaches Jalali behavior through Angular Material's DateAdapter/MAT_DATE_FORMATS injection, or through @dentix/kernel's pure conversion functions.",
+      "severity": "error",
+      "from": { "path": "^src/", "pathNot": "^src/app/core/jalali/jalali-date-adapter\\.ts$" },
+      "to": { "path": "node_modules/date-fns-jalali" }
+    }
+  ],
+  "options": {
+    "tsPreCompilationDeps": true,
+    "tsConfig": { "fileName": "tsconfig.json" },
+    "doNotFollow": { "path": "node_modules" },
+    "exclude": { "path": "\\.spec\\.ts$" }
+  }
+}

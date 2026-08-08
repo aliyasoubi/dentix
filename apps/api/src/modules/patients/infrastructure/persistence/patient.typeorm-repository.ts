@@ -14,6 +14,7 @@ interface PatientSearchRow {
   readonly native_name: string;
   readonly latin_name: string | null;
   readonly phone: string | null;
+  readonly date_of_birth: string | null;
 }
 
 @Injectable()
@@ -55,6 +56,13 @@ export class TypeOrmPatientRepository implements PatientRepository {
     readonly canonicalPhoneQuery: string | null;
     readonly limit: number;
   }): Promise<PatientSearchResult[]> {
+    // date_of_birth is cast to text in SQL rather than left as a `date`
+    // column: this raw query bypasses TypeORM's own hydration (which
+    // treats `date` columns as plain strings), so the pg driver would
+    // otherwise parse it into a JS Date at LOCAL midnight — verified
+    // directly against Postgres — and reading that back with
+    // toISOString() rolls the date backward a day in any timezone west
+    // of UTC. Casting in SQL sidesteps the Date object entirely.
     const rows: PatientSearchRow[] = await this.repository.manager.query(
       `
       SELECT
@@ -62,7 +70,8 @@ export class TypeOrmPatientRepository implements PatientRepository {
         p."patient_number",
         native."original_value" AS native_name,
         latin."original_value" AS latin_name,
-        preferred_contact."original_value" AS phone
+        preferred_contact."original_value" AS phone,
+        p."date_of_birth"::text AS date_of_birth
       FROM "patient" p
       LEFT JOIN "patient_name" native
         ON native."patient_id" = p."id" AND native."name_type" = 'native' AND native."is_current" = true
@@ -89,6 +98,7 @@ export class TypeOrmPatientRepository implements PatientRepository {
       nativeName: row.native_name,
       latinName: row.latin_name,
       phone: row.phone,
+      dateOfBirth: row.date_of_birth,
     }));
   }
 }

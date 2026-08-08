@@ -8,6 +8,8 @@ export interface CreatePatientRequest {
   readonly phone?: string | null;
   readonly contactUnavailable?: boolean;
   readonly sex?: "male" | "female" | "unspecified";
+  /** Canonical Gregorian ISO date string ("YYYY-MM-DD") — converted from the Jalali picker at the form boundary. */
+  readonly dateOfBirth?: string | null;
 }
 
 export interface CreatePatientResponse {
@@ -21,6 +23,8 @@ export interface PatientSearchResult {
   readonly nativeName: string;
   readonly latinName: string | null;
   readonly phone: string | null;
+  /** Canonical Gregorian ISO date string ("YYYY-MM-DD"), or null — where known. */
+  readonly dateOfBirth: string | null;
 }
 
 /** Thin wrapper over PatientsController (apps/api) — no business logic here, that's the backend's job. */

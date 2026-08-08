@@ -8,6 +8,8 @@ export interface PatientSearchResult {
   readonly nativeName: string;
   readonly latinName: string | null;
   readonly phone: string | null;
+  /** Canonical Gregorian ISO date string ("YYYY-MM-DD"), or null — where known (01-patient-management.md). */
+  readonly dateOfBirth: string | null;
 }
 
 export interface PatientRepository {

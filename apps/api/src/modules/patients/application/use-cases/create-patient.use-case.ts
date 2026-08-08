@@ -15,7 +15,11 @@ import type { PatientRepository } from "../../domain/repositories/patient.reposi
 import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
 import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
-export type CreatePatientErrorCode = "NATIVE_NAME_REQUIRED" | "INVALID_PHONE" | "CONTACT_REQUIRED";
+export type CreatePatientErrorCode =
+  | "NATIVE_NAME_REQUIRED"
+  | "INVALID_PHONE"
+  | "CONTACT_REQUIRED"
+  | "INVALID_DATE_OF_BIRTH";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;
@@ -26,6 +30,31 @@ export interface CreatePatientCommand {
   /** Only meaningful when phone is omitted — 01-patient-management.md: "at least one contact method unless explicitly unavailable." */
   readonly contactUnavailable?: boolean;
   readonly sex?: PatientSex;
+  /** Canonical Gregorian ISO date string ("YYYY-MM-DD") — "where known" (01-patient-management.md), the Jalali picker converts to this at the UI boundary (ADR-008, ADR-012). */
+  readonly dateOfBirth?: string | null;
+}
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Parses a canonical ISO date string to a UTC-midnight Date, rejecting anything malformed, calendrically invalid, or in the future — matches PatientMapper's own `date`-column convention. */
+function parseDateOfBirth(value: string): Date | null {
+  const match = ISO_DATE.exec(value);
+  if (!match) {
+    return null;
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  const [, year, month, day] = match;
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() + 1 !== Number(month) ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    return null; // e.g. 2025-02-30 — regex-shaped but not a real calendar day
+  }
+  if (date.getTime() > Date.now()) {
+    return null; // a birth date can't be in the future
+  }
+  return date;
 }
 
 export interface CreatePatientSuccess {
@@ -67,6 +96,14 @@ export class CreatePatientUseCase {
       return fail("CONTACT_REQUIRED");
     }
 
+    let dateOfBirth: Date | null = null;
+    if (command.dateOfBirth) {
+      dateOfBirth = parseDateOfBirth(command.dateOfBirth);
+      if (!dateOfBirth) {
+        return fail("INVALID_DATE_OF_BIRTH");
+      }
+    }
+
     const now = new Date();
     const patientId = asUuid(randomUUID());
 
@@ -76,7 +113,7 @@ export class CreatePatientUseCase {
         id: patientId,
         officeId: command.officeId,
         patientNumber,
-        dateOfBirth: null,
+        dateOfBirth,
         sex: command.sex ?? "unspecified",
         contactUnavailable: !phone,
         createdBy: command.actorUserId,
