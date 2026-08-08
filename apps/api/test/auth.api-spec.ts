@@ -1,9 +1,11 @@
 import { INestApplication } from "@nestjs/common";
+import { getRepositoryToken } from "@nestjs/typeorm";
 import { Test, TestingModule } from "@nestjs/testing";
 import cookieParser from "cookie-parser";
 import { randomUUID } from "crypto";
 import request from "supertest";
 import type { App } from "supertest/types";
+import type { Repository } from "typeorm";
 import { asUuid } from "@dentix/kernel";
 import { AppModule } from "../src/app.module";
 import { Office } from "../src/modules/office-administration/domain/entities/office.entity";
@@ -20,6 +22,7 @@ import { USER_SESSION_REPOSITORY } from "../src/modules/identity-access/domain/r
 import type { UserSessionRepository } from "../src/modules/identity-access/domain/repositories/user-session.repository";
 import { SessionTokenService } from "../src/modules/identity-access/infrastructure/crypto/session-token.service";
 import { EnvelopeEncryptionService } from "../src/modules/identity-access/infrastructure/crypto/envelope-encryption.service";
+import { OfficeUserOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/office-user.orm-entity";
 import {
   SESSION_COOKIE_NAME,
   CSRF_COOKIE_NAME,
@@ -32,7 +35,7 @@ interface WhoamiResponseBody {
 }
 
 interface ErrorResponseBody {
-  readonly message: string;
+  readonly code: string;
 }
 
 interface LogoutResponseBody {
@@ -54,6 +57,7 @@ describe("Auth (API contract)", () => {
   let oidcRequests: OidcAuthorizationRequestRepository;
   let sessionTokens: SessionTokenService;
   let envelopeEncryption: EnvelopeEncryptionService;
+  let officeUserOrmRepo: Repository<OfficeUserOrmEntity>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -71,13 +75,16 @@ describe("Auth (API contract)", () => {
     oidcRequests = moduleFixture.get(OIDC_AUTHORIZATION_REQUEST_REPOSITORY);
     sessionTokens = moduleFixture.get(SessionTokenService);
     envelopeEncryption = moduleFixture.get(EnvelopeEncryptionService);
+    officeUserOrmRepo = moduleFixture.get(getRepositoryToken(OfficeUserOrmEntity));
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  async function seedActiveSession(): Promise<{ sessionToken: string; csrfToken: string }> {
+  async function seedActiveSession(
+    officeUserOverrides: Partial<{ isActive: boolean }> = {},
+  ): Promise<{ sessionToken: string; csrfToken: string }> {
     const office = Office.create({
       id: asUuid(randomUUID()),
       code: `t-${randomUUID().slice(0, 8)}`,
@@ -91,6 +98,25 @@ describe("Auth (API contract)", () => {
       displayName: "API Test User",
     });
     await userAccounts.create(account);
+
+    // office_user has no domain create() yet (S3 links accounts via the
+    // dev bootstrap script) — seed the row directly, same as the
+    // integration suite. A session without this row is exactly the bug
+    // the membership-revalidation fix below closes: whoami must not
+    // succeed for a user who no longer has (or never had) office access.
+    await officeUserOrmRepo.insert({
+      id: randomUUID(),
+      officeId: office.id,
+      userId: account.id,
+      permissionVersion: 1,
+      isActive: officeUserOverrides.isActive ?? true,
+      createdAt: new Date(),
+      createdBy: null,
+      updatedAt: new Date(),
+      updatedBy: null,
+      archivedAt: null,
+      archivedBy: null,
+    });
 
     const sessionToken = sessionTokens.generateOpaqueToken();
     const csrfToken = sessionTokens.generateOpaqueToken();
@@ -129,9 +155,13 @@ describe("Auth (API contract)", () => {
       const response = await request(app.getHttpServer()).get(
         "/api/v1/auth/login?returnTo=//evil.example.com",
       );
-      // OidcAuthorizationRequest.create throws synchronously — surfaces as 500,
-      // not a redirect anywhere, let alone to the attacker-controlled host.
-      expect(response.status).toBe(500);
+      // A malformed client-supplied returnTo is the caller's mistake, not
+      // ours — StartLoginUseCase catches OidcAuthorizationRequest.create's
+      // synchronous throw and turns it into a 400, not a redirect anywhere
+      // (let alone to the attacker-controlled host) and not an uncaught
+      // exception surfacing as a 500.
+      expect(response.status).toBe(400);
+      expect((response.body as { code: string }).code).toBe("INVALID_RETURN_PATH");
     });
   });
 
@@ -199,7 +229,7 @@ describe("Auth (API contract)", () => {
       const hash = sessionTokens.hash(sessionToken);
       const session = await sessions.findByHash(hash);
       session!.revoke("test", new Date());
-      await sessions.update(session!);
+      await sessions.revoke(session!);
 
       const response = await request(app.getHttpServer())
         .get("/api/v1/auth/whoami")
@@ -207,12 +237,36 @@ describe("Auth (API contract)", () => {
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ code: "REVOKED" });
     });
+
+    it("returns 401 NO_OFFICE_MEMBERSHIP once the office membership behind an otherwise-valid session is deactivated", async () => {
+      // Proof for the bug the external review flagged: a session token
+      // only proves "this login was valid once" — it must not keep working
+      // after an admin deactivates the membership it was issued for.
+      const { sessionToken } = await seedActiveSession({ isActive: false });
+
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/auth/whoami")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ code: "NO_OFFICE_MEMBERSHIP" });
+
+      // The revalidation failure also revokes the session server-side, so
+      // it can't be retried even if the membership is later reactivated.
+      const again = await request(app.getHttpServer())
+        .get("/api/v1/auth/whoami")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      expect(again.status).toBe(401);
+      expect(again.body).toEqual({ code: "REVOKED" });
+    });
   });
 
   describe("POST /auth/logout", () => {
     it("returns 401 with no session cookie", async () => {
       const response = await request(app.getHttpServer()).post("/api/v1/auth/logout");
       expect(response.status).toBe(401);
+      // Same {code} envelope as whoami — a guard-thrown exception must not
+      // disagree with a handler-constructed one (AuthErrorFilter).
+      expect((response.body as ErrorResponseBody).code).toBe("NO_SESSION");
     });
 
     it("returns 403 CSRF_TOKEN_MISSING when the session is valid but no CSRF header is sent", async () => {
@@ -221,7 +275,7 @@ describe("Auth (API contract)", () => {
         .post("/api/v1/auth/logout")
         .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
       expect(response.status).toBe(403);
-      expect((response.body as ErrorResponseBody).message).toBe("CSRF_TOKEN_MISSING");
+      expect((response.body as ErrorResponseBody).code).toBe("CSRF_TOKEN_MISSING");
     });
 
     it("returns 403 CSRF_TOKEN_INVALID when the header doesn't match the session's token", async () => {
@@ -231,7 +285,18 @@ describe("Auth (API contract)", () => {
         .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`)
         .set("X-CSRF-Token", "wrong-token");
       expect(response.status).toBe(403);
-      expect((response.body as ErrorResponseBody).message).toBe("CSRF_TOKEN_INVALID");
+      expect((response.body as ErrorResponseBody).code).toBe("CSRF_TOKEN_INVALID");
+    });
+
+    it("returns 403 CROSS_ORIGIN_REQUEST_REJECTED when Sec-Fetch-Site indicates a cross-site request", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/auth/logout")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .set("Sec-Fetch-Site", "cross-site");
+      expect(response.status).toBe(403);
+      expect((response.body as ErrorResponseBody).code).toBe("CROSS_ORIGIN_REQUEST_REJECTED");
     });
 
     it("revokes the session and returns a provider end-session URL when CSRF matches", async () => {

@@ -14,6 +14,8 @@ import {
 // of the caller's module system, so it works everywhere consistently.
 type OpenIdClientModule = typeof import("openid-client");
 
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
 /**
  * The only file in this module allowed to import `openid-client`
  * (03-module-boundaries.md). Config values are Layer 1 deployment config
@@ -36,12 +38,18 @@ export class OpenIdClientAdapter implements OidcClientPort, OnModuleInit {
 
     // openid-client refuses plaintext HTTP by default — correctly, since a
     // downgraded discovery/token endpoint is a real MITM risk in
-    // production. Gated on the issuer URL's own scheme, not an env flag:
-    // this can only ever trigger when OIDC_ISSUER_URL itself is http://
-    // (dev Keycloak), so a production https:// issuer is never affected
+    // production. Gated on scheme AND hostname, not scheme alone: an
+    // http:// scheme check by itself would also silently bypass the
+    // safety check for a misconfigured OIDC_ISSUER_URL pointing at a real
+    // non-loopback host (e.g. an internal http:// Keycloak reached without
+    // TLS termination) — restricting to loopback means that case instead
+    // hits openid-client's own "only HTTPS" rejection, which is what
+    // should happen. A production https:// issuer is never affected
     // regardless of how other config is set.
     const options =
-      issuer.protocol === "http:" ? { execute: [this.client.allowInsecureRequests] } : undefined;
+      issuer.protocol === "http:" && LOOPBACK_HOSTNAMES.has(issuer.hostname)
+        ? { execute: [this.client.allowInsecureRequests] }
+        : undefined;
 
     this.configuration = await this.client.discovery(issuer, clientId, clientSecret, undefined, options);
   }

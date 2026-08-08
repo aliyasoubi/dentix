@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Repository } from "typeorm";
+import { TransactionContext } from "@dentix/kernel";
 import { UserSession } from "../../domain/entities/user-session.entity";
 import { UserSessionRepository } from "../../domain/repositories/user-session.repository";
-import { UserSessionMapper } from "../mappers/user-session.mapper";
 import { UserSessionOrmEntity } from "./user-session.orm-entity";
+import { UserSessionMapper } from "../mappers/user-session.mapper";
+import { repositoryFor } from "./typeorm-transaction";
 
 @Injectable()
 export class TypeOrmUserSessionRepository implements UserSessionRepository {
@@ -18,13 +20,25 @@ export class TypeOrmUserSessionRepository implements UserSessionRepository {
     return record ? UserSessionMapper.toDomain(record) : null;
   }
 
-  async create(session: UserSession): Promise<void> {
-    await this.repository.insert(UserSessionMapper.toOrm(session));
+  async create(session: UserSession, tx?: TransactionContext): Promise<void> {
+    await repositoryFor(this.repository, tx).insert(UserSessionMapper.toOrm(session));
   }
 
-  async update(session: UserSession): Promise<void> {
-    // save() on an entity carrying the real primary key is an UPDATE here,
-    // not a fresh insert — safe per UserSessionMapper.toOrm's doc comment.
-    await this.repository.save(UserSessionMapper.toOrm(session));
+  async touchIfActive(session: UserSession): Promise<boolean> {
+    // WHERE revokedAt IS NULL is evaluated against the row as it stands at
+    // UPDATE time, not the copy read earlier — the DB, not application
+    // code, is what decides whether this touch still applies.
+    const result = await this.repository.update(
+      { id: session.id, revokedAt: IsNull() },
+      { lastSeenAt: session.lastSeenAt, idleExpiresAt: session.idleExpiresAt },
+    );
+    return (result.affected ?? 0) > 0;
+  }
+
+  async revoke(session: UserSession, tx?: TransactionContext): Promise<void> {
+    await repositoryFor(this.repository, tx).update(
+      { id: session.id, revokedAt: IsNull() },
+      { revokedAt: session.revokedAt, revokedReason: session.revokedReason },
+    );
   }
 }

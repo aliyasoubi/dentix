@@ -36,7 +36,7 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
-  "bruteForceProtected": false,
+  "bruteForceProtected": true,
   "permanentLockout": false,
   "maxTemporaryLockouts": 0,
   "bruteForceStrategy": "MULTIPLE",
@@ -45,7 +45,7 @@
   "waitIncrementSeconds": 60,
   "quickLoginCheckMilliSeconds": 1000,
   "maxDeltaTimeSeconds": 43200,
-  "failureFactor": 30,
+  "failureFactor": 5,
   "maxSecondaryAuthFailures": 0,
   "roles": {
     "realm": [
@@ -193,6 +193,19 @@
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,
       "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "name": "amr",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-amr-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
       "defaultClientScopes": [
         "web-origins",
         "acr",
@@ -1193,7 +1206,7 @@
         {
           "authenticator": "auth-recovery-authn-code-form",
           "authenticatorFlow": false,
-          "requirement": "DISABLED",
+          "requirement": "ALTERNATIVE",
           "priority": 50,
           "autheticatorFlow": false,
           "userSetupAllowed": false
@@ -1322,7 +1335,7 @@
         {
           "authenticator": "auth-recovery-authn-code-form",
           "authenticatorFlow": false,
-          "requirement": "DISABLED",
+          "requirement": "ALTERNATIVE",
           "priority": 50,
           "autheticatorFlow": false,
           "userSetupAllowed": false

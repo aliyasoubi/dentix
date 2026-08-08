@@ -23,13 +23,10 @@ export class UserSessionMapper {
   }
 
   /**
-   * Used for both insert (create) and update (touch/revoke). Safe to
-   * share, unlike Office/UserAccount's insert-only mapper: every field
-   * here — including createdAt — is read from the domain entity's own
-   * state rather than fabricated, and UserSession never exposes a way to
-   * mutate createdAt after construction, so re-writing it on update is a
-   * correct no-op, not the created_at-overwrite bug that method guards
-   * against.
+   * Insert-only: touch()/revoke() persist through their own narrow,
+   * conditional repository methods (touchIfActive/revoke) rather than a
+   * full-row toOrm() round-trip, so a stale in-memory copy can never
+   * blind-overwrite a concurrent mutation.
    */
   static toOrm(session: UserSession): UserSessionOrmEntity {
     const record = new UserSessionOrmEntity();

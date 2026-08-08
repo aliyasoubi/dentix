@@ -1,9 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { asUuid } from "@dentix/kernel";
+import { randomUUID } from "crypto";
+import { AuditEvent } from "../../domain/entities/audit-event.entity";
 import { UserSession } from "../../domain/entities/user-session.entity";
+import { AUDIT_EVENT_REPOSITORY } from "../../domain/repositories/audit-event.repository";
+import type { AuditEventRepository } from "../../domain/repositories/audit-event.repository";
 import { USER_SESSION_REPOSITORY } from "../../domain/repositories/user-session.repository";
 import type { UserSessionRepository } from "../../domain/repositories/user-session.repository";
 import { OIDC_CLIENT_PORT } from "../ports/oidc-client.port";
 import type { OidcClientPort } from "../ports/oidc-client.port";
+import { UNIT_OF_WORK_PORT } from "../ports/unit-of-work.port";
+import type { UnitOfWorkPort } from "../ports/unit-of-work.port";
 
 /**
  * 09-authentication-session-architecture.md, "Logout and revocation":
@@ -20,14 +27,33 @@ export class LogoutUseCase {
   constructor(
     @Inject(USER_SESSION_REPOSITORY) private readonly sessions: UserSessionRepository,
     @Inject(OIDC_CLIENT_PORT) private readonly oidcClient: OidcClientPort,
+    @Inject(AUDIT_EVENT_REPOSITORY) private readonly auditEvents: AuditEventRepository,
+    @Inject(UNIT_OF_WORK_PORT) private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
   async execute(params: {
     readonly session: UserSession;
     readonly postLogoutRedirectUri: string;
   }): Promise<{ readonly providerEndSessionUrl: URL }> {
-    params.session.revoke("user-initiated logout", new Date());
-    await this.sessions.update(params.session);
+    const now = new Date();
+    params.session.revoke("user-initiated logout", now);
+
+    await this.unitOfWork.runInTransaction(async (tx) => {
+      await this.sessions.revoke(params.session, tx);
+      await this.auditEvents.create(
+        AuditEvent.create({
+          id: asUuid(randomUUID()),
+          officeId: params.session.officeId,
+          actorUserId: params.session.userId,
+          action: "logout",
+          entityType: "user_session",
+          entityId: params.session.id,
+          detail: null,
+          now,
+        }),
+        tx,
+      );
+    });
 
     const providerEndSessionUrl = this.oidcClient.buildEndSessionUrl({
       postLogoutRedirectUri: params.postLogoutRedirectUri,

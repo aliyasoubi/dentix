@@ -21,6 +21,24 @@ export class CsrfGuard implements CanActivate {
       return true;
     }
 
+    // Defense-in-depth ahead of the token check itself, per browser-sent
+    // signals a forged cross-site request can't fake: `Sec-Fetch-Site`
+    // (modern browsers, Fetch Metadata) and `Origin` (broader support) are
+    // both set by the browser, never by page script. Checked only when
+    // present — an absent header (older browser, non-browser client)
+    // falls through to the CSRF token check below, which stays the actual
+    // gate; this only rejects requests a real cross-origin attacker page
+    // would send, it never weakens same-origin requests missing a header.
+    const secFetchSite = request.headers["sec-fetch-site"];
+    if (typeof secFetchSite === "string" && secFetchSite !== "same-origin" && secFetchSite !== "none") {
+      throw new ForbiddenException("CROSS_ORIGIN_REQUEST_REJECTED");
+    }
+    const origin = request.headers.origin;
+    const appBaseUrl = process.env["APP_BASE_URL"];
+    if (typeof origin === "string" && appBaseUrl && origin !== appBaseUrl) {
+      throw new ForbiddenException("CROSS_ORIGIN_REQUEST_REJECTED");
+    }
+
     const session = request.currentSession;
     if (!session) {
       // Programmer error, not a client error: CsrfGuard applied without

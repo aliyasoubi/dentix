@@ -1,10 +1,12 @@
 import { Module } from "@nestjs/common";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { CompleteLoginUseCase } from "./application/use-cases/complete-login.use-case";
 import { GetSessionUseCase } from "./application/use-cases/get-session.use-case";
 import { LogoutUseCase } from "./application/use-cases/logout.use-case";
 import { ResolveActiveSessionUseCase } from "./application/use-cases/resolve-active-session.use-case";
 import { StartLoginUseCase } from "./application/use-cases/start-login.use-case";
+import { AUDIT_EVENT_REPOSITORY } from "./domain/repositories/audit-event.repository";
 import { OFFICE_USER_REPOSITORY } from "./domain/repositories/office-user.repository";
 import { OIDC_AUTHORIZATION_REQUEST_REPOSITORY } from "./domain/repositories/oidc-authorization-request.repository";
 import { USER_ACCOUNT_REPOSITORY } from "./domain/repositories/user-account.repository";
@@ -12,13 +14,17 @@ import { USER_SESSION_REPOSITORY } from "./domain/repositories/user-session.repo
 import { ENCRYPTION_PORT } from "./application/ports/encryption.port";
 import { OIDC_CLIENT_PORT } from "./application/ports/oidc-client.port";
 import { SESSION_TOKEN_PORT } from "./application/ports/session-token.port";
+import { UNIT_OF_WORK_PORT } from "./application/ports/unit-of-work.port";
 import { EnvelopeEncryptionService } from "./infrastructure/crypto/envelope-encryption.service";
 import { SessionTokenService } from "./infrastructure/crypto/session-token.service";
 import { OpenIdClientAdapter } from "./infrastructure/oidc/openid-client.adapter";
+import { AuditEventOrmEntity } from "./infrastructure/persistence/audit-event.orm-entity";
+import { TypeOrmAuditEventRepository } from "./infrastructure/persistence/audit-event.typeorm-repository";
 import { OfficeUserOrmEntity } from "./infrastructure/persistence/office-user.orm-entity";
 import { TypeOrmOfficeUserRepository } from "./infrastructure/persistence/office-user.typeorm-repository";
 import { OidcAuthorizationRequestOrmEntity } from "./infrastructure/persistence/oidc-authorization-request.orm-entity";
 import { TypeOrmOidcAuthorizationRequestRepository } from "./infrastructure/persistence/oidc-authorization-request.typeorm-repository";
+import { TypeOrmUnitOfWork } from "./infrastructure/persistence/typeorm-unit-of-work";
 import { UserAccountOrmEntity } from "./infrastructure/persistence/user-account.orm-entity";
 import { TypeOrmUserAccountRepository } from "./infrastructure/persistence/user-account.typeorm-repository";
 import { UserSessionOrmEntity } from "./infrastructure/persistence/user-session.orm-entity";
@@ -34,7 +40,15 @@ import { SessionGuard } from "./presentation/guards/session.guard";
       OfficeUserOrmEntity,
       UserSessionOrmEntity,
       OidcAuthorizationRequestOrmEntity,
+      AuditEventOrmEntity,
     ]),
+    // Applied per-route (login/callback only, see auth.controller.ts) —
+    // not global, so it doesn't affect whoami/logout, which a legitimate
+    // SPA calls far more often. Defense-in-depth alongside Keycloak's own
+    // brute-force protection (ADR-007): this limits abuse of Dentix's own
+    // side of the flow (authorization-request row creation, code/state
+    // guessing) independent of what the provider does.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
   ],
   controllers: [AuthController],
   providers: [
@@ -51,6 +65,8 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     { provide: OFFICE_USER_REPOSITORY, useClass: TypeOrmOfficeUserRepository },
     { provide: USER_SESSION_REPOSITORY, useClass: TypeOrmUserSessionRepository },
     { provide: OIDC_AUTHORIZATION_REQUEST_REPOSITORY, useClass: TypeOrmOidcAuthorizationRequestRepository },
+    { provide: AUDIT_EVENT_REPOSITORY, useClass: TypeOrmAuditEventRepository },
+    { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
     { provide: OIDC_CLIENT_PORT, useClass: OpenIdClientAdapter },
     StartLoginUseCase,
     CompleteLoginUseCase,
@@ -59,6 +75,7 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     LogoutUseCase,
     SessionGuard,
     CsrfGuard,
+    ThrottlerGuard,
   ],
   exports: [
     SessionTokenService,
@@ -67,6 +84,7 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     OFFICE_USER_REPOSITORY,
     USER_SESSION_REPOSITORY,
     OIDC_AUTHORIZATION_REQUEST_REPOSITORY,
+    AUDIT_EVENT_REPOSITORY,
     SessionGuard,
     CsrfGuard,
   ],

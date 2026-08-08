@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   verify:
@@ -21,6 +21,12 @@ jobs:
       # CI-only throwaway key — protects nothing but ephemeral test data in
       # this run. Real environments generate their own (see .env.example).
       SESSION_ENCRYPTION_KEY: "-rh27R89xGUe8BzZy9sqm7waoMFsdVQYfycL_Zw7oZY"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_ci_only
+      OIDC_ISSUER_URL: http://localhost:8080/realms/dentix
+      OIDC_CLIENT_ID: dentix-bff
+      OIDC_REDIRECT_URI: http://localhost:3000/api/v1/auth/callback
+      APP_BASE_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +39,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Start Postgres (docker-compose.yml, postgres service only)
+      - name: Start Postgres and Keycloak (docker-compose.yml)
         run: |
-          docker compose up -d postgres
+          docker compose up -d postgres keycloak
           until docker compose ps postgres --format json | grep -q healthy; do
             echo "waiting for postgres..."
             sleep 2
           done
+          until docker compose ps keycloak --format json | grep -q healthy; do
+            echo "waiting for keycloak..."
+            sleep 3
+          done
+
+      - name: Fetch the dentix-bff client secret (realm imported fresh each start)
+        run: |
+          TOKEN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=$KEYCLOAK_ADMIN&password=$KEYCLOAK_ADMIN_PASSWORD&grant_type=password&client_id=admin-cli" \
+            | node -e "process.stdin.on('data', d => process.stdout.write(JSON.parse(d).access_token))")
+          UUID=$(curl -s "http://localhost:8080/admin/realms/dentix/clients?clientId=$OIDC_CLIENT_ID" \
+            -H "Authorization: Bearer $TOKEN" \
+            | node -e "process.stdin.on('data', d => process.stdout.write(JSON.parse(d)[0].id))")
+          SECRET=$(curl -s "http://localhost:8080/admin/realms/dentix/clients/$UUID/client-secret" \
+            -H "Authorization: Bearer $TOKEN" \
+            | node -e "process.stdin.on('data', d => process.stdout.write(JSON.parse(d).value))")
+          echo "OIDC_CLIENT_SECRET=$SECRET" >> "$GITHUB_ENV"
 
       # Canonical always-on gate (docs/08-implementation/01-workflow.md).
       # openapi:check joins this list starting with S8.
+      - name: Format check
+        run: npm run format
+
       - name: Lint
         run: npm run lint
 
@@ -61,7 +88,7 @@ jobs:
       - name: Integration tests
         run: npm run test:int
 
-      - name: API contract tests
+      - name: API contract tests (bootstraps against the live Keycloak service above)
         run: npm run test:api
 
       - name: Build

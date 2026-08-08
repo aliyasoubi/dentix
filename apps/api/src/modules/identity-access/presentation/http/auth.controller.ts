@@ -1,4 +1,5 @@
-import { Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, Post, Req, Res, UseFilters, UseGuards } from "@nestjs/common";
+import { ThrottlerGuard } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { CompleteLoginUseCase } from "../../application/use-cases/complete-login.use-case";
 import { GetSessionUseCase } from "../../application/use-cases/get-session.use-case";
@@ -9,6 +10,7 @@ import { CurrentSession } from "../decorators/current-session.decorator";
 import { CsrfGuard } from "../guards/csrf.guard";
 import { SessionGuard } from "../guards/session.guard";
 import { UserSession } from "../../domain/entities/user-session.entity";
+import { AuthErrorFilter } from "./auth-error.filter";
 import { clearSessionCookies, SESSION_COOKIE_NAME, setSessionCookies } from "./cookies";
 
 function requireEnv(name: string): string {
@@ -25,6 +27,7 @@ function requireEnv(name: string): string {
  * OIDC Authorization Code redirect can't be driven through an API client.
  */
 @Controller("auth")
+@UseFilters(AuthErrorFilter)
 export class AuthController {
   constructor(
     private readonly startLogin: StartLoginUseCase,
@@ -34,13 +37,21 @@ export class AuthController {
   ) {}
 
   @Get("login")
+  @UseGuards(ThrottlerGuard)
   async login(@Req() request: Request, @Res() response: Response): Promise<void> {
     const returnTo = typeof request.query["returnTo"] === "string" ? request.query["returnTo"] : "/";
-    const { authorizationUrl } = await this.startLogin.execute({ returnPath: returnTo });
-    response.redirect(authorizationUrl.toString());
+    const result = await this.startLogin.execute({ returnPath: returnTo });
+    if (!result.ok) {
+      // A malformed client-supplied returnTo is the caller's mistake, not
+      // ours — 400, not the 500 an uncaught exception would have produced.
+      response.status(400).json({ code: result.code });
+      return;
+    }
+    response.redirect(result.value.authorizationUrl.toString());
   }
 
   @Get("callback")
+  @UseGuards(ThrottlerGuard)
   async callback(@Req() request: Request, @Res() response: Response): Promise<void> {
     const appBaseUrl = requireEnv("APP_BASE_URL");
     const callbackUrl = new URL(request.originalUrl, appBaseUrl);
