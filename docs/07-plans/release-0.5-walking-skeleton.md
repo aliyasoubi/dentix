@@ -10,7 +10,7 @@ committing to feature development. Every item here is a known project risk (see 
 - [ ] Decide and record ADR-006: ORM / migration tooling (see adr/adr-006-persistence-tooling.md)
 - [ ] Decide and record ADR-007: self-hosted OIDC provider (see adr/adr-007-oidc-provider.md)
 - [ ] Decide and record ADR-008: Jalali date adapter library (see adr/adr-008-jalali-adapter.md)
-- [ ] One end-to-end slice: login via OIDC → create a "patient" (name in Persian + optional Latin) → stored in Postgres via migration-managed schema → listed with search → audit event written
+- [x] One end-to-end slice: login via OIDC → create a "patient" (name in Persian + optional Latin) → stored in Postgres via migration-managed schema → listed with search → audit event written *(S4: proven in a real browser — real Keycloak login with MFA, patient created with a Persian native name + Latin name + phone, found again by phone in all three accepted forms (09…, +98…, Persian digits) and by a partial name typed with the Arabic Yeh variant, RTL layout correct throughout, session survives a hard reload, logout ends both the local and Keycloak SSO session.)*
 - [ ] Angular Material theme per UX-DS-001 §24 (Vazirmatn-first typography, density -1) rendering the slice in fa-IR RTL (single locale per ADR-012; strings externalized as a hedge)
 - [ ] Storybook running with tokens + first Ds components (UX-DS-001 §28 list starts here: DsStatusChip, DsMoneyDisplay)
 - [ ] Public bootstrap loader validates fixed Farsi/RTL/Jalali values and configured money unit before shell render

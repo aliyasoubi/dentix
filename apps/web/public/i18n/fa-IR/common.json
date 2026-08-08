@@ -1,0 +1,10 @@
+{
+  "app.title": "دنتیکس",
+  "common.actions.save": "ذخیره",
+  "common.actions.cancel": "انصراف",
+  "common.actions.logout": "خروج",
+  "common.actions.retry": "تلاش مجدد",
+  "common.loading": "در حال بارگذاری…",
+  "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+  "common.error.unauthenticated": "برای ادامه وارد شوید."
+}

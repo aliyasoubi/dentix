@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" width="220" height="64" role="img" aria-labelledby="title desc">
+  <title id="title">Dentix wordmark, English</title>
+  <desc id="desc">Icon mark followed by the Latin wordmark DENTIX in brand teal, left to right</desc>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#eef9fa"/>
+  <text x="30" y="43" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-weight="800" font-size="34" fill="#187381">D</text>
+  <circle cx="46" cy="20" r="4" fill="#48afbe"/>
+  <text x="72" y="40" font-family="Inter, 'Segoe UI', sans-serif" font-weight="600" font-size="26" letter-spacing="1" fill="#155c68">DENTIX</text>
+</svg>

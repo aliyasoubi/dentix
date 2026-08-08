@@ -1,0 +1,101 @@
+<h1 class="patients-page__title">{{ "patients.page.title" | translate }}</h1>
+
+<section class="patients-page__form-section">
+  <h2>{{ "patients.form.title" | translate }}</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="patients-form">
+    <div class="patients-form__row">
+      <mat-form-field appearance="outline" class="patients-form__field">
+        <mat-label>{{ "patients.form.nativeName.label" | translate }}</mat-label>
+        <input matInput formControlName="nativeName" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
+        <mat-label>{{ "patients.form.latinName.label" | translate }}</mat-label>
+        <input matInput formControlName="latinName" dir="ltr" />
+      </mat-form-field>
+    </div>
+
+    <div class="patients-form__row">
+      <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
+        <mat-label>{{ "patients.form.phone.label" | translate }}</mat-label>
+        <input matInput formControlName="phone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="patients-form__field">
+        <mat-label>{{ "patients.form.sex.label" | translate }}</mat-label>
+        <mat-select formControlName="sex">
+          <mat-option value="unspecified">{{ "patients.form.sex.unspecified" | translate }}</mat-option>
+          <mat-option value="male">{{ "patients.form.sex.male" | translate }}</mat-option>
+          <mat-option value="female">{{ "patients.form.sex.female" | translate }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-checkbox formControlName="contactUnavailable">
+      {{ "patients.form.contactUnavailable.label" | translate }}
+    </mat-checkbox>
+
+    @if (submitError()) {
+      <p class="patients-form__error" role="alert">{{ submitError() }}</p>
+    }
+    @if (lastCreated(); as created) {
+      <p class="patients-form__success" role="status">
+        {{
+          "patients.form.success"
+            | translate: { name: created.name, patientNumber: created.patientNumber.toString() }
+        }}
+      </p>
+    }
+
+    <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
+      @if (submitting()) {
+        <mat-progress-spinner diameter="18" mode="indeterminate" />
+      } @else {
+        {{ "patients.form.submit" | translate }}
+      }
+    </button>
+  </form>
+</section>
+
+<section class="patients-page__list-section">
+  <mat-form-field appearance="outline" class="patients-page__search">
+    <mat-label>{{ "patients.search.placeholder" | translate }}</mat-label>
+    <input
+      matInput
+      [value]="searchQuery()"
+      (input)="onSearchInput($any($event.target).value)"
+    />
+  </mat-form-field>
+
+  @if (results().length > 0) {
+    <table mat-table [dataSource]="results()" class="patients-table">
+      <ng-container matColumnDef="patientNumber">
+        <th mat-header-cell *matHeaderCellDef>{{ "patients.list.column.patientNumber" | translate }}</th>
+        <td mat-cell *matCellDef="let row" class="ds-ltr-isolate">{{ row.patientNumber }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nativeName">
+        <th mat-header-cell *matHeaderCellDef>{{ "patients.list.column.nativeName" | translate }}</th>
+        <td mat-cell *matCellDef="let row">{{ row.nativeName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="latinName">
+        <th mat-header-cell *matHeaderCellDef>{{ "patients.list.column.latinName" | translate }}</th>
+        <td mat-cell *matCellDef="let row" class="ds-ltr-isolate">{{ row.latinName }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="phone">
+        <th mat-header-cell *matHeaderCellDef>{{ "patients.list.column.phone" | translate }}</th>
+        <td mat-cell *matCellDef="let row" class="ds-ltr-isolate">{{ row.phone }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  } @else if (hasSearched() && !searching()) {
+    <p class="patients-page__empty">
+      {{ (searchQuery() ? "patients.list.empty" : "patients.list.empty.noQuery") | translate }}
+    </p>
+  }
+</section>

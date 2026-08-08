@@ -1,0 +1,63 @@
+.patients-page {
+  &__title {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 650;
+    margin-block-end: var(--ds-space-6);
+  }
+
+  &__form-section,
+  &__list-section {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: 8px;
+    padding: var(--ds-space-6);
+    margin-block-end: var(--ds-space-6);
+  }
+
+  &__search {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  &__empty {
+    color: var(--ds-text-muted);
+  }
+}
+
+.patients-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+
+  &__row {
+    display: flex;
+    gap: var(--ds-space-4);
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  &__field {
+    flex: 1 1 0;
+  }
+
+  &__field--ltr input {
+    text-align: start;
+  }
+
+  &__error {
+    color: var(--ds-danger);
+    margin: 0;
+  }
+
+  &__success {
+    color: var(--ds-success);
+    margin: 0;
+  }
+}
+
+.patients-table {
+  width: 100%;
+}

@@ -1,12 +1,20 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject } from "@angular/core";
+import { RouterOutlet } from "@angular/router";
+import { MatToolbarModule } from "@angular/material/toolbar";
+import { MatButtonModule } from "@angular/material/button";
+import { AuthService } from "./core/auth/auth.service";
+import { TranslatePipe } from "./core/i18n/translate.pipe";
 
 @Component({
-  selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.scss',
+  selector: "app-root",
+  imports: [RouterOutlet, MatToolbarModule, MatButtonModule, TranslatePipe],
+  templateUrl: "./app.html",
+  styleUrl: "./app.scss",
 })
 export class App {
-  protected readonly title = signal('web');
+  protected readonly auth = inject(AuthService);
+
+  protected logout(): void {
+    void this.auth.logout();
+  }
 }

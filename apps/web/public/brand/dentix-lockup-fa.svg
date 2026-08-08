@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" width="220" height="64" role="img" aria-labelledby="title desc">
+  <title id="title">Dentix wordmark, Farsi</title>
+  <desc id="desc">Farsi wordmark Dentix in brand teal followed by the icon mark, right to left layout for RTL contexts</desc>
+  <text x="148" y="40" text-anchor="end" font-family="Vazirmatn, Tahoma, sans-serif" font-weight="700" font-size="26" fill="#155c68">دنتیکس</text>
+  <rect x="160" y="4" width="56" height="56" rx="14" fill="#eef9fa"/>
+  <text x="186" y="43" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-weight="800" font-size="34" fill="#187381">D</text>
+  <circle cx="202" cy="20" r="4" fill="#48afbe"/>
+</svg>

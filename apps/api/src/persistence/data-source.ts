@@ -1,38 +1,9 @@
 import "reflect-metadata";
 import { config } from "dotenv";
-import { existsSync } from "fs";
-import { dirname, join } from "path";
+import { join } from "path";
 import { DataSource, DataSourceOptions } from "typeorm";
 import { APP_ENTITIES } from "./entity-registry";
-
-/**
- * Walks up from `startDir` to find the monorepo root, identified by
- * `docker-compose.yml` (a real, stable, root-only file). A fixed
- * `../../../../` hop count would be correct from ts-node/ts-jest (running
- * against source, e.g. `apps/api/src/persistence`) but wrong from the
- * compiled build (`apps/api/dist/src/persistence` — `rootDir: "."` adds an
- * extra nesting level), silently landing one directory short with no
- * error since every field below has a fallback default. Walking up to a
- * known anchor is correct from both locations without needing to know
- * which one `__dirname` is.
- *
- * Returns null instead of throwing when no anchor is found — a production
- * image built from `dist/` alone (no monorepo source, no
- * docker-compose.yml) is a real, expected deployment shape, and it must
- * boot on real injected environment variables, not crash looking for a
- * dev-only file that was never supposed to ship.
- */
-function findRepoRoot(startDir: string): string | null {
-  let dir = startDir;
-  while (!existsSync(join(dir, "docker-compose.yml"))) {
-    const parent = dirname(dir);
-    if (parent === dir) {
-      return null;
-    }
-    dir = parent;
-  }
-  return dir;
-}
+import { findRepoRoot } from "../platform/find-repo-root";
 
 // One shared .env at the repo root (matches docker-compose.yml, which also
 // lives there) — loaded explicitly so this resolves the same whether the
