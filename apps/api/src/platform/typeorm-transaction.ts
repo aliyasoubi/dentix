@@ -25,3 +25,8 @@ export function repositoryFor<T extends ObjectLiteral>(
   }
   return (tx as TypeOrmTransactionContext).manager.getRepository(defaultRepository.target);
 }
+
+/** Same idea as repositoryFor, for repositories that need the raw EntityManager (e.g. a hand-written UPSERT) rather than a typed Repository<T>. */
+export function managerFor(defaultManager: EntityManager, tx: TransactionContext | undefined): EntityManager {
+  return tx ? (tx as TypeOrmTransactionContext).manager : defaultManager;
+}

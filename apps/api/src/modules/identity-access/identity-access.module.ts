@@ -81,6 +81,17 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     OFFICE_USER_REPOSITORY,
     USER_SESSION_REPOSITORY,
     OIDC_AUTHORIZATION_REQUEST_REPOSITORY,
+    // SessionGuard/CsrfGuard used cross-module via @UseGuards() are
+    // resolved by Nest through the CONSUMING controller's own module
+    // (Injector.loadInjectable uses that module's injector, not the
+    // guard's origin module) — so every one of their own constructor
+    // dependencies must ALSO be reachable from there, not just the guard
+    // classes themselves. ResolveActiveSessionUseCase and the two port
+    // tokens below are exported for exactly that reason, not because
+    // another module has any business calling them directly.
+    ResolveActiveSessionUseCase,
+    SESSION_TOKEN_PORT,
+    UNIT_OF_WORK_PORT,
     SessionGuard,
     CsrfGuard,
   ],

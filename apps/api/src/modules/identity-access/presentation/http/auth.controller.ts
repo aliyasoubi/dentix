@@ -10,7 +10,7 @@ import { CurrentSession } from "../decorators/current-session.decorator";
 import { CsrfGuard } from "../guards/csrf.guard";
 import { SessionGuard } from "../guards/session.guard";
 import { UserSession } from "../../domain/entities/user-session.entity";
-import { AuthErrorFilter } from "./auth-error.filter";
+import { HttpErrorFilter } from "../../../../platform/http-error.filter";
 import { clearSessionCookies, SESSION_COOKIE_NAME, setSessionCookies } from "./cookies";
 
 function requireEnv(name: string): string {
@@ -27,7 +27,7 @@ function requireEnv(name: string): string {
  * OIDC Authorization Code redirect can't be driven through an API client.
  */
 @Controller("auth")
-@UseFilters(AuthErrorFilter)
+@UseFilters(HttpErrorFilter)
 export class AuthController {
   constructor(
     private readonly startLogin: StartLoginUseCase,
