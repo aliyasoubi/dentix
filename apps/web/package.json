@@ -10,7 +10,9 @@
     "test": "ng test",
     "test:e2e": "playwright test",
     "lint": "ng lint",
-    "lint:arch": "depcruise src --config .dependency-cruiser.json"
+    "lint:arch": "depcruise src --config .dependency-cruiser.json",
+    "storybook": "ng run web:storybook",
+    "build-storybook": "ng run web:build-storybook"
   },
   "private": true,
   "dependencies": {
@@ -42,6 +44,17 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.62.1",
     "vazirmatn": "33.0.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "storybook": "10.5.7",
+    "@storybook/angular-vite": "10.5.7",
+    "@storybook/addon-a11y": "10.5.7",
+    "@storybook/addon-docs": "10.5.7",
+    "@types/node": "20.19.43",
+    "@angular-devkit/build-angular": "22.1.0",
+    "@angular-devkit/architect": "0.2201.0",
+    "@angular-devkit/core": "22.1.0",
+    "@analogjs/vite-plugin-angular": "2.6.4",
+    "vite": "8.1.5",
+    "eslint-plugin-storybook": "10.5.7"
   }
 }

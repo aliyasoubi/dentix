@@ -89,12 +89,6 @@ export function formatJalali(j: JalaliYmd): string {
   return `${String(j.year).padStart(4, "0")}/${String(j.month).padStart(2, "0")}/${String(j.day).padStart(2, "0")}`;
 }
 
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-
-/** Latin digits -> Persian digits, for display. The inverse of normalizeDigits. */
-export function toPersianDigits(input: string): string {
-  return input.replace(/[0-9]/g, (digit) => PERSIAN_DIGITS[Number(digit)]!);
-}
 
 /**
  * Parses "1369/02/25" style input (Persian or Latin digits, `/` or `-`

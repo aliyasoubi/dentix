@@ -1,4 +1,10 @@
-import { canonicalizeIranianMobile, normalizeDigits, normalizeForSearch, normalizePersianText } from "./persian";
+import {
+  canonicalizeIranianMobile,
+  normalizeDigits,
+  normalizeForSearch,
+  normalizePersianText,
+  toPersianDigits,
+} from "./persian";
 
 describe("normalizeDigits", () => {
   it("converts Persian digits to Latin", () => {
@@ -11,6 +17,20 @@ describe("normalizeDigits", () => {
 
   it("leaves Latin digits and other characters untouched", () => {
     expect(normalizeDigits("abc 123")).toBe("abc 123");
+  });
+});
+
+describe("toPersianDigits", () => {
+  it("converts Latin digits to Persian digits", () => {
+    expect(toPersianDigits("09123456789")).toBe("۰۹۱۲۳۴۵۶۷۸۹");
+  });
+
+  it("leaves non-digit characters untouched", () => {
+    expect(toPersianDigits("1,234/56")).toBe("۱,۲۳۴/۵۶");
+  });
+
+  it("is the inverse of normalizeDigits", () => {
+    expect(normalizeDigits(toPersianDigits("2500000"))).toBe("2500000");
   });
 });
 

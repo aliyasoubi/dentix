@@ -1,0 +1,15 @@
+.ds-money-display {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ds-space-1);
+}
+
+.ds-money-display__value {
+  font-weight: 600;
+  color: var(--ds-text-primary);
+}
+
+.ds-money-display__unit {
+  color: var(--ds-text-secondary);
+  font-size: 0.9em;
+}

@@ -1,0 +1,9 @@
+.ds-money-input {
+  width: 100%;
+  max-width: 320px;
+}
+
+.ds-money-input__unit {
+  color: var(--ds-text-secondary);
+  margin-inline-start: var(--ds-space-2);
+}

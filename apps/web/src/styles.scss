@@ -125,3 +125,13 @@ body {
   font-family: var(--ds-font-en);
   font-variant-numeric: tabular-nums;
 }
+
+// Persian digits (unlike a Latin name or phone number) are bidi class EN
+// and the Persian thousands separator ٬ is CS — both already flow
+// correctly left-to-right embedded in RTL text per the Unicode
+// bidirectional algorithm, so money values need tabular alignment only,
+// never .ds-ltr-isolate's direction/font override (05-ui-design-system.md
+// "Use tabular numerals for money").
+.ds-tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

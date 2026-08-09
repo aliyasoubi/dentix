@@ -22,6 +22,11 @@ export function normalizeDigits(input: string): string {
   return result;
 }
 
+/** Latin digits -> Persian digits, for display. The inverse of normalizeDigits. */
+export function toPersianDigits(input: string): string {
+  return input.replace(/[0-9]/g, (digit) => PERSIAN_DIGITS[Number(digit)]!);
+}
+
 // Arabic-script letters that are typed interchangeably with their Persian
 // equivalents (different keyboards/input methods, copy-pasted Arabic
 // text) but must match as the same letter for search purposes.

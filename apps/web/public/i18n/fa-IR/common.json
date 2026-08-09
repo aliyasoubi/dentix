@@ -6,5 +6,10 @@
   "common.actions.retry": "تلاش مجدد",
   "common.loading": "در حال بارگذاری…",
   "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
-  "common.error.unauthenticated": "برای ادامه وارد شوید."
+  "common.error.unauthenticated": "برای ادامه وارد شوید.",
+
+  "common.money.unit.rial": "ریال",
+  "common.money.unit.toman": "تومان",
+  "common.money.canonicalEquivalent": "معادل ثبت‌شده: {{amount}} ریال",
+  "common.money.error.invalidAmount": "مبلغ واردشده معتبر نیست."
 }
