@@ -21,6 +21,7 @@ import { MatInputModule } from "@angular/material/input";
 import {
   formatMoneyInputGrouped,
   fromCanonicalRials,
+  isStorableRialAmount,
   MoneyDisplayUnit,
   parseMoneyInput,
   toCanonicalRials,
@@ -87,15 +88,35 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
   // eslint-disable-next-line @typescript-eslint/no-empty-function -- see above
   protected onTouched: () => void = () => {};
 
-  private readonly resolvedUnit = computed(() => this.unit() ?? this.moneyConfig.defaultUnit);
+  /** The office's configured unit (or this field's explicit override) — what the field uses unless a written value forces otherwise. */
+  private readonly configuredUnit = computed(() => this.unit() ?? this.moneyConfig.defaultUnit);
+
+  /**
+   * True when writeValue received a canonical rial amount that is not a
+   * whole number of tomans, so this field cannot honestly present itself
+   * as a toman field for that value.
+   *
+   * Without this, the field showed the raw rial digits while the suffix
+   * still read تومان — a 10x overstatement — and worse, the next keystroke
+   * sent those rial digits back through toCanonicalRials(…, "TOMAN"),
+   * multiplying the stored amount by ten. The unit label is the contract
+   * for how the field's contents are read, so label and interpretation
+   * must degrade together or not at all.
+   */
+  private readonly forcedToRial = signal(false);
+
+  /** The unit this field is actually operating in right now: the label, the digits, and the re-parse all follow this one value. */
+  private readonly effectiveUnit = computed<MoneyDisplayUnit>(() =>
+    this.forcedToRial() ? "RIAL" : this.configuredUnit(),
+  );
 
   protected readonly unitLabelKey = computed(() =>
-    this.resolvedUnit() === "TOMAN" ? "common.money.unit.toman" : "common.money.unit.rial",
+    this.effectiveUnit() === "TOMAN" ? "common.money.unit.toman" : "common.money.unit.rial",
   );
 
   /** Shown only for TOMAN entry, where the canonical value isn't the number the user typed — 05-ui-design-system.md's worked example. */
   protected readonly equivalentLabel = computed(() => {
-    if (this.resolvedUnit() !== "TOMAN" || this.rawText().trim() === "") {
+    if (this.effectiveUnit() !== "TOMAN" || this.rawText().trim() === "") {
       return null;
     }
     const entered = parseMoneyInput(this.rawText());
@@ -121,6 +142,10 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
     this.control.markAsTouched();
 
     if (value.trim() === "") {
+      // Nothing left to present, so nothing is forcing rial any more:
+      // an emptied field reverts to the office's configured unit, the
+      // same as a freshly rendered one.
+      this.forcedToRial.set(false);
       this.control.setErrors(null);
       this.onChange(null);
       return;
@@ -131,24 +156,39 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
       this.onChange(null);
       return;
     }
+    const canonical = toCanonicalRials(entered, this.effectiveUnit());
+    if (!isStorableRialAmount(canonical)) {
+      // Beyond the signed-bigint rial column (04-data-model.md). Rejected
+      // at entry rather than surfacing later as an INSERT failure.
+      this.control.setErrors({ invalidMoneyInput: true });
+      this.onChange(null);
+      return;
+    }
     this.control.setErrors(null);
-    this.onChange(toCanonicalRials(entered, this.resolvedUnit()));
+    this.onChange(canonical);
   }
 
   writeValue(canonicalRial: bigint | null): void {
     if (canonicalRial === null) {
+      this.forcedToRial.set(false);
       this.rawText.set("");
       this.control.setValue("", { emitEvent: false });
       this.control.setErrors(null);
       return;
     }
-    // fromCanonicalRials returns null only when unit=TOMAN and the rial
-    // amount isn't a whole number of tomans — an externally-set value
-    // this field's own entry path could never itself produce. Falling
-    // back to the raw rial figure keeps writeValue total rather than
-    // throwing on a value it merely didn't originate.
-    const entryAmount = fromCanonicalRials(canonicalRial, this.resolvedUnit()) ?? canonicalRial;
-    const text = formatMoneyInputGrouped(entryAmount);
+
+    // fromCanonicalRials returns null exactly when the configured unit is
+    // TOMAN and the amount isn't a whole number of tomans. This field's
+    // own entry path can't produce such a value, but the ledger can (a
+    // percentage discount, a split payment), so it has to be presented
+    // honestly rather than assumed away: fall back to rial *and* relabel
+    // the field, so the suffix matches the digits and the next keystroke
+    // is re-read as rial too.
+    const configured = this.configuredUnit();
+    const asConfigured = fromCanonicalRials(canonicalRial, configured);
+    this.forcedToRial.set(asConfigured === null);
+
+    const text = formatMoneyInputGrouped(asConfigured ?? canonicalRial);
     this.rawText.set(text);
     this.control.setValue(text, { emitEvent: false });
     this.control.setErrors(null);

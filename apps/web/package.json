@@ -4,9 +4,12 @@
   "description": "Dentix web — Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)",
   "scripts": {
     "ng": "ng",
+    "prestart": "npm run build --workspace @dentix/kernel",
     "start": "ng serve",
+    "prebuild": "npm run build --workspace @dentix/kernel",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "pretest": "npm run build --workspace @dentix/kernel",
     "test": "ng test",
     "test:e2e": "playwright test",
     "lint": "ng lint",

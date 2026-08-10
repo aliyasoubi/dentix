@@ -112,4 +112,82 @@ describe("DsMoneyInputComponent", () => {
     const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
     expect(input.value).toBe("۲٬۵۰۰٬۰۰۰");
   });
+
+  // Regression: a rial amount that is not a whole number of tomans (a
+  // percentage discount, a split payment) used to render its raw rial
+  // digits while the suffix still read تومان — a 10x overstatement — and
+  // the next keystroke re-read those digits as toman, writing 10x back.
+  describe("a canonical amount that is not a whole number of tomans", () => {
+    it("relabels the field to ریال instead of showing rial digits under a تومان suffix", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.detectChanges();
+
+      const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+      expect(input.value).toBe("۲۵٬۰۰۰٬۰۰۱");
+      expect(text).toContain("ریال");
+      expect(text).not.toContain("تومان");
+    });
+
+    it("re-reads a subsequent edit as rial, so the value is not multiplied by ten", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.detectChanges();
+
+      const onChange = vi.fn();
+      fixture.componentInstance.registerOnChange(onChange);
+      typeIntoInput("25000002");
+
+      expect(onChange).toHaveBeenCalledWith(25_000_002n);
+      expect(onChange).not.toHaveBeenCalledWith(250_000_020n);
+    });
+
+    it("shows no toman equivalent line while degraded, since rial is already canonical", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.detectChanges();
+
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+      expect(text).not.toContain("معادل ثبت‌شده");
+    });
+
+    it("reverts to the configured toman unit once the field is emptied", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.detectChanges();
+      typeIntoInput("");
+
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+      expect(text).toContain("تومان");
+
+      const onChange = vi.fn();
+      fixture.componentInstance.registerOnChange(onChange);
+      typeIntoInput("2500000");
+      expect(onChange).toHaveBeenCalledWith(25_000_000n);
+    });
+  });
+
+  it("rejects malformed grouping rather than silently reinterpreting it", async () => {
+    await create("TOMAN");
+    const onChange = vi.fn();
+    fixture.componentInstance.registerOnChange(onChange);
+
+    typeIntoInput("1,2");
+
+    expect(onChange).toHaveBeenCalledWith(null);
+    expect(fixture.componentInstance.validate()).toEqual({ invalidMoneyInput: true });
+  });
+
+  it("rejects an entry whose canonical rial value would exceed the storable bigint range", async () => {
+    await create("TOMAN");
+    const onChange = vi.fn();
+    fixture.componentInstance.registerOnChange(onChange);
+
+    // Well-formed digits, but ×10 for toman puts it past the signed-bigint column.
+    typeIntoInput("9223372036854775807");
+
+    expect(onChange).toHaveBeenCalledWith(null);
+    expect(fixture.componentInstance.validate()).toEqual({ invalidMoneyInput: true });
+  });
 });

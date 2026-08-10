@@ -3,6 +3,9 @@ import {
   formatMoneyForDisplay,
   formatMoneyInputGrouped,
   fromCanonicalRials,
+  isStorableRialAmount,
+  MAX_RIAL,
+  MIN_RIAL,
   parseAmountRialString,
   parseMoneyInput,
   RIALS_PER_TOMAN,
@@ -87,6 +90,32 @@ describe("amountRial decimal-string boundary (05-api-guidelines.md)", () => {
     expect(parseAmountRialString("abc")).toBeNull();
   });
 
+  // 04-data-model.md stores rials in a signed bigint column. Accepting a
+  // larger value here would only defer the failure to the INSERT.
+  it("accepts the exact PostgreSQL bigint bounds", () => {
+    expect(parseAmountRialString(MAX_RIAL.toString())).toBe(MAX_RIAL);
+    expect(parseAmountRialString(MIN_RIAL.toString())).toBe(MIN_RIAL);
+  });
+
+  it("rejects one past each bound", () => {
+    expect(parseAmountRialString((MAX_RIAL + 1n).toString())).toBeNull();
+    expect(parseAmountRialString((MIN_RIAL - 1n).toString())).toBeNull();
+  });
+
+  it("rejects a wildly out-of-range value that JS BigInt would happily parse", () => {
+    expect(parseAmountRialString("99999999999999999999999999")).toBeNull();
+  });
+});
+
+describe("isStorableRialAmount", () => {
+  it.each([0n, 1n, -1n, 25_000_000n, MAX_RIAL, MIN_RIAL])("accepts %s", (amount) => {
+    expect(isStorableRialAmount(amount)).toBe(true);
+  });
+
+  it.each([MAX_RIAL + 1n, MIN_RIAL - 1n, 10n ** 30n])("rejects %s", (amount) => {
+    expect(isStorableRialAmount(amount)).toBe(false);
+  });
+
   it.each([0n, 1n, -1n, 25_000_000n, -25_000_000n, 9_007_199_254_740_993n, -9_007_199_254_740_993n])(
     "round-trips exactly through amountRialToString for %s",
     (amount) => {
@@ -123,6 +152,23 @@ describe("parseMoneyInput — Persian and Latin digits, with or without grouping
   it("rejects ambiguous decimal input rather than guessing", () => {
     expect(parseMoneyInput("2500.5")).toBeNull();
   });
+
+  // Stripping separators before validating their structure would silently
+  // invent an amount: "1,2" -> 12, "1,23,4" -> 1234. A money field must
+  // reject malformed grouping, not reinterpret it.
+  it.each(["1,2", "1٬2", "1,23,4", "1,,2", "25,00,000", "1234,567", ",500", "2,500,"])(
+    "rejects malformed grouping %p instead of stripping separators and guessing",
+    (input) => {
+      expect(parseMoneyInput(input)).toBeNull();
+    },
+  );
+
+  it.each(["2,500,000", "2٬500٬000", "999", "1,000", "12,345,678"])(
+    "accepts correctly grouped %p",
+    (input) => {
+      expect(parseMoneyInput(input)).not.toBeNull();
+    },
+  );
 
   it("rejects a negative sign — entry fields are unsigned quantities", () => {
     expect(parseMoneyInput("-2500000")).toBeNull();

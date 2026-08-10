@@ -49,6 +49,20 @@ export function formatMoneyForDisplay(amountInRials: bigint, unit: MoneyDisplayU
   return { value: fromCanonicalRials(amountInRials, unit)!, unit };
 }
 
+/**
+ * 04-data-model.md stores money as a signed `bigint` rial column, so the
+ * representable range is PostgreSQL's `bigint`, not JS's unbounded
+ * BigInt. Enforced at every boundary that can introduce a value (the API
+ * string parser and the entry-field validator) rather than discovered as
+ * a write failure once the ledger exists.
+ */
+export const MAX_RIAL = 9_223_372_036_854_775_807n;
+export const MIN_RIAL = -9_223_372_036_854_775_808n;
+
+export function isStorableRialAmount(amountInRials: bigint): boolean {
+  return amountInRials >= MIN_RIAL && amountInRials <= MAX_RIAL;
+}
+
 const DECIMAL_INTEGER = /^-?(0|[1-9]\d*)$/;
 
 /**
@@ -57,10 +71,15 @@ const DECIMAL_INTEGER = /^-?(0|[1-9]\d*)$/;
  * JS's float-backed JSON parser intact. Rejects anything that isn't a
  * plain signed integer — no decimal point, no exponent, no leading zeros
  * (except "0" itself), no grouping separators (those are an entry/display
- * concern, see parseMoneyInput).
+ * concern, see parseMoneyInput) — and anything outside the storable rial
+ * range, since accepting it here only defers the failure to the INSERT.
  */
 export function parseAmountRialString(value: string): bigint | null {
-  return DECIMAL_INTEGER.test(value) ? BigInt(value) : null;
+  if (!DECIMAL_INTEGER.test(value)) {
+    return null;
+  }
+  const parsed = BigInt(value);
+  return isStorableRialAmount(parsed) ? parsed : null;
 }
 
 export function amountRialToString(amountInRials: bigint): string {
@@ -69,23 +88,36 @@ export function amountRialToString(amountInRials: bigint): string {
 
 // U+066C ARABIC THOUSANDS SEPARATOR (٬) is the conventional Persian
 // grouping mark; a plain "," is also accepted since some users type on a
-// Latin keyboard layout. Both are stripped, not counted as part of the
-// number.
+// Latin keyboard layout.
 const GROUPING_SEPARATORS = /[٬,]/g;
+
+// Either no separators at all, or correctly grouped in threes. Structure
+// is validated *before* separators are stripped, so malformed grouping is
+// rejected rather than silently reinterpreted: stripping first would turn
+// "1,2" into 12 and "1,23,4" into 1234, quietly inventing an amount the
+// user never typed. Mixed separator characters within one number are
+// tolerated (digits already are — see normalizeDigits), but the 3-digit
+// structure is not optional.
+const UNGROUPED = /^\d+$/;
+const CORRECTLY_GROUPED = /^\d{1,3}([٬,]\d{3})+$/;
 
 /**
  * Parses a money *entry* field's raw text (Persian or Latin digits,
  * optional grouping separators) into a non-negative integer amount in
  * whatever unit the field represents — the caller still owns the
- * toman/rial conversion via toCanonicalRials. Returns null for anything
- * that isn't an unsigned whole number, including decimal input: rial and
- * toman are both integer units, so "2500.5" is rejected outright rather
- * than guessing which side of the dot is meaningful
+ * toman/rial conversion via toCanonicalRials, and owns checking that the
+ * converted result is storable (isStorableRialAmount). Returns null for
+ * anything that isn't an unsigned whole number, including decimal input:
+ * rial and toman are both integer units, so "2500.5" is rejected outright
+ * rather than guessing which side of the dot is meaningful
  * (05-ui-design-system.md: "Reject ambiguous decimal input").
  */
 export function parseMoneyInput(rawInput: string): bigint | null {
-  const stripped = normalizeDigits(rawInput.trim()).replace(GROUPING_SEPARATORS, "");
-  return /^\d+$/.test(stripped) ? BigInt(stripped) : null;
+  const normalized = normalizeDigits(rawInput.trim());
+  if (!UNGROUPED.test(normalized) && !CORRECTLY_GROUPED.test(normalized)) {
+    return null;
+  }
+  return BigInt(normalized.replace(GROUPING_SEPARATORS, ""));
 }
 
 /**
