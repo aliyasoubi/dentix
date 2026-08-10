@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, inject, input, signal } from "@angular/core";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  forwardRef,
+  inject,
+  input,
+  signal,
+} from "@angular/core";
 import {
   ControlValueAccessor,
   FormControl,

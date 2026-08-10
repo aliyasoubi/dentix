@@ -4,7 +4,7 @@
   "version": "0.5.0",
   "description": "Dentix — Farsi-first single-office dental PMS (monorepo root)",
   "engines": {
-    "node": ">=24.11.0 <25",
+    "node": ">=22.22.3 <23",
     "npm": ">=10"
   },
   "workspaces": [

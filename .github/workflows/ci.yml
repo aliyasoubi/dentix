@@ -35,6 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # .nvmrc pins Node exactly (22.23.2). Node 24 aborts apps/web's Vitest
+      # run with SIGABRT — see the warning in README.md's "Getting started"
+      # before changing this.
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"

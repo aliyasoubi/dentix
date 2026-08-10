@@ -26,10 +26,14 @@ type Story = StoryObj<DsMoneyInputComponent>;
  * throughout.
  */
 export const TomanEntry: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
+  ],
 };
 
 /** Office configured for RIAL entry: no separate equivalent line, since the typed number already is the canonical value. */
 export const RialEntry: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "RIAL" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "RIAL" } }] }),
+  ],
 };

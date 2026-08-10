@@ -1,6 +1,12 @@
 import { HttpErrorResponse } from "@angular/common/http";
 import { Component, inject, signal } from "@angular/core";
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from "@angular/forms";
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from "@angular/forms";
 import { MatButtonModule } from "@angular/material/button";
 import { MatCheckboxModule } from "@angular/material/checkbox";
 import { DateAdapter } from "@angular/material/core";
@@ -14,11 +20,7 @@ import { isoDateToJalali, formatJalali, toPersianDigits } from "@dentix/kernel";
 import { AuthService } from "../../core/auth/auth.service";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { TranslationService } from "../../core/i18n/translation.service";
-import {
-  CreatePatientResponse,
-  PatientSearchResult,
-  PatientsApiService,
-} from "./patients-api.service";
+import { CreatePatientResponse, PatientSearchResult, PatientsApiService } from "./patients-api.service";
 
 const KNOWN_ERROR_CODES = new Set([
   "NATIVE_NAME_REQUIRED",
@@ -61,13 +63,7 @@ export class PatientsPage {
   protected readonly auth = inject(AuthService);
   private readonly formBuilder = inject(FormBuilder);
 
-  protected readonly displayedColumns = [
-    "patientNumber",
-    "nativeName",
-    "latinName",
-    "phone",
-    "dateOfBirth",
-  ];
+  protected readonly displayedColumns = ["patientNumber", "nativeName", "latinName", "phone", "dateOfBirth"];
   protected readonly formatDateOfBirth = formatDateOfBirth;
 
   protected readonly form = this.formBuilder.nonNullable.group({
@@ -85,7 +81,7 @@ export class PatientsPage {
 
   protected readonly submitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
-  protected readonly lastCreated = signal<CreatePatientResponse & { name: string } | null>(null);
+  protected readonly lastCreated = signal<(CreatePatientResponse & { name: string }) | null>(null);
 
   protected readonly searchQuery = signal("");
   protected readonly searching = signal(false);

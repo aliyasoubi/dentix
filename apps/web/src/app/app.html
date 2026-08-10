@@ -3,8 +3,8 @@
   <span class="app-toolbar__title">{{ "app.title" | translate }}</span>
   <span class="app-toolbar__spacer"></span>
   @if (auth.isAuthenticated()) {
-    <span class="app-toolbar__user">{{ auth.session()?.displayName }}</span>
-    <button mat-stroked-button (click)="logout()">{{ "common.actions.logout" | translate }}</button>
+  <span class="app-toolbar__user">{{ auth.session()?.displayName }}</span>
+  <button mat-stroked-button (click)="logout()">{{ "common.actions.logout" | translate }}</button>
   }
 </mat-toolbar>
 

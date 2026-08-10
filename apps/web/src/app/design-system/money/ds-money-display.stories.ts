@@ -24,7 +24,9 @@ type Story = StoryObj<DsMoneyDisplayComponent>;
 
 /** Office configured for TOMAN (the common case): 25,000,000 rial displays as ۲٬۵۰۰٬۰۰۰ تومان. */
 export const TomanDefault: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
+  ],
   args: {
     amountRial: 25_000_000n,
   },
@@ -32,7 +34,9 @@ export const TomanDefault: Story = {
 
 /** Office configured for RIAL: the same 25,000,000 rial amount displays unconverted, as ۲۵٬۰۰۰٬۰۰۰ ریال. */
 export const RialDefault: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "RIAL" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "RIAL" } }] }),
+  ],
   args: {
     amountRial: 25_000_000n,
   },
@@ -40,7 +44,9 @@ export const RialDefault: Story = {
 
 /** A single amountRial input overrides the office default for just this one display — useful when a screen must show both units side by side. */
 export const ExplicitUnitOverride: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
+  ],
   args: {
     amountRial: 25_000_000n,
     unit: "RIAL",
@@ -53,7 +59,9 @@ export const ExplicitUnitOverride: Story = {
  * never round; it falls back to an explicitly labeled rial amount instead.
  */
 export const NonWholeTomanFallsBackToRial: Story = {
-  decorators: [applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] })],
+  decorators: [
+    applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
+  ],
   args: {
     amountRial: 25_000_001n,
   },

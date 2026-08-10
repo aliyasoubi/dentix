@@ -1,38 +1,32 @@
-import type { StorybookConfig } from '@storybook/angular-vite';
+import type { StorybookConfig } from "@storybook/angular-vite";
 
-import { dirname } from "path"
+import { dirname } from "path";
 
-import { fileURLToPath } from "url"
+import { fileURLToPath } from "url";
 
 /**
-* This function is used to resolve the absolute path of a package.
-* It is needed in projects that use Yarn PnP or are set up within a monorepo.
-*/
+ * This function is used to resolve the absolute path of a package.
+ * It is needed in projects that use Yarn PnP or are set up within a monorepo.
+ */
 function getAbsolutePath(value: string) {
-  return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)))
+  return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
 }
 const config: StorybookConfig = {
-  "stories": [
-    "../src/**/*.mdx",
-    "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"
-  ],
+  stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
   // Serves the app's real public/ dir (i18n JSON, Vazirmatn font) so
   // stories load the same translation resources and fonts as production,
   // not story-local stand-ins.
-  "staticDirs": ["../public"],
-  "addons": [
-    getAbsolutePath('@storybook/addon-a11y'),
-    getAbsolutePath('@storybook/addon-docs')
-  ],
-  "framework": {
-    "name": getAbsolutePath('@storybook/angular-vite'),
-    "options": {
+  staticDirs: ["../public"],
+  addons: [getAbsolutePath("@storybook/addon-a11y"), getAbsolutePath("@storybook/addon-docs")],
+  framework: {
+    name: getAbsolutePath("@storybook/angular-vite"),
+    options: {
       // We don't use the Compodoc-generated docs.json (auto-populated prop
       // tables) — @storybook/addon-docs still renders a docs page from
       // TS types alone. Compodoc defaults to true and would otherwise
       // spawn a project-wide TS scan via a package we don't install.
-      "compodoc": false
-    }
+      compodoc: false,
+    },
   },
   // @dentix/kernel is a linked npm workspace package, not a real
   // published dependency, so Vite serves its compiled CommonJS output

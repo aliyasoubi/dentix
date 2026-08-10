@@ -28,15 +28,15 @@ const entityFiles = findOrmEntityFiles(join(SRC_DIR, "modules"));
 const entitiesSource = readFileSync(ENTITIES_FILE, "utf8");
 
 const unregistered = entityFiles.filter((file) => {
-  const specifier = relative(dirname(ENTITIES_FILE), file)
-    .replace(/\\/g, "/")
-    .replace(/\.ts$/, "");
+  const specifier = relative(dirname(ENTITIES_FILE), file).replace(/\\/g, "/").replace(/\.ts$/, "");
   const importSpecifier = specifier.startsWith(".") ? specifier : `./${specifier}`;
   return !entitiesSource.includes(importSpecifier);
 });
 
 if (unregistered.length > 0) {
-  console.error("lint:arch — entity file(s) exist but are not registered in src/persistence/entity-registry.ts:");
+  console.error(
+    "lint:arch — entity file(s) exist but are not registered in src/persistence/entity-registry.ts:",
+  );
   for (const file of unregistered) {
     console.error(`  - ${relative(SRC_DIR, file)}`);
   }

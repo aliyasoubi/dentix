@@ -17,7 +17,10 @@ class StubTranslationService {
     if (!params) {
       return template;
     }
-    return Object.entries(params).reduce((msg, [name, value]) => msg.replaceAll(`{{${name}}}`, value), template);
+    return Object.entries(params).reduce(
+      (msg, [name, value]) => msg.replaceAll(`{{${name}}}`, value),
+      template,
+    );
   }
 }
 

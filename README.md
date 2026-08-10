@@ -9,12 +9,13 @@
 ```
 CLAUDE.md                  AI-assisted development guide (invariants, conventions)
 assets/brand/               Dentix logo — icon, EN/FA lockups, monochrome variant
-docker-compose.yml         Dev-only Postgres + Keycloak (see 00-build-sequencing.md for what's deliberately not here yet)
+docker-compose.yml         Dev-only Postgres + Keycloak + MinIO (see 00-build-sequencing.md for what's deliberately not here yet)
 apps/
   api/                     NestJS modular monolith (ADR-001)
   web/                     Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)
+  worker/                  Headless-Chromium document rendering (ADR-009)
 packages/
-  kernel/                  Shared kernel: identifiers, result/error types (03-module-boundaries.md)
+  kernel/                  Shared kernel: identifiers, result/error types, Jalali, money (03-module-boundaries.md)
 docs/
   README.md                Executive implementation summary
   document-control.md      Authority, ownership, and change rules
@@ -41,7 +42,16 @@ docs/
 
 ## Getting started (Release 0.5, slice S1)
 
-Prerequisites: Node 24 (`nvm use`, matching `.nvmrc`) and Docker.
+Prerequisites: Node 22.23.2 (`nvm use`, matching `.nvmrc`) and Docker.
+
+> **Do not bump Node to 24 without re-verifying `apps/web`.** Node 24.18.1 aborts
+> `npm run test --workspace @dentix/web` with `SIGABRT` (exit 134) after ~1,486
+> `File descriptor … unmanaged mode` warnings. The Angular build and test
+> discovery both succeed; only test _execution_ dies, and it does so regardless
+> of Vitest's `pool` setting. `apps/api`, `apps/worker`, and `packages/kernel`
+> all pass on 24. Node 22.22.3+ is inside Angular 22's supported range
+> (`^22.22.3 || ^24.15.0 || >=26.0.0`) and is LTS into 2027, so the pin costs
+> nothing today. Revisit when Angular/Vitest fix the Node 24 path, or at Node 26.
 
 ```bash
 npm install                        # installs all workspaces (apps/*, packages/*)

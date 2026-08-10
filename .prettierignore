@@ -1,0 +1,21 @@
+# Build and generated output.
+dist/
+coverage/
+storybook-static/
+.angular/
+apps/worker/tmp/
+package-lock.json
+
+# Generated Keycloak realm export, not hand-authored config: keycloak/README.md
+# documents re-exporting it from the admin console, so reformatting it here
+# would be undone by (and conflict with) the next export.
+keycloak/dentix-realm.json
+
+# Human-authored specification and governance documents. These live under
+# docs/document-control.md, are reviewed as prose, and use hand-aligned wide
+# tables that Prettier would pad out to 200+ character lines without changing
+# a single word of content — churn across 80+ authoritative documents in
+# exchange for nothing. Prettier governs code style in this repo; spec prose
+# is governed by review.
+docs/
+CLAUDE.md

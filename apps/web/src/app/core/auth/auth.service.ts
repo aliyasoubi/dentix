@@ -40,9 +40,7 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    const response = await firstValueFrom(
-      this.http.post<LogoutResponse>("/api/v1/auth/logout", {}),
-    );
+    const response = await firstValueFrom(this.http.post<LogoutResponse>("/api/v1/auth/logout", {}));
     this.currentSession.set(null);
     window.location.href = response.providerEndSessionUrl;
   }

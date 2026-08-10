@@ -89,7 +89,6 @@ export function formatJalali(j: JalaliYmd): string {
   return `${String(j.year).padStart(4, "0")}/${String(j.month).padStart(2, "0")}/${String(j.day).padStart(2, "0")}`;
 }
 
-
 /**
  * Parses "1369/02/25" style input (Persian or Latin digits, `/` or `-`
  * separators) into a validated Jalali date, or null if the text isn't a
