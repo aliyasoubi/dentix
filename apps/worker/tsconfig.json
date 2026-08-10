@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["node", "jest"],
+    // Clears tsconfig.base.json's "@dentix/kernel" -> packages/kernel/src
+    // path mapping (meant for tooling within the kernel package itself):
+    // this app imports @dentix/kernel by package name and must resolve
+    // it through node_modules to the compiled dist/, like any other
+    // dependency — not to kernel's own source, which sits outside this
+    // project's rootDir.
+    "paths": {}
+  }
+}

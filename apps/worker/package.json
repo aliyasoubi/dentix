@@ -1,0 +1,47 @@
+{
+  "name": "@dentix/worker",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Dentix worker — headless-Chromium document rendering (ADR-009), a separately scalable process per ADR-001",
+  "main": "dist/main.js",
+  "scripts": {
+    "prebuild": "npm run build --workspace @dentix/kernel",
+    "build": "tsc -p tsconfig.build.json",
+    "render:receipt-fixture": "npm run build && node dist/main.js",
+    "lint": "eslint src test --max-warnings=0",
+    "lint:arch": "depcruise src --config .dependency-cruiser.json",
+    "pretest": "npm run build --workspace @dentix/kernel",
+    "test": "jest",
+    "pretest:int": "npm run build --workspace @dentix/kernel",
+    "test:int": "jest --config ./test/jest-int.json --runInBand"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1106.0",
+    "@dentix/kernel": "0.5.0",
+    "dotenv": "17.4.2",
+    "playwright": "1.62.1",
+    "vazirmatn": "33.0.3"
+  },
+  "devDependencies": {
+    "@types/jest": "30.0.0",
+    "@types/node": "24.13.3",
+    "dependency-cruiser": "18.1.1",
+    "jest": "30.4.2",
+    "ts-jest": "29.4.12",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "testEnvironment": "node"
+  }
+}

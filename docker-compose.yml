@@ -1,8 +1,10 @@
-
-# Dev-only stack for Release 0.5 (S1). Deliberately does not include Redis,
-# BullMQ, or MinIO — see docs/07-plans/00-build-sequencing.md: those are
-# added when the first real async workflow (Redis/BullMQ, ~R2) or document
-# storage (MinIO, ~R6) actually needs them, not before.
+# Dev-only stack for Release 0.5. Deliberately does not include Redis or
+# BullMQ — see docs/07-plans/00-build-sequencing.md: messaging
+# infrastructure is added when the first real async workflow needs it
+# (~R2), not before. MinIO joined in S7, the slice where document storage
+# (the PDF receipt pipeline, ADR-009) actually starts — per the same doc,
+# "add MinIO only when document storage starts." This is the dev-only
+# container; "MinIO/S3 production setup" itself remains an R6 concern.
 #
 # Keycloak runs its own embedded dev store (`start-dev`); it does not share
 # the `dentix` Postgres database. The `dentix` realm (ADR-007) is imported
@@ -51,5 +53,28 @@ services:
       timeout: 5s
       retries: 20
 
+  # S3-compatible dev object storage (ADR-009). The worker ensures its
+  # bucket exists on startup (idempotent CreateBucket) rather than this
+  # compose file provisioning one — the same thing a real S3 account setup
+  # would do, and one less moving part here.
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dentix}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dentix_dev_only}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - dentix_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   dentix_postgres_data:
+  dentix_minio_data:

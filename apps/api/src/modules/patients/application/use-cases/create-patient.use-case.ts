@@ -16,10 +16,7 @@ import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
 import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 export type CreatePatientErrorCode =
-  | "NATIVE_NAME_REQUIRED"
-  | "INVALID_PHONE"
-  | "CONTACT_REQUIRED"
-  | "INVALID_DATE_OF_BIRTH";
+  "NATIVE_NAME_REQUIRED" | "INVALID_PHONE" | "CONTACT_REQUIRED" | "INVALID_DATE_OF_BIRTH";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;

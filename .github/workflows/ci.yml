@@ -27,6 +27,10 @@ jobs:
       OIDC_CLIENT_ID: dentix-bff
       OIDC_REDIRECT_URI: http://localhost:3000/api/v1/auth/callback
       APP_BASE_URL: http://localhost:3000
+      MINIO_ROOT_USER: dentix
+      MINIO_ROOT_PASSWORD: dentix_ci_only
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_BUCKET: dentix-documents-ci
 
     steps:
       - uses: actions/checkout@v4
@@ -39,9 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Start Postgres and Keycloak (docker-compose.yml)
+      - name: Start Postgres, Keycloak, and MinIO (docker-compose.yml)
         run: |
-          docker compose up -d postgres keycloak
+          docker compose up -d postgres keycloak minio
           until docker compose ps postgres --format json | grep -q healthy; do
             echo "waiting for postgres..."
             sleep 2
@@ -49,6 +53,10 @@ jobs:
           until docker compose ps keycloak --format json | grep -q healthy; do
             echo "waiting for keycloak..."
             sleep 3
+          done
+          until docker compose ps minio --format json | grep -q healthy; do
+            echo "waiting for minio..."
+            sleep 2
           done
 
       - name: Fetch the dentix-bff client secret (realm imported fresh each start)
@@ -84,6 +92,12 @@ jobs:
           npm run db:migrate
           npm run db:migrate:down
           npm run db:migrate
+
+      # apps/worker renders receipts via headless Chromium (ADR-009); the
+      # binary isn't in the npm cache, only this explicit install step.
+      - name: Install Playwright Chromium (worker PDF rendering)
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/worker
 
       - name: Integration tests
         run: npm run test:int
