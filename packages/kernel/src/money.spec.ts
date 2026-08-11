@@ -170,6 +170,22 @@ describe("parseMoneyInput — Persian and Latin digits, with or without grouping
     },
   );
 
+  // A leading zero would silently reinterpret "0500" as 500 — the same
+  // failure mode as unvalidated grouping, just via a different route.
+  // parseAmountRialString already rejects this shape at the API boundary;
+  // the entry parser must not be laxer than the wire format it feeds.
+  it.each(["0500", "00", "0,500", "01,234"])("rejects a leading zero %p", (input) => {
+    expect(parseMoneyInput(input)).toBeNull();
+  });
+
+  it("accepts the literal single digit zero", () => {
+    expect(parseMoneyInput("0")).toBe(0n);
+  });
+
+  it("tolerates a mixed separator glyph within one number, since either character at a valid group boundary is unambiguous", () => {
+    expect(parseMoneyInput("1,234٬567")).toBe(1_234_567n);
+  });
+
   it("rejects a negative sign — entry fields are unsigned quantities", () => {
     expect(parseMoneyInput("-2500000")).toBeNull();
   });

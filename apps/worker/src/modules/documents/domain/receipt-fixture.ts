@@ -1,6 +1,4 @@
-import type { GregorianYmd } from "@dentix/kernel";
-
-export type MoneyDisplayUnit = "RIAL" | "TOMAN";
+import type { GregorianYmd, MoneyDisplayUnit } from "@dentix/kernel";
 
 export interface ReceiptFixture {
   readonly receiptNumber: string;

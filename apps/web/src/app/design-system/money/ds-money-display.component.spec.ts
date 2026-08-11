@@ -70,4 +70,29 @@ describe("DsMoneyDisplayComponent", () => {
     expect(text).toContain("۲۵٬۰۰۰٬۰۰۰");
     expect(text).toContain("ریال");
   });
+
+  // A signed amount (a ledger reversal, once that exists) must not trip
+  // the same 10x mislabeling class of bug DsMoneyInputComponent had: the
+  // non-whole-toman check has to hold its sign correctly for a negative
+  // amount too, not just a positive one.
+  it("converts a negative whole-toman amount correctly", async () => {
+    await createWithDefaultUnit("TOMAN");
+    fixture.componentRef.setInput("amountRial", -25_000_000n);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+    expect(text).toContain("-۲٬۵۰۰٬۰۰۰");
+    expect(text).toContain("تومان");
+  });
+
+  it("falls back to labeled rial for a negative amount that is not a whole number of tomans", async () => {
+    await createWithDefaultUnit("TOMAN");
+    fixture.componentRef.setInput("amountRial", -25_000_001n);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+    expect(text).toContain("-۲۵٬۰۰۰٬۰۰۱");
+    expect(text).toContain("ریال");
+    expect(text).not.toContain("تومان");
+  });
 });

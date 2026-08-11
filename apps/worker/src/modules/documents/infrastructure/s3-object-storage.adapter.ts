@@ -35,7 +35,17 @@ export class S3ObjectStorageAdapter implements ObjectStoragePort {
   async ensureBucketExists(): Promise<void> {
     try {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
-    } catch {
+    } catch (error) {
+      // Only a genuinely missing bucket (404/NotFound) should fall
+      // through to creating one. Anything else — bad credentials (403),
+      // a network failure, an unreachable endpoint — must propagate as
+      // itself: verified directly that a credentials error here has
+      // name "Unknown"/status 403, not "NotFound", and swallowing it
+      // would mask a clear auth failure behind a confusing secondary
+      // CreateBucket error instead.
+      if (!isBucketNotFound(error)) {
+        throw error;
+      }
       await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
     }
   }
@@ -59,4 +69,17 @@ export class S3ObjectStorageAdapter implements ObjectStoragePort {
     }
     return Buffer.from(bytes);
   }
+}
+
+interface AwsSdkErrorShape {
+  readonly name?: unknown;
+  readonly $metadata?: { readonly httpStatusCode?: number };
+}
+
+function isBucketNotFound(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const { name, $metadata } = error as AwsSdkErrorShape;
+  return name === "NotFound" || name === "NoSuchBucket" || $metadata?.httpStatusCode === 404;
 }

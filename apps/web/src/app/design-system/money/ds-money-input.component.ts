@@ -43,6 +43,14 @@ import { MONEY_CONFIG } from "./money-config";
  * auto-switching inside mat-form-field reads the input's NgControl
  * errorState, which stays permanently false without a real FormControl
  * attached — a bare (input) handler cannot drive it.
+ *
+ * Non-negative entry only, matching kernel's parseMoneyInput contract — a
+ * fee, payment, or charge amount is never typed as negative. writeValue
+ * will still *display* a negative canonicalRial correctly (a signed
+ * ledger reversal, once that exists), but editing it is rejected as
+ * invalidMoneyInput rather than misread, since this field has no signed-
+ * entry syntax. A ledger UI that needs to edit signed amounts is a
+ * separate future component, not this one widened.
  */
 @Component({
   selector: "app-ds-money-input",
@@ -81,7 +89,6 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
 
   protected readonly control = new FormControl("", { nonNullable: true });
   private readonly rawText = signal("");
-  protected readonly disabled = signal(false);
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function -- ControlValueAccessor default until registerOnChange/registerOnTouched supply the real callback
   private onChange: (value: bigint | null) => void = () => {};
@@ -203,7 +210,8 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    // FormControlDirective reflects control.disabled onto the native
+    // input's disabled attribute itself — no separate signal needed.
     if (isDisabled) {
       this.control.disable({ emitEvent: false });
     } else {

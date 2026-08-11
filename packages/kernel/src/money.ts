@@ -96,10 +96,14 @@ const GROUPING_SEPARATORS = /[٬,]/g;
 // rejected rather than silently reinterpreted: stripping first would turn
 // "1,2" into 12 and "1,23,4" into 1234, quietly inventing an amount the
 // user never typed. Mixed separator characters within one number are
-// tolerated (digits already are — see normalizeDigits), but the 3-digit
-// structure is not optional.
-const UNGROUPED = /^\d+$/;
-const CORRECTLY_GROUPED = /^\d{1,3}([٬,]\d{3})+$/;
+// tolerated (digits already are — see normalizeDigits) since either glyph
+// at a valid group boundary is unambiguous. No leading zero (except the
+// literal single digit "0"), matching parseAmountRialString's own rule —
+// otherwise "0500" would silently become 500, the same silent
+// reinterpretation this function exists to prevent, just via a different
+// route than malformed grouping.
+const UNGROUPED = /^(0|[1-9]\d*)$/;
+const CORRECTLY_GROUPED = /^[1-9]\d{0,2}([٬,]\d{3})+$/;
 
 /**
  * Parses a money *entry* field's raw text (Persian or Latin digits,

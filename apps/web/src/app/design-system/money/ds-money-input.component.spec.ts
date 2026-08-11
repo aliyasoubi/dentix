@@ -190,4 +190,32 @@ describe("DsMoneyInputComponent", () => {
     expect(onChange).toHaveBeenCalledWith(null);
     expect(fixture.componentInstance.validate()).toEqual({ invalidMoneyInput: true });
   });
+
+  // This field is non-negative entry only (see the class doc comment). A
+  // signed ledger amount can still be *displayed* correctly, but the field
+  // must refuse to guess at editing it rather than misreading the sign.
+  describe("a negative canonical amount (not producible by this field, but displayable)", () => {
+    it("displays the signed amount correctly on load", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(-25_000_000n);
+      fixture.detectChanges();
+
+      const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
+      expect(input.value).toBe("-۲٬۵۰۰٬۰۰۰");
+    });
+
+    it("rejects an edit to the loaded text as invalid, rather than misreading the sign", async () => {
+      await create("TOMAN");
+      fixture.componentInstance.writeValue(-25_000_000n);
+      fixture.detectChanges();
+
+      const onChange = vi.fn();
+      fixture.componentInstance.registerOnChange(onChange);
+      typeIntoInput("-۲٬۵۰۰٬۰۰۱");
+
+      expect(onChange).toHaveBeenCalledWith(null);
+      expect(onChange).not.toHaveBeenCalledWith(-250_000_010n);
+      expect(fixture.componentInstance.validate()).toEqual({ invalidMoneyInput: true });
+    });
+  });
 });
