@@ -1,16 +1,44 @@
 import {
   amountRialToString,
+  asMoney,
   formatMoneyForDisplay,
   formatMoneyInputGrouped,
   fromCanonicalRials,
   isStorableRialAmount,
   MAX_RIAL,
   MIN_RIAL,
+  Money,
   parseAmountRialString,
   parseMoneyInput,
   RIALS_PER_TOMAN,
   toCanonicalRials,
+  tryAsMoney,
 } from "./money";
+
+describe("asMoney / tryAsMoney — the Money type guard (S6: 'Money type over bigint rials')", () => {
+  it("asMoney returns the same value for a storable amount, typed as Money", () => {
+    const money: Money = asMoney(25_000_000n);
+    expect(money).toBe(25_000_000n);
+  });
+
+  it("asMoney throws for a value outside the storable rial range, rather than silently accepting it", () => {
+    expect(() => asMoney(MAX_RIAL + 1n)).toThrow(/not a storable rial amount/i);
+  });
+
+  it("tryAsMoney returns the value for a storable amount", () => {
+    expect(tryAsMoney(25_000_000n)).toBe(25_000_000n);
+  });
+
+  it("tryAsMoney returns null instead of throwing for an out-of-range amount — the boundary-safe counterpart to asMoney", () => {
+    expect(tryAsMoney(MAX_RIAL + 1n)).toBeNull();
+    expect(tryAsMoney(MIN_RIAL - 1n)).toBeNull();
+  });
+
+  it("accepts exactly the PostgreSQL bigint bounds", () => {
+    expect(tryAsMoney(MAX_RIAL)).toBe(MAX_RIAL);
+    expect(tryAsMoney(MIN_RIAL)).toBe(MIN_RIAL);
+  });
+});
 
 describe("toCanonicalRials", () => {
   it("multiplies toman by 10 to get rials (05-ui-design-system.md's worked example)", () => {
@@ -25,39 +53,60 @@ describe("toCanonicalRials", () => {
     const hugeToman = 9_007_199_254_740_993n; // MAX_SAFE_INTEGER + 2, a float would round this
     expect(toCanonicalRials(hugeToman, "TOMAN")).toBe(hugeToman * RIALS_PER_TOMAN);
   });
+
+  // Not "always exact" the way the pre-Money version was documented: a
+  // toman amount this large, ×10, overflows the storable rial range.
+  // DsMoneyInputComponent has a browser-verified regression test typing
+  // in exactly this value and being rejected, rather than silently
+  // wrapping or truncating.
+  it("returns null — not a wrapped or truncated value — when the toman amount overflows the storable rial range", () => {
+    expect(toCanonicalRials(MAX_RIAL, "TOMAN")).toBeNull();
+  });
+
+  it("returns null when the rial amount itself is already out of range", () => {
+    expect(toCanonicalRials(MAX_RIAL + 1n, "RIAL")).toBeNull();
+  });
 });
 
 describe("fromCanonicalRials", () => {
   it("divides rials by 10 for a whole-toman amount", () => {
-    expect(fromCanonicalRials(25_000_000n, "TOMAN")).toBe(2_500_000n);
+    expect(fromCanonicalRials(asMoney(25_000_000n), "TOMAN")).toBe(2_500_000n);
   });
 
   it("is the identity for rial", () => {
-    expect(fromCanonicalRials(25_000_001n, "RIAL")).toBe(25_000_001n);
+    expect(fromCanonicalRials(asMoney(25_000_001n), "RIAL")).toBe(25_000_001n);
   });
 
   it("returns null rather than rounding when the rial amount isn't a whole number of tomans", () => {
-    expect(fromCanonicalRials(25_000_001n, "TOMAN")).toBeNull();
+    expect(fromCanonicalRials(asMoney(25_000_001n), "TOMAN")).toBeNull();
   });
 
   it("round-trips through toCanonicalRials for every multiple of 10", () => {
     for (const toman of [0n, 1n, 42n, 2_500_000n, 999_999_999_999n]) {
-      expect(fromCanonicalRials(toCanonicalRials(toman, "TOMAN"), "TOMAN")).toBe(toman);
+      const rials = toCanonicalRials(toman, "TOMAN");
+      expect(rials).not.toBeNull();
+      expect(fromCanonicalRials(rials!, "TOMAN")).toBe(toman);
     }
   });
 });
 
 describe("formatMoneyForDisplay", () => {
   it("shows a whole-toman amount as toman", () => {
-    expect(formatMoneyForDisplay(25_000_000n, "TOMAN")).toEqual({ value: 2_500_000n, unit: "TOMAN" });
+    expect(formatMoneyForDisplay(asMoney(25_000_000n), "TOMAN")).toEqual({
+      value: 2_500_000n,
+      unit: "TOMAN",
+    });
   });
 
   it("falls back to a labeled rial amount instead of rounding a non-whole-toman value", () => {
-    expect(formatMoneyForDisplay(25_000_001n, "TOMAN")).toEqual({ value: 25_000_001n, unit: "RIAL" });
+    expect(formatMoneyForDisplay(asMoney(25_000_001n), "TOMAN")).toEqual({
+      value: 25_000_001n,
+      unit: "RIAL",
+    });
   });
 
   it("never fails for rial — every integer rial amount is displayable as rial", () => {
-    expect(formatMoneyForDisplay(1n, "RIAL")).toEqual({ value: 1n, unit: "RIAL" });
+    expect(formatMoneyForDisplay(asMoney(1n), "RIAL")).toEqual({ value: 1n, unit: "RIAL" });
   });
 });
 
@@ -105,6 +154,13 @@ describe("amountRial decimal-string boundary (05-api-guidelines.md)", () => {
   it("rejects a wildly out-of-range value that JS BigInt would happily parse", () => {
     expect(parseAmountRialString("99999999999999999999999999")).toBeNull();
   });
+
+  it.each([0n, 1n, -1n, 25_000_000n, -25_000_000n, 9_007_199_254_740_993n, -9_007_199_254_740_993n])(
+    "round-trips exactly through amountRialToString for %s",
+    (amount) => {
+      expect(parseAmountRialString(amountRialToString(asMoney(amount)))).toBe(amount);
+    },
+  );
 });
 
 describe("isStorableRialAmount", () => {
@@ -115,13 +171,6 @@ describe("isStorableRialAmount", () => {
   it.each([MAX_RIAL + 1n, MIN_RIAL - 1n, 10n ** 30n])("rejects %s", (amount) => {
     expect(isStorableRialAmount(amount)).toBe(false);
   });
-
-  it.each([0n, 1n, -1n, 25_000_000n, -25_000_000n, 9_007_199_254_740_993n, -9_007_199_254_740_993n])(
-    "round-trips exactly through amountRialToString for %s",
-    (amount) => {
-      expect(parseAmountRialString(amountRialToString(amount))).toBe(amount);
-    },
-  );
 });
 
 describe("parseMoneyInput — Persian and Latin digits, with or without grouping separators", () => {

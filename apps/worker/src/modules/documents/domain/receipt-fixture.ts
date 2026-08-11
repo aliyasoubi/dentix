@@ -1,4 +1,4 @@
-import type { GregorianYmd, MoneyDisplayUnit } from "@dentix/kernel";
+import { asMoney, type GregorianYmd, type Money, type MoneyDisplayUnit } from "@dentix/kernel";
 
 export interface ReceiptFixture {
   readonly receiptNumber: string;
@@ -8,7 +8,7 @@ export interface ReceiptFixture {
   readonly patientLatinName: string;
   readonly procedureDescriptionFa: string;
   /** Canonical rial amount (ADR-005) — the template converts to the display unit, never stores a converted value. */
-  readonly amountRial: bigint;
+  readonly amountRial: Money;
   readonly displayUnit: MoneyDisplayUnit;
 }
 
@@ -29,6 +29,6 @@ export const DUMMY_RECEIPT_FIXTURE: ReceiptFixture = {
   patientNativeName: "رضا احمدی",
   patientLatinName: "Reza Ahmadi",
   procedureDescriptionFa: "جرم‌گیری و بروساژ",
-  amountRial: 25_000_000n,
+  amountRial: asMoney(25_000_000n),
   displayUnit: "TOMAN",
 };

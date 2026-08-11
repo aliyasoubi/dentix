@@ -1,3 +1,4 @@
+import { asMoney } from "@dentix/kernel";
 import { renderReceiptHtml } from "./receipt-template";
 import type { ReceiptFixture } from "./receipt-fixture";
 
@@ -10,7 +11,7 @@ const FIXTURE: ReceiptFixture = {
   patientNativeName: "رضا احمدی",
   patientLatinName: "Reza Ahmadi",
   procedureDescriptionFa: "جرم‌گیری و بروساژ",
-  amountRial: 25_000_000n,
+  amountRial: asMoney(25_000_000n),
   displayUnit: "TOMAN",
 };
 
@@ -44,7 +45,7 @@ describe("renderReceiptHtml", () => {
   });
 
   it("falls back to a labeled rial amount when the value isn't a whole number of tomans", () => {
-    const html = renderReceiptHtml({ ...FIXTURE, amountRial: 25_000_001n }, FONTS, BRAND_ICON_SVG);
+    const html = renderReceiptHtml({ ...FIXTURE, amountRial: asMoney(25_000_001n) }, FONTS, BRAND_ICON_SVG);
     expect(html).toContain("۲۵٬۰۰۰٬۰۰۱");
     expect(html).toContain("ریال");
   });

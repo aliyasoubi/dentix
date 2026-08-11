@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from "@angular/core";
-import { formatMoneyForDisplay, formatMoneyInputGrouped, MoneyDisplayUnit } from "@dentix/kernel";
+import { formatMoneyForDisplay, formatMoneyInputGrouped, Money, MoneyDisplayUnit } from "@dentix/kernel";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { MONEY_CONFIG } from "./money-config";
 
@@ -25,8 +25,15 @@ import { MONEY_CONFIG } from "./money-config";
 export class DsMoneyDisplayComponent {
   private readonly moneyConfig = inject(MONEY_CONFIG);
 
-  /** Canonical rial amount — never a display-unit value (04-data-model.md: "v1 stores money as signed bigint rials"). */
-  readonly amountRial = input.required<bigint>();
+  /**
+   * Canonical rial amount — never a display-unit value (04-data-model.md:
+   * "v1 stores money as signed bigint rials"). Typed as the kernel's
+   * branded Money, not a bare bigint, so a caller can't accidentally bind
+   * an unrelated bigint (a patient count, a Jalali year) here — construct
+   * one via asMoney/tryAsMoney at the boundary where the raw amount was
+   * read (e.g. from an API response already validated as amountRial).
+   */
+  readonly amountRial = input.required<Money>();
   /** Overrides the office's configured default unit for this one amount; omit to follow MONEY_CONFIG. */
   readonly unit = input<MoneyDisplayUnit>();
 

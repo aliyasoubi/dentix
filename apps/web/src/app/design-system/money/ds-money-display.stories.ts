@@ -1,3 +1,4 @@
+import { asMoney } from "@dentix/kernel";
 import type { Meta, StoryObj } from "@storybook/angular-vite";
 import { applicationConfig } from "@storybook/angular-vite";
 import { DsMoneyDisplayComponent } from "./ds-money-display.component";
@@ -28,7 +29,7 @@ export const TomanDefault: Story = {
     applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
   ],
   args: {
-    amountRial: 25_000_000n,
+    amountRial: asMoney(25_000_000n),
   },
 };
 
@@ -38,7 +39,7 @@ export const RialDefault: Story = {
     applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "RIAL" } }] }),
   ],
   args: {
-    amountRial: 25_000_000n,
+    amountRial: asMoney(25_000_000n),
   },
 };
 
@@ -48,7 +49,7 @@ export const ExplicitUnitOverride: Story = {
     applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
   ],
   args: {
-    amountRial: 25_000_000n,
+    amountRial: asMoney(25_000_000n),
     unit: "RIAL",
   },
 };
@@ -63,6 +64,6 @@ export const NonWholeTomanFallsBackToRial: Story = {
     applicationConfig({ providers: [{ provide: MONEY_CONFIG, useValue: { defaultUnit: "TOMAN" } }] }),
   ],
   args: {
-    amountRial: 25_000_001n,
+    amountRial: asMoney(25_000_001n),
   },
 };

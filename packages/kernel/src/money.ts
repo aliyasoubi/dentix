@@ -1,3 +1,4 @@
+import { Branded } from "./identifiers";
 import { normalizeDigits, toPersianDigits } from "./persian";
 
 /**
@@ -12,9 +13,52 @@ export type MoneyDisplayUnit = "RIAL" | "TOMAN";
 
 export const RIALS_PER_TOMAN = 10n;
 
-/** Display/entry unit -> canonical rials. Toman -> rial is always exact (multiplication), never fails. */
-export function toCanonicalRials(amount: bigint, unit: MoneyDisplayUnit): bigint {
-  return unit === "TOMAN" ? amount * RIALS_PER_TOMAN : amount;
+/**
+ * A bigint already proven to be a storable rial amount — the same
+ * Branded<> pattern as Uuid (identifiers.ts), for the same reason: so a
+ * patient count, a Jalali year, or any other incidental bigint can't be
+ * passed where a rial amount is expected, and so every function below
+ * that receives one doesn't need to re-check its range. Construct one via
+ * asMoney/tryAsMoney/toCanonicalRials — never via a bare `as Money`
+ * outside this file.
+ */
+export type Money = Branded<bigint, "Money">;
+
+/**
+ * 04-data-model.md stores money as a signed `bigint` rial column, so the
+ * representable range is PostgreSQL's `bigint`, not JS's unbounded
+ * BigInt. Doubles as the Money type guard: every function that returns
+ * Money below funnels through this, so "not storable" and "not a valid
+ * Money" are the same check, not two that could drift apart.
+ */
+export const MAX_RIAL = 9_223_372_036_854_775_807n;
+export const MIN_RIAL = -9_223_372_036_854_775_808n;
+
+export function isStorableRialAmount(amountInRials: bigint): amountInRials is Money {
+  return amountInRials >= MIN_RIAL && amountInRials <= MAX_RIAL;
+}
+
+/** Validating constructor for a value already known to come from a trusted source (e.g. a `bigint` column PostgreSQL itself already range-constrains) — throws otherwise, matching asUuid's convention. */
+export function asMoney(amountInRials: bigint): Money {
+  if (!isStorableRialAmount(amountInRials)) {
+    throw new Error(`Not a storable rial amount: ${amountInRials}`);
+  }
+  return amountInRials;
+}
+
+/** Boundary constructor for a value that may not be valid (external input) — returns null instead of throwing. */
+export function tryAsMoney(amountInRials: bigint): Money | null {
+  return isStorableRialAmount(amountInRials) ? amountInRials : null;
+}
+
+/**
+ * Display/entry unit -> canonical rials. Nullable, not "always exact":
+ * a toman amount large enough that ×10 exceeds the storable rial range
+ * has no valid Money to return — verified reachable directly (a
+ * DsMoneyInputComponent regression test types in exactly this value).
+ */
+export function toCanonicalRials(amount: bigint, unit: MoneyDisplayUnit): Money | null {
+  return tryAsMoney(unit === "TOMAN" ? amount * RIALS_PER_TOMAN : amount);
 }
 
 /**
@@ -24,7 +68,7 @@ export function toCanonicalRials(amount: bigint, unit: MoneyDisplayUnit): bigint
  * validation message rather than truncate or round; a DISPLAY path must
  * use formatMoneyForDisplay instead, which never fails.
  */
-export function fromCanonicalRials(amountInRials: bigint, unit: MoneyDisplayUnit): bigint | null {
+export function fromCanonicalRials(amountInRials: Money, unit: MoneyDisplayUnit): bigint | null {
   if (unit === "RIAL") {
     return amountInRials;
   }
@@ -42,25 +86,11 @@ export interface FormattedMoney {
  * explicitly labeled rial rendering instead of rounding or truncating
  * (05-ui-design-system.md's "explicit rial fallback, labeled").
  */
-export function formatMoneyForDisplay(amountInRials: bigint, unit: MoneyDisplayUnit): FormattedMoney {
+export function formatMoneyForDisplay(amountInRials: Money, unit: MoneyDisplayUnit): FormattedMoney {
   if (unit === "TOMAN" && amountInRials % RIALS_PER_TOMAN !== 0n) {
     return { value: amountInRials, unit: "RIAL" };
   }
   return { value: fromCanonicalRials(amountInRials, unit)!, unit };
-}
-
-/**
- * 04-data-model.md stores money as a signed `bigint` rial column, so the
- * representable range is PostgreSQL's `bigint`, not JS's unbounded
- * BigInt. Enforced at every boundary that can introduce a value (the API
- * string parser and the entry-field validator) rather than discovered as
- * a write failure once the ledger exists.
- */
-export const MAX_RIAL = 9_223_372_036_854_775_807n;
-export const MIN_RIAL = -9_223_372_036_854_775_808n;
-
-export function isStorableRialAmount(amountInRials: bigint): boolean {
-  return amountInRials >= MIN_RIAL && amountInRials <= MAX_RIAL;
 }
 
 const DECIMAL_INTEGER = /^-?(0|[1-9]\d*)$/;
@@ -74,15 +104,11 @@ const DECIMAL_INTEGER = /^-?(0|[1-9]\d*)$/;
  * concern, see parseMoneyInput) — and anything outside the storable rial
  * range, since accepting it here only defers the failure to the INSERT.
  */
-export function parseAmountRialString(value: string): bigint | null {
-  if (!DECIMAL_INTEGER.test(value)) {
-    return null;
-  }
-  const parsed = BigInt(value);
-  return isStorableRialAmount(parsed) ? parsed : null;
+export function parseAmountRialString(value: string): Money | null {
+  return DECIMAL_INTEGER.test(value) ? tryAsMoney(BigInt(value)) : null;
 }
 
-export function amountRialToString(amountInRials: bigint): string {
+export function amountRialToString(amountInRials: Money): string {
   return amountInRials.toString();
 }
 

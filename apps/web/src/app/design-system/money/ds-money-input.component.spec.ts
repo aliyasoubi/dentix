@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
+import { asMoney } from "@dentix/kernel";
 import { TranslationService } from "../../core/i18n/translation.service";
 import { DsMoneyInputComponent } from "./ds-money-input.component";
 import { MONEY_CONFIG } from "./money-config";
@@ -106,7 +107,7 @@ describe("DsMoneyInputComponent", () => {
 
   it("writeValue displays a canonical rial amount converted into the configured entry unit", async () => {
     await create("TOMAN");
-    fixture.componentInstance.writeValue(25_000_000n);
+    fixture.componentInstance.writeValue(asMoney(25_000_000n));
     fixture.detectChanges();
 
     const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
@@ -120,7 +121,7 @@ describe("DsMoneyInputComponent", () => {
   describe("a canonical amount that is not a whole number of tomans", () => {
     it("relabels the field to ریال instead of showing rial digits under a تومان suffix", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.componentInstance.writeValue(asMoney(25_000_001n));
       fixture.detectChanges();
 
       const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
@@ -132,7 +133,7 @@ describe("DsMoneyInputComponent", () => {
 
     it("re-reads a subsequent edit as rial, so the value is not multiplied by ten", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.componentInstance.writeValue(asMoney(25_000_001n));
       fixture.detectChanges();
 
       const onChange = vi.fn();
@@ -145,7 +146,7 @@ describe("DsMoneyInputComponent", () => {
 
     it("shows no toman equivalent line while degraded, since rial is already canonical", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.componentInstance.writeValue(asMoney(25_000_001n));
       fixture.detectChanges();
 
       const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
@@ -154,7 +155,7 @@ describe("DsMoneyInputComponent", () => {
 
     it("reverts to the configured toman unit once the field is emptied", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(25_000_001n);
+      fixture.componentInstance.writeValue(asMoney(25_000_001n));
       fixture.detectChanges();
       typeIntoInput("");
 
@@ -197,7 +198,7 @@ describe("DsMoneyInputComponent", () => {
   describe("a negative canonical amount (not producible by this field, but displayable)", () => {
     it("displays the signed amount correctly on load", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(-25_000_000n);
+      fixture.componentInstance.writeValue(asMoney(-25_000_000n));
       fixture.detectChanges();
 
       const input = (fixture.nativeElement as HTMLElement).querySelector("input")!;
@@ -206,7 +207,7 @@ describe("DsMoneyInputComponent", () => {
 
     it("rejects an edit to the loaded text as invalid, rather than misreading the sign", async () => {
       await create("TOMAN");
-      fixture.componentInstance.writeValue(-25_000_000n);
+      fixture.componentInstance.writeValue(asMoney(-25_000_000n));
       fixture.detectChanges();
 
       const onChange = vi.fn();

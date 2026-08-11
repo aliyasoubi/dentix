@@ -21,7 +21,7 @@ import { MatInputModule } from "@angular/material/input";
 import {
   formatMoneyInputGrouped,
   fromCanonicalRials,
-  isStorableRialAmount,
+  Money,
   MoneyDisplayUnit,
   parseMoneyInput,
   toCanonicalRials,
@@ -91,7 +91,7 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
   private readonly rawText = signal("");
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function -- ControlValueAccessor default until registerOnChange/registerOnTouched supply the real callback
-  private onChange: (value: bigint | null) => void = () => {};
+  private onChange: (value: Money | null) => void = () => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function -- see above
   protected onTouched: () => void = () => {};
 
@@ -131,6 +131,13 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
       return null;
     }
     const canonical = toCanonicalRials(entered, "TOMAN");
+    if (canonical === null) {
+      // Overflows the storable rial range — handleInput already reports
+      // this through the field's own error state, so there's no sensible
+      // equivalent to show here (and mat-form-field hides the hint
+      // whenever the error is showing anyway).
+      return null;
+    }
     return this.translation.translate("common.money.canonicalEquivalent", {
       amount: formatMoneyInputGrouped(canonical),
     });
@@ -163,10 +170,13 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
       this.onChange(null);
       return;
     }
+    // toCanonicalRials returns null both for a unit it can't convert
+    // cleanly and — since kernel's S6 quality pass — for a toman amount
+    // whose ×10 would exceed the storable rial range (04-data-model.md).
+    // One check now covers both; a separate isStorableRialAmount call
+    // here would be redundant with what toCanonicalRials already does.
     const canonical = toCanonicalRials(entered, this.effectiveUnit());
-    if (!isStorableRialAmount(canonical)) {
-      // Beyond the signed-bigint rial column (04-data-model.md). Rejected
-      // at entry rather than surfacing later as an INSERT failure.
+    if (canonical === null) {
       this.control.setErrors({ invalidMoneyInput: true });
       this.onChange(null);
       return;
@@ -175,7 +185,7 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
     this.onChange(canonical);
   }
 
-  writeValue(canonicalRial: bigint | null): void {
+  writeValue(canonicalRial: Money | null): void {
     if (canonicalRial === null) {
       this.forcedToRial.set(false);
       this.rawText.set("");
@@ -201,7 +211,7 @@ export class DsMoneyInputComponent implements ControlValueAccessor, Validator {
     this.control.setErrors(null);
   }
 
-  registerOnChange(fn: (value: bigint | null) => void): void {
+  registerOnChange(fn: (value: Money | null) => void): void {
     this.onChange = fn;
   }
 

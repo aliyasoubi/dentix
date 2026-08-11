@@ -1,4 +1,5 @@
 import { FormControl, ReactiveFormsModule } from "@angular/forms";
+import { asMoney, Money } from "@dentix/kernel";
 import type { Meta, StoryObj } from "@storybook/angular-vite";
 import { applicationConfig, moduleMetadata } from "@storybook/angular-vite";
 import { DsMoneyInputComponent } from "./ds-money-input.component";
@@ -11,7 +12,7 @@ const meta: Meta<DsMoneyInputComponent> = {
     docs: {
       description: {
         component:
-          "A Reactive Forms control (implements ControlValueAccessor) whose value is always the canonical rial bigint. Accepts Persian or Latin digits with grouping separators; rejects ambiguous decimal input; shows the rial equivalent when entering in toman.",
+          "A Reactive Forms control (implements ControlValueAccessor) whose value is always the canonical rial Money value. Accepts Persian or Latin digits with grouping separators; rejects ambiguous decimal input; shows the rial equivalent when entering in toman.",
       },
     },
   },
@@ -56,7 +57,7 @@ export const NonWholeTomanValueDegradesToRial: Story = {
     moduleMetadata({ imports: [ReactiveFormsModule] }),
   ],
   render: () => ({
-    props: { amount: new FormControl<bigint | null>(25_000_001n) },
+    props: { amount: new FormControl<Money | null>(asMoney(25_000_001n)) },
     template: `<app-ds-money-input [formControl]="amount" />`,
   }),
 };

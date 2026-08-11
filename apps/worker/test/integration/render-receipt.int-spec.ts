@@ -1,3 +1,4 @@
+import { asMoney } from "@dentix/kernel";
 import { DUMMY_RECEIPT_FIXTURE } from "../../src/modules/documents/domain/receipt-fixture";
 import { RenderReceiptUseCase } from "../../src/modules/documents/application/render-receipt.use-case";
 import { LocalTemplateAssetsAdapter } from "../../src/modules/documents/infrastructure/local-template-assets.adapter";
@@ -65,7 +66,7 @@ describe("RenderReceiptUseCase (ADR-009)", () => {
   it("hashes to a different key when the underlying data changes", async () => {
     const useCase = buildUseCase();
     const first = await useCase.execute(DUMMY_RECEIPT_FIXTURE);
-    const second = await useCase.execute({ ...DUMMY_RECEIPT_FIXTURE, amountRial: 30_000_000n });
+    const second = await useCase.execute({ ...DUMMY_RECEIPT_FIXTURE, amountRial: asMoney(30_000_000n) });
 
     expect(second.contentHashSha256).not.toBe(first.contentHashSha256);
   });
