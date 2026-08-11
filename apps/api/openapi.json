@@ -1,0 +1,364 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/auth/login": {
+      "get": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirect to the OIDC provider's authorization endpoint."
+          },
+          "400": {
+            "description": "Malformed returnTo path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start the OIDC login redirect (top-level browser navigation, not an XHR call)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/callback": {
+      "get": {
+        "operationId": "AuthController_callback",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirect back into the app, authenticated (or to /login?error=... on failure)."
+          }
+        },
+        "summary": "OIDC authorization-code callback; sets the BFF session cookies and redirects",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/whoami": {
+      "get": {
+        "operationId": "AuthController_whoami",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoAmIResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session, or an invalid/expired one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Identify the current session, if any",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logoutHandler",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Revoke the current Dentix session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/patients": {
+      "post": {
+        "operationId": "PatientsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePatientRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePatientResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure, e.g. NATIVE_NAME_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Create a patient",
+        "tags": [
+          "patients"
+        ]
+      },
+      "get": {
+        "operationId": "PatientsController_list",
+        "parameters": [
+          {
+            "name": "query",
+            "required": false,
+            "in": "query",
+            "description": "Name or phone fragment; omit to list most recent.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PatientSearchResultDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Search patients by name or phone, or list most recent when query is empty",
+        "tags": [
+          "patients"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Dentix API",
+    "description": "Farsi-first single-office dental PMS — REST contract (05-api-guidelines.md)",
+    "version": "0.5.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-dentix_session"
+      }
+    },
+    "schemas": {
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable, locale-neutral error code (05-api-guidelines.md)."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "WhoAmIResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "officeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "permissionVersion": {
+            "type": "number",
+            "description": "Bumped when the user's permissions change, so a stale client can detect it."
+          },
+          "authenticatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 instant of the current session's authentication."
+          },
+          "isRecentlyAuthenticated": {
+            "type": "boolean",
+            "description": "Whether authentication happened recently enough for sensitive actions."
+          }
+        },
+        "required": [
+          "userId",
+          "officeId",
+          "displayName",
+          "permissionVersion",
+          "authenticatedAt",
+          "isRecentlyAuthenticated"
+        ]
+      },
+      "LogoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "providerEndSessionUrl": {
+            "type": "string",
+            "description": "Provider end-session URL the browser should follow to also end the Keycloak SSO session.",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "providerEndSessionUrl"
+        ]
+      },
+      "CreatePatientRequestDto": {
+        "type": "object",
+        "properties": {
+          "nativeName": {
+            "type": "string",
+            "description": "Patient's name as entered, typically Persian."
+          },
+          "latinName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional Latin-script name, stored and displayed unmirrored in RTL."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Iranian mobile number in any common display form (09…, +98…, Persian digits)."
+          },
+          "contactUnavailable": {
+            "type": "boolean",
+            "description": "True only when the patient explicitly has no contact method."
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "unspecified"
+            ]
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary (ADR-008/012).",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "nativeName"
+        ]
+      },
+      "CreatePatientResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientNumber": {
+            "type": "number",
+            "description": "Office-scoped sequential patient number."
+          }
+        },
+        "required": [
+          "id",
+          "patientNumber"
+        ]
+      },
+      "PatientSearchResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientNumber": {
+            "type": "number"
+          },
+          "nativeName": {
+            "type": "string"
+          },
+          "latinName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "patientNumber",
+          "nativeName",
+          "latinName",
+          "phone",
+          "dateOfBirth"
+        ]
+      }
+    }
+  }
+}

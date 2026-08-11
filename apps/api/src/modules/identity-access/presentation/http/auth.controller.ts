@@ -1,5 +1,6 @@
 import { Controller, Get, HttpCode, Post, Req, Res, UseFilters, UseGuards } from "@nestjs/common";
 import { ThrottlerGuard } from "@nestjs/throttler";
+import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { CompleteLoginUseCase } from "../../application/use-cases/complete-login.use-case";
 import { GetSessionUseCase } from "../../application/use-cases/get-session.use-case";
@@ -11,7 +12,10 @@ import { CsrfGuard } from "../guards/csrf.guard";
 import { SessionGuard } from "../guards/session.guard";
 import { UserSession } from "../../domain/entities/user-session.entity";
 import { HttpErrorFilter } from "../../../../platform/http-error.filter";
+import { ErrorResponseDto } from "../../../../platform/dto/error-response.dto";
 import { clearSessionCookies, SESSION_COOKIE_NAME, setSessionCookies } from "./cookies";
+import { LogoutResponseDto } from "./dto/logout-response.dto";
+import { WhoAmIResponseDto } from "./dto/whoami-response.dto";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -26,6 +30,7 @@ function requireEnv(name: string): string {
  * top-level browser navigations (redirects both ways), not fetch/XHR — an
  * OIDC Authorization Code redirect can't be driven through an API client.
  */
+@ApiTags("auth")
 @Controller("auth")
 @UseFilters(HttpErrorFilter)
 export class AuthController {
@@ -38,6 +43,9 @@ export class AuthController {
 
   @Get("login")
   @UseGuards(ThrottlerGuard)
+  @ApiOperation({ summary: "Start the OIDC login redirect (top-level browser navigation, not an XHR call)" })
+  @ApiResponse({ status: 302, description: "Redirect to the OIDC provider's authorization endpoint." })
+  @ApiResponse({ status: 400, type: ErrorResponseDto, description: "Malformed returnTo path." })
   async login(@Req() request: Request, @Res() response: Response): Promise<void> {
     const returnTo = typeof request.query["returnTo"] === "string" ? request.query["returnTo"] : "/";
     const result = await this.startLogin.execute({ returnPath: returnTo });
@@ -52,6 +60,11 @@ export class AuthController {
 
   @Get("callback")
   @UseGuards(ThrottlerGuard)
+  @ApiOperation({ summary: "OIDC authorization-code callback; sets the BFF session cookies and redirects" })
+  @ApiResponse({
+    status: 302,
+    description: "Redirect back into the app, authenticated (or to /login?error=... on failure).",
+  })
   async callback(@Req() request: Request, @Res() response: Response): Promise<void> {
     const appBaseUrl = requireEnv("APP_BASE_URL");
     const callbackUrl = new URL(request.originalUrl, appBaseUrl);
@@ -71,6 +84,9 @@ export class AuthController {
   }
 
   @Get("whoami")
+  @ApiOperation({ summary: "Identify the current session, if any" })
+  @ApiOkResponse({ type: WhoAmIResponseDto })
+  @ApiResponse({ status: 401, type: ErrorResponseDto, description: "No session, or an invalid/expired one." })
   async whoami(@Req() request: Request, @Res() response: Response): Promise<void> {
     const sessionToken = (request.cookies as Record<string, string> | undefined)?.[SESSION_COOKIE_NAME];
     if (!sessionToken) {
@@ -97,6 +113,9 @@ export class AuthController {
   @Post("logout")
   @HttpCode(200)
   @UseGuards(SessionGuard, CsrfGuard)
+  @ApiCookieAuth()
+  @ApiOperation({ summary: "Revoke the current Dentix session" })
+  @ApiOkResponse({ type: LogoutResponseDto })
   async logoutHandler(@CurrentSession() session: UserSession, @Res() response: Response): Promise<void> {
     const appBaseUrl = requireEnv("APP_BASE_URL");
     const { providerEndSessionUrl } = await this.logout.execute({

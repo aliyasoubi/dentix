@@ -77,7 +77,6 @@ jobs:
           echo "OIDC_CLIENT_SECRET=$SECRET" >> "$GITHUB_ENV"
 
       # Canonical always-on gate (docs/08-implementation/01-workflow.md).
-      # openapi:check joins this list starting with S8.
       - name: Format check
         run: npm run format
 
@@ -89,6 +88,13 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+
+      # S8: regenerates apps/api/openapi.json from the live NestJS app and
+      # apps/web's api-types.gen.ts from that contract, then fails on any
+      # uncommitted drift in either — needs Postgres (already up above) for
+      # NestFactory.create(AppModule) to bootstrap, same as test:int/test:api.
+      - name: OpenAPI contract check
+        run: npm run openapi:check
 
       - name: Migration up / down / up (S2 Verify line)
         run: |

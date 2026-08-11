@@ -8,20 +8,23 @@ import {
   UseFilters,
   UseGuards,
 } from "@nestjs/common";
-import { PatientSex } from "../../domain/entities/patient.entity";
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 import { CreatePatientUseCase } from "../../application/use-cases/create-patient.use-case";
 import { SearchPatientsUseCase } from "../../application/use-cases/search-patients.use-case";
 import { CurrentSession, CsrfGuard, SessionGuard, UserSession } from "../../../identity-access/public-api";
 import { HttpErrorFilter } from "../../../../platform/http-error.filter";
-
-interface CreatePatientRequestBody {
-  readonly nativeName: string;
-  readonly latinName?: string | null;
-  readonly phone?: string | null;
-  readonly contactUnavailable?: boolean;
-  readonly sex?: PatientSex;
-  readonly dateOfBirth?: string | null;
-}
+import { ErrorResponseDto } from "../../../../platform/dto/error-response.dto";
+import { CreatePatientRequestDto } from "./dto/create-patient-request.dto";
+import { CreatePatientResponseDto } from "./dto/create-patient-response.dto";
+import { PatientSearchResultDto } from "./dto/patient-search-result.dto";
 
 /**
  * 02-slices-release-0.5.md S4. Every route requires an authenticated
@@ -30,6 +33,8 @@ interface CreatePatientRequestBody {
  * value (04-data-model.md: "office_id is derived from the authenticated
  * session, never accepted as an unrestricted client value").
  */
+@ApiTags("patients")
+@ApiCookieAuth()
 @Controller("patients")
 @UseGuards(SessionGuard)
 @UseFilters(HttpErrorFilter)
@@ -41,7 +46,18 @@ export class PatientsController {
 
   @Post()
   @UseGuards(CsrfGuard)
-  async create(@CurrentSession() session: UserSession, @Body() body: CreatePatientRequestBody) {
+  @ApiOperation({ summary: "Create a patient" })
+  @ApiBody({ type: CreatePatientRequestDto })
+  @ApiResponse({ status: 201, type: CreatePatientResponseDto })
+  @ApiResponse({
+    status: 400,
+    type: ErrorResponseDto,
+    description: "Validation failure, e.g. NATIVE_NAME_REQUIRED",
+  })
+  async create(
+    @CurrentSession() session: UserSession,
+    @Body() body: CreatePatientRequestDto,
+  ): Promise<CreatePatientResponseDto> {
     const result = await this.createPatient.execute({
       officeId: session.officeId,
       actorUserId: session.userId,
@@ -59,7 +75,17 @@ export class PatientsController {
   }
 
   @Get()
-  async list(@CurrentSession() session: UserSession, @Query("query") query?: string) {
+  @ApiOperation({ summary: "Search patients by name or phone, or list most recent when query is empty" })
+  @ApiQuery({
+    name: "query",
+    required: false,
+    description: "Name or phone fragment; omit to list most recent.",
+  })
+  @ApiOkResponse({ type: PatientSearchResultDto, isArray: true })
+  async list(
+    @CurrentSession() session: UserSession,
+    @Query("query") query?: string,
+  ): Promise<PatientSearchResultDto[]> {
     return this.searchPatients.execute({ officeId: session.officeId, query });
   }
 }

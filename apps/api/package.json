@@ -28,7 +28,11 @@
     "test:api": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-api.json",
     "db:migrate": "typeorm-ts-node-commonjs migration:run -d src/persistence/data-source.ts",
     "db:migrate:down": "typeorm-ts-node-commonjs migration:revert -d src/persistence/data-source.ts",
-    "dev:bootstrap-office-user": "ts-node -T scripts/bootstrap-dev-office-user.ts"
+    "dev:bootstrap-office-user": "ts-node -T scripts/bootstrap-dev-office-user.ts",
+    "preopenapi:generate": "npm run build --workspace @dentix/kernel",
+    "openapi:generate": "ts-node -T scripts/generate-openapi.ts",
+    "preopenapi:check": "npm run build --workspace @dentix/kernel",
+    "openapi:check": "ts-node -T scripts/generate-openapi.ts && test -z \"$(git status --porcelain -- openapi.json)\""
   },
   "dependencies": {
     "@dentix/kernel": "0.5.0",
@@ -37,6 +41,7 @@
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
     "@nestjs/serve-static": "5.0.5",
+    "@nestjs/swagger": "11.4.6",
     "@nestjs/throttler": "6.5.0",
     "@nestjs/typeorm": "11.0.3",
     "cookie-parser": "1.4.7",

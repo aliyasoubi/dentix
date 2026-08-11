@@ -71,8 +71,8 @@ Module:      (platform)
 Builds:      OpenAPI generation from Nest; committed contract; generated/type-checked Angular client consumed by the S4 page; `openapi:check` in CI
 Tests first: CI drift check itself; client adapter converts `amountRial` string → `bigint` (unit)
 Verify:      `npm run openapi:check`; frontend builds against the generated types
-Human check: No user-visible surface. The human spot-reads the committed OpenAPI contract once for naming/shape sanity (money as decimal string, dates as ISO).
-Done when:   Plan checkbox "OpenAPI generated and consumed" ticks
+Human check: No user-visible surface. The human spot-reads the committed OpenAPI contract once for naming/shape sanity (money as decimal string, dates as ISO). *(Not yet done — implementation-complete and machine-verified per the Verify line, but this spot-read is a real pending action for a human, not claimed here.)*
+Done when:   Plan checkbox "OpenAPI generated and consumed" ticks *(done — see `07-plans/release-0.5-walking-skeleton.md` for what was built and the one real defect the work caught.)*
 
 ### S9 — Deploy the skeleton (proves ADR-010)
 Spec:        `adr/adr-010-hosting-operations.md`; `06-operations/01-deployment.md`

@@ -22,7 +22,7 @@
     "pretest:api": "npm run build --workspace @dentix/kernel",
     "test:api": "npm run test:api --workspace apps/api --if-present",
     "test:e2e": "npm run test:e2e --workspace apps/web --if-present",
-    "openapi:check": "npm run openapi:check --workspace apps/api --if-present",
+    "openapi:check": "npm run openapi:check --workspace apps/api --if-present && npm run openapi:check --workspace apps/web --if-present",
     "db:migrate": "npm run db:migrate --workspace apps/api",
     "db:migrate:down": "npm run db:migrate:down --workspace apps/api",
     "prebuild": "npm run build --workspace @dentix/kernel",
