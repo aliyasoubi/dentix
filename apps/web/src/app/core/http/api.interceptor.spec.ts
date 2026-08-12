@@ -27,7 +27,9 @@ describe("apiInterceptor", () => {
   }
 
   it("marks the session expired when an ordinary API call 401s", async () => {
-    const expired = vi.spyOn(auth, "markSessionExpired");
+    // mockImplementation: the real method redirects the browser, which this
+    // test isn't exercising — see auth.service.spec.ts for that behavior.
+    const expired = vi.spyOn(auth, "markSessionExpired").mockImplementation(() => undefined);
     const request = firstValueFrom(http.get("/api/v1/patients"));
     httpMock
       .expectOne("/api/v1/patients")

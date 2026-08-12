@@ -31,6 +31,34 @@ describe("SessionTokenService", () => {
     expect(service.hash(a)).not.toBe(service.hash(b));
   });
 
+  describe("verifyHash", () => {
+    it("accepts the token whose hash matches", () => {
+      const token = service.generateOpaqueToken();
+      expect(service.verifyHash(token, service.hash(token))).toBe(true);
+    });
+
+    it("rejects a token that doesn't hash to the expected value", () => {
+      const token = service.generateOpaqueToken();
+      const otherHash = service.hash(service.generateOpaqueToken());
+      expect(service.verifyHash(token, otherHash)).toBe(false);
+    });
+
+    // Regression: the original CsrfGuard code compared hashes with plain
+    // `!==`, a timing side-channel (JS string inequality short-circuits at
+    // the first differing byte). This doesn't measure timing directly —
+    // that would be flaky in a unit test — but it locks in the mismatched-
+    // length case that `crypto.timingSafeEqual` throws on if called naively,
+    // which a naive migration to it could easily reintroduce as a 500
+    // instead of a clean rejection.
+    it("rejects rather than throws when the expected hash is a different length", () => {
+      expect(service.verifyHash("some-token", "not-a-real-hash")).toBe(false);
+    });
+
+    it("rejects an empty expected hash without throwing", () => {
+      expect(service.verifyHash("some-token", "")).toBe(false);
+    });
+  });
+
   describe("generatePkcePair", () => {
     it("produces a verifier RFC 7636 accepts as valid length (43-128 chars)", () => {
       const { verifier } = service.generatePkcePair();

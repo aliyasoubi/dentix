@@ -62,6 +62,49 @@ Two further things this pass fixed in the tooling itself:
   `canonicalizeIranianMobile` rather than a second hand-written regex — a duplicated copy of
   "what counts as an Iranian mobile" is exactly how client and server drift into disagreeing.
 
+## Second hardening pass — a wider independent review, and two ADR checklist items closed
+
+Continued the same review discipline over the modules the first pass didn't touch
+(`identity-access` guards/session store, `office-administration`, `audit`, shared platform
+guards/filters, plus a cross-module grep for `console.log`/raw `any`/TODOs and untransacted
+mutations). One real, genuinely severe finding, one gap noted for awareness, and two smaller
+things found while fixing the first:
+
+1. **CSRF token comparison was timing-unsafe.** `CsrfGuard` compared the presented token's hash
+   against the session's stored hash with plain `!==` — the one place in the module a hash is
+   compared directly in application code; everywhere else (session cookie, OIDC `state`) the
+   comparison is implicitly a DB index lookup by hash, not a string comparison in JS. `!==`
+   short-circuits at the first differing byte, which in principle lets an attacker who can fire
+   many CSRF-guarded requests (e.g. `POST /auth/logout`) and measure latency recover
+   `csrfTokenHash` byte by byte, then forge a header for a token they never saw. Fixed with
+   `crypto.timingSafeEqual` behind a new `SessionTokenService.verifyHash()`, length-checked
+   first since `timingSafeEqual` throws rather than compares on a length mismatch.
+2. **`office-administration` module has no consumer** — `OfficeRepository`/`Office` are
+   exported but nothing outside the module calls `.create()`; offices currently only come into
+   existence via a migration/seed script, not application code. Not a bug, flagged for
+   awareness: worth confirming this is the intended shape (pre-seeded office) before a real
+   office-onboarding flow is designed.
+3. **`markSessionExpired()` (the previous pass's 401 fix) only cleared local state — it never
+   redirected.** The app shell's logout button, and with it the only visible link back to
+   login, renders `@if (auth.isAuthenticated())`; once that flips false after a stray 401 there
+   was no other path back to login short of manually editing the URL. Now reuses the same
+   redirect `authGuard` already performs for "no session", landing the user back at their
+   current location as `returnTo`.
+4. **ADR-006 and ADR-007's acceptance checklists were stale**, not incomplete: both items they
+   still listed as unproven were actually already proven by work already in the tree.
+   - ADR-006: "map an entity ORM ↔ domain ↔ API through explicit mappers" was written before
+     the patients slice existed. It's proven now — `PatientOrmEntity` → `PatientMapper` →
+     domain `Patient` → `CreatePatientUseCase` → `CreatePatientRequestDto`/
+     `CreatePatientResponseDto`. 4 of 5 proven; the remaining item (money DB↔API round trip)
+     is genuinely blocked on the finance feature, not stalled.
+   - ADR-007's provider-logout item was already closed in the first pass's evidence.
+
+Testing note: `AuthService`'s tests were rewritten mid-pass — jsdom in this project's version
+fully blocks `location.href` reassignment (logs "Not implemented: navigation", leaves the
+property unchanged), so asserting on `window.location.href` after `login()`/`logout()` was
+silently testing nothing. `login()`/`logout()` now route through a private `redirectTo()`, and
+the tests spy on that instead.
+
 ## Monorepo scaffold
 
 S1: never ticked when S1 actually landed even though its own "Done when" line named this

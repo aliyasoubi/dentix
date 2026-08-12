@@ -36,26 +36,41 @@ export class AuthService {
   }
 
   login(returnTo: string): void {
-    window.location.href = `/api/v1/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+    this.redirectTo(`/api/v1/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
+  /** Isolates the one line that's unit-testable only by mocking, rather than by asserting on a real browser navigation. */
+  private redirectTo(url: string): void {
+    window.location.href = url;
   }
 
   /**
    * Called by apiInterceptor when the server rejects a call with 401 — the
    * server-side session expired or was force-revoked while the SPA still
-   * believed it was authenticated. Clearing `sessionChecked` too is the part
-   * that matters: authGuard only re-fetches whoami when it is false, so
-   * without this the guard would keep waving through a dead session.
+   * believed it was authenticated. Clearing `sessionChecked` matters even
+   * though a redirect follows immediately: it's what makes authGuard
+   * re-check with a fresh whoami instead of waving a dead session through
+   * on the way back, e.g. after the user cancels the provider's login page.
+   *
+   * Redirects rather than just updating local state: the app shell's
+   * logout button only renders `@if (auth.isAuthenticated())`, so once that
+   * flips false there is no other visible path back to login — the user
+   * would otherwise be stranded on the current page reading an inline error
+   * with literally nothing left to click. Reuses `login()`, the same
+   * redirect authGuard already performs for "no session", with the current
+   * location as returnTo so the user lands back where they were.
    */
   markSessionExpired(): void {
     this.currentSession.set(null);
     this.sessionChecked.set(false);
+    this.login(window.location.pathname + window.location.search);
   }
 
   async logout(): Promise<void> {
     try {
       const response = await firstValueFrom(this.http.post<LogoutResponse>("/api/v1/auth/logout", {}));
       this.currentSession.set(null);
-      window.location.href = response.providerEndSessionUrl;
+      this.redirectTo(response.providerEndSessionUrl);
     } catch {
       // A failed logout (typically the session was already gone, so the POST
       // 401s) previously left the user staring at an unchanged screen with no

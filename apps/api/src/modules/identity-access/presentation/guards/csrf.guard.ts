@@ -51,7 +51,7 @@ export class CsrfGuard implements CanActivate {
       throw new ForbiddenException("CSRF_TOKEN_MISSING");
     }
 
-    if (this.sessionTokens.hash(presentedToken) !== session.csrfTokenHash) {
+    if (!this.sessionTokens.verifyHash(presentedToken, session.csrfTokenHash)) {
       throw new ForbiddenException("CSRF_TOKEN_INVALID");
     }
 
