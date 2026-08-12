@@ -1,15 +1,29 @@
 // UX-DS-001 (docs/03-ux/05-ui-design-system.md) is authoritative for these
 // tokens — do not hand-invent colors/spacing in feature code, use these.
 @use "@angular/material" as mat;
+@use "./styles/theme-colors" as brand;
 
 @include mat.core();
 
+// §24's own illustrative snippet shows `primary: mat.$cyan-palette` — a
+// placeholder for the theme's *shape*, the same way its density: -1 wasn't
+// meant to be copied literally either (see the density comment below, and
+// the log's density write-up). The one actual brand color the design system
+// specifies is §6.1's --ds-brand-600: #187381, which is what
+// ./styles/theme-colors.scss's tone maps are generated from. Two stock,
+// mutually unrelated palettes (cyan primary + blue tertiary) previously
+// stood in for it, so Material's own primary color — every unstyled
+// component internal (ripples, indicators, anything not explicitly
+// overridden below) — rendered as #006a6a, a real, different color from the
+// brand teal a designer would see in Figma. One seed color now drives both
+// roles, so re-theming is "change the hex, regenerate" rather than "hunt
+// down every place a color was hand-picked".
 $dentix-theme: mat.define-theme(
   (
     color: (
       theme-type: light,
-      primary: mat.$cyan-palette,
-      tertiary: mat.$blue-palette,
+      primary: brand.$primary-palette,
+      tertiary: brand.$tertiary-palette,
     ),
     typography: (
       brand-family: "Vazirmatn",
@@ -82,21 +96,25 @@ html {
   outline: none !important;
 }
 
-// mat.define-theme's neutral/surface palette is algorithmically derived
-// from mat.$cyan-palette (Material's own M3 color science), not from our
-// hand-picked --ds-* tokens (UX-DS-001 §6.2) — confirmed by reading
-// Angular Material's own _definition.scss, not assumed. The result:
-// overlay panels (datepicker, select) render a washed-out greenish-gray
-// background that's nearly indistinguishable from --ds-page, reading as
-// "no background" — exactly the report this fixes. The datepicker's own
-// generated elevation-shadow token is separately baked in at zero
-// blur/spread (confirmed in the compiled CSS output, not assumed), so it
-// casts no shadow at all regardless of the background fix. Per UX-DS-001
-// §24 ("apply product-specific semantic tokens above [the Material
-// theme]"), overriding the specific component tokens Material actually
-// renders from is the correct fix — not fighting Sass palette generation.
-// :root outranks the html-selector rule above on specificity, so this
-// wins regardless of source order; kept after it for readability.
+// mat.define-theme's neutral/surface tokens come from the brand-derived M3
+// neutral tone ramp (./styles/theme-colors.scss's `neutral`/`neutral-variant`
+// maps — algorithmic HCT tones, not literal hex values), not from our
+// hand-picked --ds-* tokens (UX-DS-001 §6.2), which were chosen by a
+// designer rather than derived from the brand hue. The two now agree on hue
+// family (both ultimately trace to #187381) but are still two different,
+// independently-authored scales — this override still matters even after
+// the primary/tertiary palette fix above. Originally found with the old
+// cyan-sourced neutral ramp, where the mismatch was worse: overlay panels
+// (datepicker, select) rendered a washed-out greenish-gray nearly
+// indistinguishable from --ds-page, reading as "no background". The
+// datepicker's own generated elevation-shadow token is separately baked in
+// at zero blur/spread (confirmed in the compiled CSS output, not assumed),
+// so it casts no shadow at all regardless of the background fix. Per
+// UX-DS-001 §24 ("apply product-specific semantic tokens above [the
+// Material theme]"), overriding the specific component tokens Material
+// actually renders from is the correct fix — not fighting Sass palette
+// generation. :root outranks the html-selector rule above on specificity,
+// so this wins regardless of source order; kept after it for readability.
 :root {
   --mat-datepicker-calendar-container-background-color: var(--ds-surface);
   --mat-datepicker-calendar-container-text-color: var(--ds-text-primary);

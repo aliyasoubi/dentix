@@ -313,3 +313,39 @@ list, ahead of any endpoint actually returning `amountRial` — there isn't one 
 Post-S8, a live Swagger UI was also mounted at `/api/docs` (dev/staging only, gated off in
 production) so the contract is browsable, not just a committed JSON file — `main.ts` and the
 generator script now share one `buildOpenApiDocument()` helper so the two can't drift apart.
+
+## Third hardening pass — brand-derived Material theme (closing a known gap)
+
+A gap flagged but deliberately left open in the last commit: the theme ran two disconnected
+color systems. `styles.scss` fed `mat.define-theme` two arbitrary stock M3 palettes
+(`mat.$cyan-palette` for primary, `mat.$blue-palette` for tertiary) that have no relationship to
+each other or to the actual brand color, while UX-DS-001 §6.1 specifies a real one:
+`--ds-brand-600: #187381`. The practical result — confirmed, not assumed, via `getComputedStyle`
+on a real submit button and by grepping the compiled bundle — was that every Material component
+internal not already covered by this project's own `--ds-*` overrides (ripples, unstyled
+components, anything not deliberately re-themed) rendered `#006a6a`, a real and visibly different
+teal from the brand's `#187381`. Re-theming meant hunting down two unrelated palette choices by
+hand, the opposite of "easily changeable".
+
+Fixed by generating an actual M3 palette from the real brand hex, using the same tool Angular
+Material's own docs point to for a custom brand rather than one of the twelve stock hues:
+
+```bash
+npx ng generate @angular/material:m3-theme --primary-color="#187381" --directory=src/styles --is-scss --defaults
+```
+
+This runs Google's Material Color Utilities (HCT color space) against the seed and writes
+`apps/web/src/styles/_theme-colors.scss` — `$primary-palette`/`$tertiary-palette` tone maps,
+committed like any other source file (not regenerated at build time; re-run the command with
+`--force` to re-theme). `styles.scss` now passes `brand.$primary-palette`/`brand.$tertiary-palette`
+into `mat.define-theme` instead of the two stock palettes. Verified in a real logged-in browser
+session, not just the compiled bundle: the submit button's computed `background-color` is
+`rgb(0, 104, 118)` (`#006876`, the seed's derived tone-40), and the earlier datepicker/select
+overlay `--mat-*` overrides (still necessary — Material's own neutral tone ramp and this
+project's hand-picked `--ds-surface`/`--ds-border` remain two independently-authored scales, now
+at least agreeing on hue family) continue to render a proper white surface with visible elevation.
+Bundle size and lint/test/build stayed unaffected — this only changes which colors the same
+theming machinery is fed. §24's own "illustrative structure" code sample in the UX doc still
+shows the stock-palette shape (same reasoning as its `density: -1` sample, see above): it
+demonstrates `mat.define-theme`'s call shape, not a literal value to copy — it was never the
+authoritative color, §6.1 always was.
