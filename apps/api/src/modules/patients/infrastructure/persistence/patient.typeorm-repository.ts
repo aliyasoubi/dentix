@@ -17,6 +17,19 @@ interface PatientSearchRow {
   readonly date_of_birth: string | null;
 }
 
+/**
+ * A search term is a literal, not a pattern. Parameterization already makes
+ * this injection-safe, but it does not stop LIKE metacharacters from being
+ * interpreted: before this, searching `%` matched every patient in the
+ * office, and `_` matched any single character. Escapes the backslash first
+ * so an escape introduced here isn't re-escaped, and pairs with an explicit
+ * `ESCAPE '\'` in the query (Postgres' default already is a backslash, but
+ * standard_conforming_strings makes that worth stating rather than assuming).
+ */
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 @Injectable()
 export class TypeOrmPatientRepository implements PatientRepository {
   constructor(
@@ -82,14 +95,20 @@ export class TypeOrmPatientRepository implements PatientRepository {
       WHERE p."office_id" = $1
         AND (
           $2 = ''
-          OR native."normalized_value" ILIKE '%' || $2 || '%'
-          OR latin."normalized_value" ILIKE '%' || $2 || '%'
+          OR native."normalized_value" ILIKE '%' || $5 || '%' ESCAPE '\\'
+          OR latin."normalized_value" ILIKE '%' || $5 || '%' ESCAPE '\\'
           OR ($3::varchar IS NOT NULL AND preferred_contact."normalized_value" = $3)
         )
       ORDER BY p."created_at" DESC
       LIMIT $4
       `,
-      [params.officeId, params.normalizedQuery, params.canonicalPhoneQuery, params.limit],
+      [
+        params.officeId,
+        params.normalizedQuery,
+        params.canonicalPhoneQuery,
+        params.limit,
+        escapeLikePattern(params.normalizedQuery),
+      ],
     );
 
     return rows.map((row) => ({

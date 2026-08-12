@@ -19,6 +19,7 @@ This document is authoritative for domain ownership and allowed module dependenc
 | Documents | `documents` | Document metadata, versions, storage lifecycle, consent artifact | Object-store vendor implementation |
 | Communications | `communications` | Message intent, template version, delivery attempt, delivery status | Marketing campaigns or clinical decisions |
 | Reporting | `reporting` | Read models, report definitions, generated report artifacts | Authoritative business writes |
+| Outbox | `outbox` | Outbox event envelope/payload and its claim/publish lifecycle — shared transaction infrastructure per rule 2 above, schema-only until a real consumer exists (`00-build-sequencing.md`) | Event consumption, delivery, or any domain business rule |
 | Audit | `audit` | Append-only security and business audit events, controlled audit queries | Mutation of source-domain records |
 | Integrations | `integrations` | Vendor adapters, callback verification, anti-corruption mappings | Domain policy or authoritative business state |
 
@@ -39,6 +40,7 @@ Odontogram and periodontal charting are subdomains inside `clinical`, not top-le
 | `documents` | `patients` | Encounter, plan, journey, lab, receipt facts |
 | `communications` | `patients` contact port | Appointment, recall, follow-up, and lab events |
 | `reporting` | No command-side module calls | Published events and approved read projections |
+| `outbox` | No domain module calls | N/A — nothing consumes outbox_event yet (`00-build-sequencing.md`) |
 | `audit` | No domain module calls | Audit facts from every module |
 | `integrations` | Public application ports only | Delivery or storage work requests |
 

@@ -1,0 +1,10 @@
+{
+  "login.title": "ورود به دنتیکس",
+  "login.action.signIn": "ورود",
+  "login.error.INVALID_STATE": "درخواست ورود نامعتبر است. لطفاً دوباره تلاش کنید.",
+  "login.error.REQUEST_EXPIRED_OR_USED": "درخواست ورود منقضی شده یا قبلاً استفاده شده است. لطفاً دوباره تلاش کنید.",
+  "login.error.PROVIDER_EXCHANGE_FAILED": "برقراری ارتباط با سرویس احراز هویت ناموفق بود. لطفاً دوباره تلاش کنید.",
+  "login.error.NO_ACTIVE_ACCOUNT": "حساب کاربری فعالی برای این هویت یافت نشد. با مدیر سیستم تماس بگیرید.",
+  "login.error.NO_OFFICE_MEMBERSHIP": "این حساب به مطبی متصل نیست. با مدیر سیستم تماس بگیرید.",
+  "login.error.AUTHENTICATION_TIME_UNVERIFIED": "زمان احراز هویت قابل تأیید نبود. لطفاً دوباره تلاش کنید."
+}

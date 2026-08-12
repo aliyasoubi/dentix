@@ -1,13 +1,19 @@
-<h1 class="patients-page__title">{{ "patients.page.title" | translate }}</h1>
+<app-ds-page-header
+  [title]="'patients.page.title' | translate"
+  [description]="'patients.page.description' | translate"
+/>
 
 <section class="patients-page__form-section">
-  <h2>{{ "patients.form.title" | translate }}</h2>
+  <h2 class="patients-page__section-title ds-text-section-title">{{ "patients.form.title" | translate }}</h2>
 
   <form [formGroup]="form" (ngSubmit)="submit()" class="patients-form">
     <div class="patients-form__row">
       <mat-form-field appearance="outline" class="patients-form__field">
         <mat-label>{{ "patients.form.nativeName.label" | translate }}</mat-label>
         <input matInput formControlName="nativeName" required />
+        @if (form.controls.nativeName.hasError("required")) {
+        <mat-error>{{ "patients.form.error.NATIVE_NAME_REQUIRED" | translate }}</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
@@ -20,6 +26,9 @@
       <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
         <mat-label>{{ "patients.form.phone.label" | translate }}</mat-label>
         <input matInput formControlName="phone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" />
+        @if (form.controls.phone.hasError("iranianMobile")) {
+        <mat-error>{{ "patients.form.error.INVALID_PHONE" | translate }}</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="patients-form__field">
@@ -45,30 +54,46 @@
       {{ "patients.form.contactUnavailable.label" | translate }}
     </mat-checkbox>
 
-    @if (submitError()) {
-    <p class="patients-form__error" role="alert">{{ submitError() }}</p>
+    <!-- Group-level rule, so it can't live in a single field's mat-error.
+         Shown only after the user has engaged with the form, per §15
+         ("Validation appears after blur or submit"). -->
+    @if (form.hasError("contactRequired") && form.touched) {
+    <p class="ds-alert ds-alert--danger" role="alert">
+      {{ "patients.form.error.CONTACT_REQUIRED" | translate }}
+    </p>
+    } @if (submitError()) {
+    <p class="ds-alert ds-alert--danger" role="alert">{{ submitError() }}</p>
     } @if (lastCreated(); as created) {
-    <p class="patients-form__success" role="status">
+    <p class="ds-alert ds-alert--success" role="status">
       {{ "patients.form.success" | translate: { name: created.name, patientNumber:
       created.patientNumber.toString() } }}
     </p>
     }
 
-    <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
-      @if (submitting()) {
-      <mat-progress-spinner diameter="18" mode="indeterminate" />
-      } @else { {{ "patients.form.submit" | translate }} }
-    </button>
+    <div class="patients-form__actions">
+      <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
+        @if (submitting()) {
+        <mat-progress-spinner diameter="18" mode="indeterminate" />
+        } @else { {{ "patients.form.submit" | translate }} }
+      </button>
+    </div>
   </form>
 </section>
 
 <section class="patients-page__list-section">
-  <mat-form-field appearance="outline" class="patients-page__search">
-    <mat-label>{{ "patients.search.placeholder" | translate }}</mat-label>
-    <input matInput [value]="searchQuery()" (input)="onSearchInput($any($event.target).value)" />
-  </mat-form-field>
+  <div class="patients-page__list-header">
+    <h2 class="patients-page__section-title ds-text-section-title">
+      {{ "patients.list.title" | translate }}
+    </h2>
+    <mat-form-field appearance="outline" class="patients-page__search">
+      <mat-label>{{ "patients.search.placeholder" | translate }}</mat-label>
+      <input matInput [value]="searchQuery()" (input)="onSearchInput($any($event.target).value)" />
+    </mat-form-field>
+  </div>
 
-  @if (results().length > 0) {
+  @if (searchError(); as error) {
+  <p class="ds-alert ds-alert--danger" role="alert">{{ error }}</p>
+  } @if (results().length > 0) {
   <table mat-table [dataSource]="results()" class="patients-table">
     <ng-container matColumnDef="patientNumber">
       <th mat-header-cell *matHeaderCellDef>{{ "patients.list.column.patientNumber" | translate }}</th>
@@ -99,8 +124,8 @@
     <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
   </table>
   } @else if (hasSearched() && !searching()) {
-  <p class="patients-page__empty">
-    {{ (searchQuery() ? "patients.list.empty" : "patients.list.empty.noQuery") | translate }}
-  </p>
+  <app-ds-empty-state
+    [title]="(searchQuery() ? 'patients.list.empty' : 'patients.list.empty.noQuery') | translate"
+  />
   }
 </section>

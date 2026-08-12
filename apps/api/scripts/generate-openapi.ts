@@ -2,8 +2,8 @@ import "reflect-metadata";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../src/app.module";
+import { buildOpenApiDocument } from "../src/platform/openapi-document";
 
 /**
  * 05-api-guidelines.md: "OpenAPI generated and checked in CI". Boots the
@@ -16,14 +16,7 @@ async function main(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix("api/v1", { exclude: ["health"] });
 
-  const config = new DocumentBuilder()
-    .setTitle("Dentix API")
-    .setDescription("Farsi-first single-office dental PMS — REST contract (05-api-guidelines.md)")
-    .setVersion("0.5.0")
-    .addCookieAuth("__Host-dentix_session")
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
+  const document = buildOpenApiDocument(app);
   const outPath = join(__dirname, "..", "openapi.json");
   writeFileSync(outPath, JSON.stringify(document, null, 2) + "\n", "utf8");
 

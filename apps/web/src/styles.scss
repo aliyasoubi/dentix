@@ -15,14 +15,93 @@ $dentix-theme: mat.define-theme(
       brand-family: "Vazirmatn",
       plain-family: "Vazirmatn",
     ),
+    // UX-DS-001 §8.3: two density modes, chosen by screen, not one global
+    // compact scale — "Comfortable" for patient registration/demographic
+    // forms/admin (0, Angular Material's default), "Compact" (-1) reserved
+    // for schedule/ledger/clinical-timeline screens. Nothing compact exists
+    // yet (Release 0.5 is patients-only), so the theme stays at Comfortable;
+    // apply `@include mat.density(-1)` scoped to a future compact-screen
+    // wrapper class rather than lowering this global value again.
     density: (
-      scale: 0,
-    ),
+        scale: 0,
+      ),
   )
 );
 
+// UX-DS-001 §24's own illustrative example uses all-component-themes, not
+// theme() — verified why that distinction is load-bearing, not stylistic:
+// mat.theme() only applies core/system-level tokens (base + color + density
+// + typography at the system level); it never includes any individual
+// component's own theme mixin (button-theme, checkbox-theme, table-theme,
+// ...), so components never receive concrete values for the CSS custom
+// properties they actually render from (e.g. a disabled mat-flat-button's
+// --mdc-filled-button-disabled-label-text-color stayed unset, making the
+// button indistinguishable from plain text — confirmed via
+// getComputedStyle, not assumed). all-component-themes includes
+// core-theme's own theme() first and then every component's theme on top,
+// so it is a strict superset, not a stylistic alternative.
 html {
-  @include mat.theme($dentix-theme);
+  @include mat.all-component-themes($dentix-theme);
+}
+
+// UX-DS-001 §26 Stage 1 ("Focus indicators") and §27's Definition of Done
+// ("Visible focus exists", "Keyboard operation works"), finally using the
+// --ds-focus-ring token §6.1 declared and nothing referenced.
+//
+// Deliberately NOT mat.strong-focus-indicators(): that mixin emits only CSS
+// variables plus a chip overflow fix — the structural rules live in a
+// separate strong-focus-indicators-structure() mixin, and those key off
+// `.mat-focus-indicator:focus-visible`, where `.mat-focus-indicator` is an
+// inner <span> Material renders inside the button. A span with no tabindex
+// never matches :focus-visible, and the compiled bundle confirmed it: zero
+// structural rules shipped. Verified by grepping the built CSS and by
+// getComputedStyle on a real focused control, not assumed.
+//
+// Applying the ring to whatever element actually holds focus is simpler and
+// provably works. :focus-visible (not :focus) so a mouse click doesn't leave
+// a ring behind.
+// !important is deliberate and one of the few places it's justified:
+// Material resets `.mdc-button { outline: none }`, which has the *same*
+// specificity as `:focus-visible` (0,1,0) and simply loads later, so it wins
+// on cascade order — verified by enumerating the matching CSSOM rules on a
+// real focused button, not guessed. A keyboard focus ring is an
+// accessibility requirement (§27 DoD), not a stylistic preference, so it
+// must not be silently suppressible by a component reset.
+:focus-visible {
+  outline: 2px solid var(--ds-focus-ring) !important;
+  outline-offset: 2px;
+  border-radius: var(--ds-radius-sm);
+}
+
+// Material form fields already render a strong focus affordance of their own
+// (the outline thickens and takes the brand color), so a second ring on the
+// inner <input> reads as a box inside a box — confirmed visually, not
+// assumed. Needs !important of its own to beat the rule above; it wins on
+// specificity (0,2,0 vs 0,1,0) once both are important.
+.mat-mdc-form-field :focus-visible {
+  outline: none !important;
+}
+
+// mat.define-theme's neutral/surface palette is algorithmically derived
+// from mat.$cyan-palette (Material's own M3 color science), not from our
+// hand-picked --ds-* tokens (UX-DS-001 §6.2) — confirmed by reading
+// Angular Material's own _definition.scss, not assumed. The result:
+// overlay panels (datepicker, select) render a washed-out greenish-gray
+// background that's nearly indistinguishable from --ds-page, reading as
+// "no background" — exactly the report this fixes. The datepicker's own
+// generated elevation-shadow token is separately baked in at zero
+// blur/spread (confirmed in the compiled CSS output, not assumed), so it
+// casts no shadow at all regardless of the background fix. Per UX-DS-001
+// §24 ("apply product-specific semantic tokens above [the Material
+// theme]"), overriding the specific component tokens Material actually
+// renders from is the correct fix — not fighting Sass palette generation.
+// :root outranks the html-selector rule above on specificity, so this
+// wins regardless of source order; kept after it for readability.
+:root {
+  --mat-datepicker-calendar-container-background-color: var(--ds-surface);
+  --mat-datepicker-calendar-container-text-color: var(--ds-text-primary);
+  --mat-datepicker-calendar-container-elevation-shadow: var(--ds-shadow-menu);
+  --mat-select-panel-background-color: var(--ds-surface);
 }
 
 @font-face {
@@ -92,10 +171,83 @@ html {
   --ds-space-8: 32px;
   --ds-space-10: 40px;
   --ds-space-12: 48px;
+
+  // 9.1 Radius
+  --ds-radius-sm: 6px; // fields, compact controls
+  --ds-radius-md: 10px; // ordinary cards and panels
+  --ds-radius-lg: 14px; // large empty states, major content surfaces
+  --ds-radius-pill: 999px; // chips and filter controls only
+
+  // 9.2 Elevation — borders are the default for ordinary containers (§9.2:
+  // "Do not wrap every section in a raised card"); these shadows are only
+  // for menus, dialogs, side panels, drag previews, and floating actions,
+  // none of which exist yet.
+  --ds-shadow-panel: 0 12px 32px rgb(27 55 68 / 12%), 0 2px 8px rgb(27 55 68 / 8%);
+  --ds-shadow-menu: 0 8px 24px rgb(27 55 68 / 16%);
+
+  // 23.2 Motion. §23.1: motion communicates state change, continuity, and
+  // confirmation — it never decorates a dense clinical screen or delays a
+  // task. Pick a duration from §23.3's matrix (hover/press 80–120ms,
+  // tooltip/menu 120–160ms, row enter 160–200ms, panel 200–220ms), never a
+  // hand-picked number. §23.6 explicitly rules motion OUT for patient
+  // switching, clinical route transitions, financial totals, and every
+  // table update — so a search that re-renders rows must not animate.
+  --ds-motion-instant: 80ms;
+  --ds-motion-fast: 120ms;
+  --ds-motion-standard: 180ms;
+  --ds-motion-panel: 220ms;
+  --ds-motion-slow: 280ms;
+
+  --ds-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ds-ease-enter: cubic-bezier(0, 0, 0, 1);
+  --ds-ease-exit: cubic-bezier(0.3, 0, 1, 1);
 }
 
 html[lang^="fa"] {
   font-family: var(--ds-font-fa);
+}
+
+// 7.2 Type scale. Feature styles should use these rather than hand-picking
+// a font-size/weight — the scale is what keeps every screen visually
+// consistent as more pages get built.
+.ds-text-page-title {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.ds-text-major-section {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.ds-text-section-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ds-text-body {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
+
+.ds-text-form-label {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 550;
+}
+
+.ds-text-supporting {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--ds-text-muted);
 }
 
 * {
@@ -135,4 +287,41 @@ body {
 // "Use tabular numerals for money").
 .ds-tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+// Inline feedback banners (form validation failure, success confirmation).
+// Shared so every feature gets the same treatment instead of each page
+// hand-rolling colored text (§6.4: "every state must include readable
+// text," not color alone — these still rely on the surrounding label/icon
+// context, e.g. role="alert", to not be color-only in a screen reader).
+.ds-alert {
+  margin: 0;
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-alert--danger {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}
+
+.ds-alert--success {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+
+// 23.7 Reduced motion. §23 closes with "Functional feedback must remain
+// available without animation" — so this neutralizes duration, never the
+// state change itself: a hover/selected/error state still applies, it just
+// arrives immediately. Deliberately last in the file and !important, since
+// it has to beat Material's own component animations too, not only ours.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }

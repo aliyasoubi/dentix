@@ -1,5 +1,6 @@
 import { OfficeOrmEntity } from "../modules/office-administration/infrastructure/persistence/office.orm-entity";
 import { AuditEventOrmEntity } from "../modules/audit/infrastructure/persistence/audit-event.orm-entity";
+import { OutboxEventOrmEntity } from "../modules/outbox/infrastructure/persistence/outbox-event.orm-entity";
 import { OfficeUserOrmEntity } from "../modules/identity-access/infrastructure/persistence/office-user.orm-entity";
 import { OidcAuthorizationRequestOrmEntity } from "../modules/identity-access/infrastructure/persistence/oidc-authorization-request.orm-entity";
 import { UserAccountOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-account.orm-entity";
@@ -22,6 +23,7 @@ export const APP_ENTITIES = [
   UserSessionOrmEntity,
   OidcAuthorizationRequestOrmEntity,
   AuditEventOrmEntity,
+  OutboxEventOrmEntity,
   PatientOrmEntity,
   PatientNameOrmEntity,
   PatientContactOrmEntity,

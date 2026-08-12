@@ -17,7 +17,7 @@
     "storybook": "ng run web:storybook",
     "build-storybook": "ng run web:build-storybook",
     "openapi:generate": "openapi-typescript ../api/openapi.json -o src/app/core/http/api-types.gen.ts",
-    "openapi:check": "npm run openapi:generate && test -z \"$(git status --porcelain -- src/app/core/http/api-types.gen.ts)\""
+    "openapi:check": "npm run openapi:generate && git ls-files --error-unmatch src/app/core/http/api-types.gen.ts > /dev/null && git diff --exit-code -- src/app/core/http/api-types.gen.ts"
   },
   "private": true,
   "dependencies": {

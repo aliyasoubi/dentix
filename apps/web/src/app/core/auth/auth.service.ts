@@ -39,9 +39,31 @@ export class AuthService {
     window.location.href = `/api/v1/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
-  async logout(): Promise<void> {
-    const response = await firstValueFrom(this.http.post<LogoutResponse>("/api/v1/auth/logout", {}));
+  /**
+   * Called by apiInterceptor when the server rejects a call with 401 — the
+   * server-side session expired or was force-revoked while the SPA still
+   * believed it was authenticated. Clearing `sessionChecked` too is the part
+   * that matters: authGuard only re-fetches whoami when it is false, so
+   * without this the guard would keep waving through a dead session.
+   */
+  markSessionExpired(): void {
     this.currentSession.set(null);
-    window.location.href = response.providerEndSessionUrl;
+    this.sessionChecked.set(false);
+  }
+
+  async logout(): Promise<void> {
+    try {
+      const response = await firstValueFrom(this.http.post<LogoutResponse>("/api/v1/auth/logout", {}));
+      this.currentSession.set(null);
+      window.location.href = response.providerEndSessionUrl;
+    } catch {
+      // A failed logout (typically the session was already gone, so the POST
+      // 401s) previously left the user staring at an unchanged screen with no
+      // redirect. Locally forgetting the session and heading to login is both
+      // the safer outcome and the one the user asked for by clicking Logout.
+      this.currentSession.set(null);
+      this.sessionChecked.set(false);
+      this.login("/patients");
+    }
   }
 }

@@ -1,7 +1,9 @@
 {
   "patients.page.title": "بیماران",
+  "patients.page.description": "ثبت بیمار جدید و جستجوی بیماران مطب",
   "patients.search.placeholder": "جستجوی نام، شماره بیمار یا موبایل",
   "patients.actions.create": "ثبت بیمار جدید",
+  "patients.list.title": "فهرست بیماران",
   "patients.list.column.patientNumber": "شماره پرونده",
   "patients.list.column.nativeName": "نام",
   "patients.list.column.latinName": "نام لاتین",
@@ -26,5 +28,6 @@
   "patients.form.error.NATIVE_NAME_REQUIRED": "وارد کردن نام فارسی الزامی است.",
   "patients.form.error.INVALID_PHONE": "شماره موبایل معتبر نیست.",
   "patients.form.error.CONTACT_REQUIRED": "شماره موبایل وارد کنید یا «بیمار روش تماسی ندارد» را انتخاب کنید.",
-  "patients.form.error.INVALID_DATE_OF_BIRTH": "تاریخ تولد معتبر نیست."
+  "patients.form.error.INVALID_DATE_OF_BIRTH": "تاریخ تولد معتبر نیست.",
+  "patients.form.error.VALIDATION_FAILED": "اطلاعات واردشده معتبر نیست. لطفاً مقادیر فرم را بررسی کنید."
 }

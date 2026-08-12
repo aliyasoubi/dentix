@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public frontend bootstrap configuration, fetched before shell render */
+        get: operations["BootstrapController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -94,6 +111,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        MoneyBootstrapConfigDto: {
+            /** @enum {string} */
+            defaultUnit: "RIAL" | "TOMAN";
+            /** @description Always true in v1 — the unit label can never be configured away. */
+            showUnitLabel: boolean;
+        };
+        BootstrapConfigResponseDto: {
+            /** @enum {string} */
+            locale: "fa-IR";
+            /** @enum {string} */
+            dir: "rtl";
+            /** @enum {string} */
+            calendarDisplay: "JALALI";
+            /** @description IANA timezone identifier. */
+            timezone: string;
+            money: components["schemas"]["MoneyBootstrapConfigDto"];
+            /** @description Same-origin API path prefix; relative, never an absolute host. */
+            apiBaseUrl: string;
+            appVersion: string;
+        };
         ErrorResponseDto: {
             /** @description Stable, locale-neutral error code (05-api-guidelines.md). */
             code: string;
@@ -166,6 +203,25 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    BootstrapController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BootstrapConfigResponseDto"];
+                };
+            };
+        };
+    };
     AuthController_login: {
         parameters: {
             query?: never;

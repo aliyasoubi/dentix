@@ -271,6 +271,58 @@ describe("Patients persistence (integration)", () => {
   });
 
   describe("search", () => {
+    // Regression: the query was interpolated into ILIKE '%'||$2||'%' with no
+    // escaping, so LIKE metacharacters were treated as wildcards — searching
+    // "%" returned every patient in the office instead of none.
+    it("treats LIKE wildcards in the query as literal characters, not patterns", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patientId = asUuid(randomUUID());
+      await patientRepo.create(
+        Patient.create({
+          id: patientId,
+          officeId,
+          patientNumber,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientNameRepo.create(
+        PatientName.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          nameType: "native",
+          value: "مریم حسینی",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      for (const wildcard of ["%", "_"]) {
+        const results = await patientRepo.search({
+          officeId,
+          normalizedQuery: wildcard,
+          canonicalPhoneQuery: null,
+          limit: 10,
+        });
+        expect(results.map((r) => r.id)).not.toContain(patientId);
+      }
+
+      // Sanity: the seeded patient is genuinely findable by a real term, so
+      // the assertions above aren't passing because the row is missing.
+      const realHit = await patientRepo.search({
+        officeId,
+        normalizedQuery: normalizeForSearch("مریم"),
+        canonicalPhoneQuery: null,
+        limit: 10,
+      });
+      expect(realHit.map((r) => r.id)).toContain(patientId);
+    });
+
     it("matches by partial normalized native name regardless of Yeh variant typed", async () => {
       const { officeId, actorUserId } = await seedOfficeAndActor();
       const now = new Date();

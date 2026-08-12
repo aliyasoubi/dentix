@@ -28,7 +28,7 @@ Changed by an authorized administrator; every change produces an audit event (pr
 | | `calendarDisplay` | `JALALI` (fixed in v1) |
 | | `timezone` | `Asia/Tehran` (IANA; config, never hardcoded in logic) |
 | | `holidayCalendar` | versioned Iranian holiday data + office closures |
-| Money | `displayUnit` | `RIAL` \| `TOMAN` (changing it never touches stored values) |
+| Money | `defaultUnit` | `RIAL` \| `TOMAN` (changing it never touches stored values) |
 | Patients | `nationalCodeValidation` | on/off; absence never blocks registration |
 | | `duplicateDetectionThresholds` | scoring cutoffs for warning queue |
 | Scheduling | office hours, appointment types, default durations, operatories, conflict-override policy | office-editable |
@@ -43,7 +43,7 @@ Default calendar view (day/week/provider), default landing page, density where o
 
 ### Layer 4 — Frontend bootstrap config (public JSON, fetched before shell render)
 
-Read-only projection needed before authentication: fixed v1 `locale`, `dir`, and `calendarDisplay`; configured `timezone` and `money.displayUnit`; API base URL; and app version. **No secrets, ever.** See UX-DS-001 §2.1 for the startup sequence.
+Read-only projection needed before authentication: fixed v1 `locale`, `dir`, and `calendarDisplay`; configured `timezone` and `money.defaultUnit`; API base URL; and app version. **No secrets, ever.** See UX-DS-001 §2.1 for the startup sequence.
 
 ## Deliberately NOT configuration (invariants — changing these means changing code + ADR)
 

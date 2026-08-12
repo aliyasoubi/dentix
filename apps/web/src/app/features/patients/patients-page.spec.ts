@@ -8,6 +8,7 @@ import { PatientsPage } from "./patients-page";
 
 const STUB_TRANSLATIONS: Record<string, string> = {
   "patients.form.error.INVALID_PHONE": "شماره موبایل معتبر نیست.",
+  "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
 };
 
 class StubTranslationService {
@@ -110,10 +111,13 @@ describe("PatientsPage", () => {
   });
 
   it("shows the translated error message for a backend validation failure", async () => {
+    // A well-formed phone that the client accepts, so the request actually
+    // reaches the server — this test is about mapping a server error code to
+    // localized text, not about client-side validation.
     fixture.componentInstance["form"].setValue({
       nativeName: "رضا احمدی",
       latinName: "",
-      phone: "not-a-phone",
+      phone: "09123456789",
       dateOfBirth: null,
       contactUnavailable: false,
       sex: "unspecified",
@@ -126,5 +130,97 @@ describe("PatientsPage", () => {
     await submitPromise;
 
     expect(fixture.componentInstance["submitError"]()).toBe("شماره موبایل معتبر نیست.");
+  });
+
+  describe("client-side validation (mirrors the server's rules)", () => {
+    it("blocks submit for a malformed Iranian mobile instead of round-tripping to the server", async () => {
+      fixture.componentInstance["form"].setValue({
+        nativeName: "رضا احمدی",
+        latinName: "",
+        phone: "not-a-phone",
+        dateOfBirth: null,
+        contactUnavailable: false,
+        sex: "unspecified",
+      });
+
+      expect(fixture.componentInstance["form"].controls.phone.hasError("iranianMobile")).toBe(true);
+      await fixture.componentInstance["submit"]();
+      httpMock.expectNone((req) => req.method === "POST");
+    });
+
+    it.each(["09123456789", "+989123456789", "۰۹۱۲۳۴۵۶۷۸۹"])(
+      "accepts %s — every form the backend canonicalizes",
+      (phone) => {
+        fixture.componentInstance["form"].controls.phone.setValue(phone);
+        expect(fixture.componentInstance["form"].controls.phone.hasError("iranianMobile")).toBe(false);
+      },
+    );
+
+    it("flags the group when neither a phone nor contactUnavailable is given", () => {
+      fixture.componentInstance["form"].setValue({
+        nativeName: "رضا احمدی",
+        latinName: "",
+        phone: "",
+        dateOfBirth: null,
+        contactUnavailable: false,
+        sex: "unspecified",
+      });
+      expect(fixture.componentInstance["form"].hasError("contactRequired")).toBe(true);
+    });
+
+    it("clears the group error once contactUnavailable is ticked", () => {
+      fixture.componentInstance["form"].setValue({
+        nativeName: "رضا احمدی",
+        latinName: "",
+        phone: "",
+        dateOfBirth: null,
+        contactUnavailable: true,
+        sex: "unspecified",
+      });
+      expect(fixture.componentInstance["form"].hasError("contactRequired")).toBe(false);
+    });
+  });
+
+  describe("search failures", () => {
+    it("surfaces an error and clears stale rows instead of leaving the old list looking current", async () => {
+      const searchPromise = fixture.componentInstance["onSearchInput"]("رضا");
+      httpMock
+        .expectOne((req) => req.url === "/api/v1/patients")
+        .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
+      await fixture.whenStable();
+      await searchPromise;
+
+      expect(fixture.componentInstance["searchError"]()).toBe("خطایی رخ داد. لطفاً دوباره تلاش کنید.");
+      expect(fixture.componentInstance["results"]()).toEqual([]);
+    });
+
+    // The duplicate-patient bug: a failing list refresh must not be reported
+    // as a failed creation, or the user retries a create that already worked.
+    it("does not report a creation failure when only the post-create refresh fails", async () => {
+      fixture.componentInstance["form"].setValue({
+        nativeName: "زهرا کریمی",
+        latinName: "",
+        phone: "09123456789",
+        dateOfBirth: null,
+        contactUnavailable: false,
+        sex: "unspecified",
+      });
+
+      const submitPromise = fixture.componentInstance["submit"]();
+      httpMock
+        .expectOne("/api/v1/patients")
+        .flush({ id: "33333333-3333-3333-3333-333333333333", patientNumber: 3 });
+      await fixture.whenStable();
+
+      httpMock
+        .expectOne((req) => req.url === "/api/v1/patients")
+        .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
+      await fixture.whenStable();
+      await submitPromise;
+
+      expect(fixture.componentInstance["submitError"]()).toBeNull();
+      expect(fixture.componentInstance["lastCreated"]()?.patientNumber).toBe(3);
+      expect(fixture.componentInstance["searchError"]()).not.toBeNull();
+    });
   });
 });

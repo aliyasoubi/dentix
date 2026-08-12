@@ -210,10 +210,18 @@ export class CompleteLoginUseCase {
   }
 
   /**
-   * Null means "no accepted MFA method present" — the caller treats that
-   * as a rejected login, not as "record unknown and let it through".
+   * Null means "no accepted MFA method present in the token's amr claim".
+   *
+   * It does NOT reject the login — the caller records it on the session and
+   * proceeds. That is deliberate and is explained in full at the top of this
+   * file: Keycloak 26.7 returns `amr: []` for the username/password + OTP
+   * flow actually in use, so gating on this claim would break every real
+   * login. MFA is enforced realm-side instead (CONFIGURE_TOTP as a default
+   * required action). `mfaContext` is informational until there is a
+   * trustworthy per-login signal to gate on — see ADR-007's tracked gap.
+   *
    * Deliberately does not fall back to authMethods[0]: an amr of ["pwd"]
-   * must not silently pass as if it were MFA.
+   * must not get recorded as though it were MFA.
    */
   private deriveMfaContext(authMethods: readonly string[] | null): string | null {
     if (!authMethods) {

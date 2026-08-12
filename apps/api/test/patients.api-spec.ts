@@ -204,6 +204,70 @@ describe("Patients (API contract)", () => {
       expect(response.status).toBe(201);
     });
 
+    // Regression tests for a real gap: there was no request validation at
+    // all, so each of these previously reached the use case — the first two
+    // crashed with a 500 (`.trim()` / DB check constraint), and the third
+    // silently passed the CONTACT_REQUIRED guard because a non-empty string
+    // is truthy, creating a patient with no contact method at all.
+    describe("request validation (type-level)", () => {
+      it("rejects a non-string phone with 400 VALIDATION_FAILED instead of crashing", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", phone: 123 });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects an unknown sex value rather than deferring to the database check constraint", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true, sex: "banana" });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects a truthy-string contactUnavailable instead of letting it bypass CONTACT_REQUIRED", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: "no" });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects unknown properties rather than silently ignoring them", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true, isAdmin: true });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      // The point of type-level-only validators: domain rules keep their own
+      // stable codes rather than collapsing into VALIDATION_FAILED.
+      it("still returns the domain code for a well-typed but invalid phone", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", phone: "02112345678" });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("INVALID_PHONE");
+      });
+    });
+
     it("returns 400 INVALID_DATE_OF_BIRTH for a calendrically impossible date", async () => {
       const { sessionToken, csrfToken } = await seedActiveSession();
       const response = await request(app.getHttpServer())

@@ -1,0 +1,14 @@
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-4);
+  max-width: 28rem;
+  margin-inline: auto;
+  margin-block-start: var(--ds-space-12);
+  padding: var(--ds-space-6);
+}
+
+.login-page__title {
+  margin: 0;
+}

@@ -13,16 +13,20 @@ end-to-end before feature work begins. `00-build-sequencing.md` governs what's i
 deferred to a later release — the architecture docs in `04-architecture/` describe the full target
 design, not a Release 1 build list.
 
-| Plan | Release | Exit gate |
+Exit gates below quote `01-product/06-product-roadmap.md` exactly rather than re-authoring the
+wording — that file is the source of truth for what each release exits to; this table only
+sequences the work against it.
+
+| Plan | Release | Exit gate (verbatim from the product roadmap) |
 |---|---|---|
 | 00-build-sequencing.md | cross-cutting | N/A — sequencing reference, not a release |
-| release-0-discovery.md | R0 | Clickable prototype approved by office staff |
+| release-0-discovery.md | R0 | Clickable prototype approved by dentist, receptionist, assistant, and office manager |
 | release-0.5-walking-skeleton.md | R0.5 (added) | Risk stack proven end-to-end |
-| release-1-foundation.md | R1 | Fictional patients managed securely in Farsi/RTL |
-| release-2-front-office.md | R2 | Reception runs a full fictional day without spreadsheets |
-| release-3-clinical-core.md | R3 | Dentist documents common appointment types safely |
-| release-4-treatment-continuity.md | R4 | Long-running care has visible next actions |
-| release-5-patient-finance.md | R5 | Authorized parallel or fictional ledger reconciliation passes |
+| release-1-foundation.md | R1 | Fictional patient data can be managed securely with correct Jalali dates and unambiguous rial/toman amounts |
+| release-2-front-office.md | R2 | Reception can operate a full fictional day without spreadsheets |
+| release-3-clinical-core.md | R3 | Dentist can document selected common appointment types safely |
+| release-4-treatment-continuity.md | R4 | Implant, orthodontic, crown/bridge, and custom workflows have visible next actions |
+| release-5-patient-finance.md | R5 | An authorized parallel ledger reconciles exactly with current office records, or fictional reconciliation passes while the Real-Data Authorization Gate remains closed |
 | release-6-operational-completeness.md | R6 | Production readiness review passes |
 | release-7-pilot.md | R7 | Office approves phased production adoption |
 

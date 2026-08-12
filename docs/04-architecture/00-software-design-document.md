@@ -160,17 +160,12 @@ Local development → shared development/integration → staging (fictional or a
 
 ### 7.3 Deployment sequence
 
-1. Validate configuration and secrets.
-2. Take/verify a recent recoverable backup before risky database changes.
-3. Apply backward-compatible (expand-and-contract) migration.
-4. Deploy API/worker.
-5. Deploy web bundle.
-6. Run smoke tests.
-7. Monitor errors, latency, jobs, database health.
-8. Complete post-deploy verification.
-
-Rollback requires schema to remain backward compatible; irreversible migrations need an approved corrective-migration plan before deployment. **Where this actually runs is not yet decided — ADR-010 (hosting model) is Proposed and blocks any real deployment.**
-Full detail: `06-operations/01-deployment.md`, `06-operations/02-backup-recovery.md`, `06-operations/03-monitoring.md`.
+Backup, then a backward-compatible (expand-and-contract) migration, then API/worker, then the web
+bundle, then smoke tests and monitoring — rollback requires the schema to stay backward
+compatible. **Where this actually runs is not yet decided — ADR-010 (hosting model) is Proposed
+and blocks any real deployment.**
+Full detail (the authoritative step sequence, migration policy, and rollback rules):
+`06-operations/01-deployment.md`, `06-operations/02-backup-recovery.md`, `06-operations/03-monitoring.md`.
 
 ---
 

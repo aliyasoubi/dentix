@@ -1,0 +1,44 @@
+// UX-DS-001 §13 dimensions: height 24-26px, horizontal padding 8px, text 12-13px.
+.ds-status-chip {
+  display: inline-flex;
+  align-items: center;
+  height: var(--ds-space-6); // 24px
+  padding-inline: var(--ds-space-2); // 8px — logical, not left/right (CLAUDE.md RTL rule)
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ds-status-chip--neutral {
+  background: var(--ds-neutral-soft);
+  color: var(--ds-neutral-state);
+}
+
+// Same family as --neutral, deliberately lower-contrast text — "Cancelled
+// / skipped" reads as present-but-de-emphasized, not just another neutral.
+.ds-status-chip--neutralSubdued {
+  background: var(--ds-neutral-soft);
+  color: var(--ds-text-muted);
+}
+
+.ds-status-chip--info {
+  background: var(--ds-info-soft);
+  color: var(--ds-info);
+}
+
+.ds-status-chip--warning {
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+}
+
+.ds-status-chip--success {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+
+.ds-status-chip--danger {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}

@@ -1,0 +1,272 @@
+# Release 0.5 — Implementation Log
+
+Detailed evidence and narrative for each item in `07-plans/release-0.5-walking-skeleton.md`. That
+checklist stays short and scannable on purpose; this file is where the proof, the bugs found, and
+the reasoning actually live. Sections match the checklist's items in the same order.
+
+## Post-S8 hardening pass (independent code review)
+
+An independent review of the whole working tree turned up nine real defects, none of which the
+green test suite had caught. Fixed together, with regression tests for each:
+
+1. **No request validation existed at all.** `class-validator` wasn't a dependency and no
+   `ValidationPipe` was registered, so the DTOs were decorative. `POST /patients` with
+   `phone: 123` crashed with a 500 at `command.phone?.trim()`; `sex: "banana"` got as far as the
+   database CHECK constraint; and `contactUnavailable: "no"` — a truthy string — **silently
+   bypassed the CONTACT_REQUIRED rule**, creating a patient with no contact method. Added a
+   global pipe (`whitelist` + `forbidNonWhitelisted` + `transform`, with
+   `enableImplicitConversion` deliberately OFF so `"no"` can't be laundered into a boolean).
+   Registered as `APP_PIPE` in `AppModule` rather than via `main.ts`, because every api-spec
+   builds its own app from `AppModule` — an entry-point-only pipe would leave the tests
+   exercising a different pipeline than production, which is precisely how "no validation at
+   all" stayed invisible to a green suite. Validators are type-level only: domain rules keep
+   their own stable codes rather than collapsing into one generic error.
+2. **The Swagger production gate was fail-open** — a bug introduced earlier in this same
+   session. It gated on `NODE_ENV !== "production"`, but `NODE_ENV` is set nowhere in the repo
+   and `start:prod` is a bare `node dist/src/main`, so `undefined !== "production"` is true and
+   `/api/docs` would have mounted in production. Now an explicit `ENABLE_API_DOCS=true` opt-in:
+   a gate on an externally reachable surface has to fail closed.
+3. **A successful create could be reported as a failure.** `submit()` awaited the list refresh
+   *inside* its own try/catch, so a failing refresh after a committed create rendered a
+   creation error — the user retries and creates a **duplicate patient**. The refresh now sits
+   outside the create's error handling, where it belongs.
+4. **Search failures were swallowed.** `runSearch` was try/finally with no catch: the stale list
+   stayed on screen looking current, and the constructor/keystroke callers produced unhandled
+   rejections. Now clears rows and shows an error.
+5. **No 401 recovery.** The interceptor had no error branch and `authGuard` never re-checked
+   (`sessionChecked` was never reset), so after an idle timeout or force-revoke the SPA stayed
+   "authenticated" while every call 401'd. Added `markSessionExpired()`, wired through the
+   interceptor — with `whoami`/`logout` excluded, since a 401 from the session *probe* is a
+   normal answer and reacting to it would recurse.
+6. **`%` and `_` in a search were treated as SQL wildcards** — searching `%` returned every
+   patient in the office. Parameterized, so never an injection risk, but wrong results. Escaped
+   with an explicit `ESCAPE` clause.
+7. **Rate limiting counted the proxy, not the client.** `trust proxy` was never set although the
+   documented deployment puts nginx/Caddy in front, so ThrottlerGuard bucketed the entire office
+   under one IP — one person's redirect loop would lock out everyone. Now opt-in via
+   `TRUST_PROXY_HOPS`; opt-in and not default-on, because trusting `X-Forwarded-For` with
+   nothing actually in front lets a caller spoof themselves a fresh bucket per request.
+8. **Logout failed silently** — a 401 (session already gone) left the user on an unchanged
+   screen with no redirect. Now clears local state and heads to login either way.
+9. **A misleading security comment** claimed `deriveMfaContext` returning null causes the caller
+   to reject the login. It does not — the caller records it and proceeds. Corrected to describe
+   the actual, already-documented behavior.
+
+Two further things this pass fixed in the tooling itself:
+
+- **`openapi:check` gave a false failure on staged-but-uncommitted files.** It used
+  `git status --porcelain`, which reports a staged file as changed even when its content is
+  exactly what regeneration produces. Replaced with a trackedness check plus
+  `git diff --exit-code`, which is correct both in CI (nothing staged) and locally.
+- **Client-side validation now mirrors the server's rules**, reusing the kernel's own
+  `canonicalizeIranianMobile` rather than a second hand-written regex — a duplicated copy of
+  "what counts as an Iranian mobile" is exactly how client and server drift into disagreeing.
+
+## Monorepo scaffold
+
+S1: never ticked when S1 actually landed even though its own "Done when" line named this
+checkbox — corrected later, no new work involved.
+
+## Docker-compose dev environment
+
+S1: same as above — Postgres + Keycloak landed in S1, MinIO followed in S7 exactly on the
+schedule `00-build-sequencing.md` predicted. Redis remains genuinely not needed yet.
+
+## ADR-008: Jalali date adapter library
+
+S5: Accepted — jalaali-js for the kernel's pure conversions, date-fns-jalali scoped to the
+Material adapter. See the ADR's own implementation note for the full reasoning.
+
+## S4 end-to-end slice (login → create patient → search)
+
+Proven in a real browser: real Keycloak login with MFA, patient created with a Persian native
+name + Latin name + phone, found again by phone in all three accepted forms (`09…`, `+98…`,
+Persian digits) and by a partial name typed with the Arabic Yeh variant, RTL layout correct
+throughout, session survives a hard reload, logout ends both the local and Keycloak SSO session.
+
+## Angular Material theme (UX-DS-001 §24) and three real rendering bugs
+
+**First pass** (post-S8, direct response to user feedback that the patients screen looked
+unstyled): the Material theme, tokens, and the S4 page were already RTL/Vazirmatn-correct, but
+nothing beyond global tokens had actually been applied — no page header, no empty state, generic
+Material defaults throughout. The checklist's own "density -1" wording turned out to be wrong
+against the spec's own §8.3, which mandates two density modes chosen per screen — "Comfortable"
+for patient registration (the only screen that exists) and "Compact" reserved for
+schedule/ledger/clinical-timeline screens that don't exist yet — not one global compact scale.
+Corrected `styles.scss` to `scale: 0` (Comfortable) instead of blindly keeping an earlier `-1`
+change that was based on §24's illustrative example without cross-checking §8.3.
+
+Also added the §9.1 radius tokens, §9.2 elevation tokens, and §7.2 type scale (as `.ds-text-*`
+utility classes) that were missing entirely; fixed the app toolbar from a solid brand-color
+background to the "quiet neutral surface" §10.3/§6.4 actually require; built
+`DsPageHeaderComponent` and `DsEmptyStateComponent` (both named in §28's required-components
+list) and applied them, plus the type scale and §9 radius rules, to the real patients page —
+restyled `patients-page.html`/`.scss` accordingly. Not the full app shell/sidebar (§10) — that's
+genuinely premature with one page in the whole app and is deferred honestly, not silently
+skipped.
+
+**Second, more serious bug** — found immediately after, from direct user testing ("the UI is
+very buggy"): `styles.scss` called `mat.theme($dentix-theme)`, which only applies Angular
+Material's core/system-level tokens (base + color + density + typography) — it never includes
+any individual component's own theme mixin (button-theme, checkbox-theme, table-theme,
+select-theme, ...). Confirmed via `getComputedStyle` in a real browser, not assumed: a disabled
+submit button's `--mdc-filled-button-disabled-label-text-color` and every other
+`--mdc-filled-button-*` custom property were empty strings, so the button rendered as plain
+unstyled text with no visible shape — and every other Material component on every page was
+silently missing its real theme CSS the same way. `mat.all-component-themes($dentix-theme)` —
+literally what §24's own illustrative example already showed — includes `core-theme`'s `theme()`
+first and then every component's theme on top, confirmed by reading Angular Material 22's own
+`_all-theme.scss` source, not guessed. Fixed; the built CSS bundle grew from 3.28 kB to 55.75 kB,
+numerically confirming the previously-missing component CSS is now actually shipping. Verified in
+a real browser: the submit button now shows a correct filled brand-teal pill when enabled and a
+correct muted-gray pill when disabled, on both the patients page and the login page.
+
+**Third bug** — found right after (user report: "persian date calendar component doesn't have
+any background"): `mat.define-theme`'s neutral/surface palette is algorithmically derived from
+`mat.$cyan-palette` (Material's own M3 color science), not from `--ds-*` — confirmed by reading
+Angular Material's own `_definition.scss`, not assumed — so the datepicker popup and the select
+dropdown both rendered a washed-out greenish-gray background barely distinguishable from
+`--ds-page`, reading as "no background." The datepicker's own generated elevation-shadow token
+was separately baked into the compiled CSS at zero blur/spread (confirmed by grepping the actual
+build output), so it cast no shadow at all. Fixed by overriding the specific component tokens
+Material actually renders from
+(`--mat-datepicker-calendar-container-background-color`/`-text-color`/`-elevation-shadow`,
+`--mat-select-panel-background-color`) with the real `--ds-*` values, per §24's own instruction
+to layer product tokens above the Material theme rather than fight Sass palette generation.
+Verified live: both the calendar popup and the gender select now show a clean white surface with
+a real visible shadow.
+
+## Motion system and focus indicators (§23, §26 Stage 1, §27 DoD)
+
+Requested directly ("needs animation and modern feel"). Investigation first found that §23's
+motion layer had never been implemented at all: **zero** motion tokens in `styles.scss`,
+`--ds-focus-ring` declared in §6.1 and referenced nowhere in the app, exactly one `:hover` rule
+in the entire codebase (a table row), and no `prefers-reduced-motion` handling despite §27's DoD
+requiring it.
+
+Built, all spec-sourced rather than invented:
+
+- **§23.2 motion tokens** — the five durations and three easing curves, verbatim from the spec.
+  Feature styles pick from §23.3's matrix (hover/press 80–120ms, menu 120–160ms, panel
+  200–220ms) instead of hand-picking numbers.
+- **§23.7 reduced motion** — neutralizes *duration*, never the state change itself, so a
+  hover/selected/error state still applies instantly for users who ask for reduced motion
+  (§23's own closing rule: "Functional feedback must remain available without animation").
+- **Keyboard focus ring** — `:focus-visible` at 2px in `--ds-focus-ring`, finally using that
+  token.
+- **Table row hover** at `--ds-motion-instant` (80ms). Deliberately *not* animating row
+  enter/exit on search: §23.6 explicitly rules motion out for "every table update," so a
+  keystroke-driven re-render must stay still.
+
+**Two things worth recording because the obvious approach was wrong:**
+
+1. `mat.strong-focus-indicators()` looked like the right supported API and **does not work on
+   its own**. It emits only CSS custom properties plus a chip overflow fix; the structural rules
+   live in a separate `strong-focus-indicators-structure()` mixin, and they key off
+   `.mat-focus-indicator:focus-visible` — where `.mat-focus-indicator` is an inner `<span>`
+   Material renders inside the button, which has no tabindex and therefore can never match
+   `:focus-visible`. Caught by grepping the compiled bundle (zero structural rules shipped) and
+   by `getComputedStyle` on a real focused control, before claiming the fix worked. Replaced
+   with a plain `:focus-visible` rule on whatever element actually holds focus.
+2. That rule then still didn't paint, because Material resets `.mdc-button { outline: none }` at
+   *equal* specificity (0,1,0) and simply loads later, winning on cascade order — confirmed by
+   enumerating matching CSSOM rules on a real focused button. Hence the `!important`, which is
+   justified here specifically: a keyboard focus ring is an accessibility requirement, not a
+   stylistic preference, and must not be silently suppressible by a component reset. Material
+   form fields are then explicitly exempted (they render their own brand-colored focus outline;
+   a second ring inside reads as a box in a box — confirmed visually).
+
+Verified in a real browser via keyboard tabbing: non-form-field controls (buttons, checkbox)
+render `solid 2px rgb(72, 175, 190)` — i.e. `--ds-focus-ring` — at a 2px offset; form-field
+inputs correctly render `outline: none` and keep Material's own affordance.
+
+## Storybook + first Ds components
+
+S6: Storybook itself is running against the real design tokens/`styles.scss`/Vazirmatn/i18n
+resources, and `DsMoneyDisplayComponent` is built, tested, and demonstrated in it — see the
+money-input entry below.
+
+Post-S8: `DsStatusChipComponent` (`apps/web/src/app/design-system/status-chip/`) closes the
+pair — the six UX-DS-001 §13 tones (neutral, neutralSubdued, info, warning, success, danger)
+mapped onto the existing `--ds-*` semantic color tokens (no new tokens invented), unit-tested per
+tone, and demonstrated in Storybook with the spec's own state-family labels
+(Planned/Active/Pending/Completed/Cancelled/Overdue) — `npm run build-storybook` verified green
+with both components present, not just assumed from the dev server.
+
+## Public bootstrap loader
+
+Post-S8: `GET /api/v1/bootstrap` (`apps/api/src/bootstrap.controller.ts`) — unauthenticated, per
+`06-configuration-catalog.md` Layer 4 — serves the fixed v1 locale/dir/calendarDisplay plus the
+office timezone and money unit, currently backed by fixed constants rather than a live Layer-2
+settings store, since no admin config UI exists yet to write one (the DTO's own comment states
+this honestly). `BootstrapConfigService` (`apps/web/src/app/core/bootstrap/`) fetches it as an
+`APP_INITIALIZER` before the shell renders, throws on any mismatch against the expected
+fa-IR/rtl/JALALI values rather than trusting the response blindly, and feeds the real
+`MONEY_CONFIG` provider — replacing the placeholder default that token's own comment flagged as
+temporary. Verified against the real running API, not just unit-mocked: `curl
+localhost:3000/api/v1/bootstrap` returns the exact expected JSON, and a real browser load shows
+the request succeed with zero console errors and the app proceeding to the login redirect, which
+an initializer failure would have blocked.
+
+## Working Jalali date picker
+
+S5: `JalaliDateAdapter` wired into the S4 patient form's date-of-birth field; kernel's 33-fixture
+suite plus 14 adapter unit tests plus a real-browser human check — picked فروردین ۱۴۰۳/۱ (Nowruz,
+a leap year) via the picker, submitted, and it round-tripped back through Postgres and the API as
+۱۴۰۳/۰۱/۰۱ in the search results.
+
+## Rial/toman money input component
+
+S6: `packages/kernel/src/money.ts` — a nominal `Money` branded type (same `Branded<>` pattern as
+`Uuid`, `asMoney`/`tryAsMoney` matching `asUuid`/`isUuid`) over bigint-only rial/toman conversion,
+decimal-string API boundary, and Persian/Latin-digit entry parsing; both example tests and
+property-based tests via fast-check (~1,100 randomized cases/run for toman↔rial exactness,
+no-silent-rounding, and decimal-string round trip — 147 kernel tests total).
+`DsMoneyDisplayComponent` + `DsMoneyInputComponent` (`apps/web/src/app/design-system/money/`) are
+typed `Money`, not a bare bigint, end to end; demonstrated in Storybook and proven in a real
+browser — typed `2500000` and ۲٬۵۰۰٬۰۰۰ (Latin and Persian digits) into a toman-configured field,
+both produced the identical "معادل ثبت‌شده: ۲۵٬۰۰۰٬۰۰۰ ریال" equivalent; the تومان/ریال unit
+label has no UI path to hide it; an ambiguous decimal (`2500.5`) was rejected with a visible
+validation message instead of guessed at.
+
+A follow-up quality pass (P1/P2) additionally closed a real defect this same checklist item's
+human check didn't happen to exercise: a canonical amount that isn't a whole number of tomans
+used to display raw rial digits under a تومان suffix — see the commit history for the fix and its
+regression tests.
+
+## One generated PDF (Persian receipt)
+
+S7: new `apps/worker` package — headless-Chromium HTML→PDF (Playwright), Vazirmatn embedded as
+base64 `@font-face` (no network fetch at render time), MinIO added to the dev stack for
+content-addressed object storage. Human-reviewed the actual rendered PDF: connected Persian
+letterforms, the Latin name unmirrored inside RTL flow, Persian-digit Jalali date, grouped toman
+amount, the receipt-number code correctly left un-converted. Along the way, found and fixed a
+real Chromium non-determinism — see ADR-009's implementation note. ADR-009's other two checklist
+items: content-hash reproducibility is now proven; running on the actual ADR-010 host stays open
+until ADR-010 is decided.
+
+## OpenAPI generated from NestJS, typed Angular client
+
+S8: `apps/api/scripts/generate-openapi.ts` boots the real `AppModule` with `@nestjs/swagger`'s
+`SwaggerModule.createDocument` — not a hand-maintained subset — and writes `apps/api/openapi.json`;
+`HealthController` is `@ApiExcludeController()`'d since it's explicitly outside `/api/v1`.
+`apps/web` runs `openapi-typescript` against that committed contract into
+`src/app/core/http/api-types.gen.ts`; `PatientsApiService` (the S4 page's client) now types its
+request/response shapes directly off `components["schemas"][...]` from that generated file
+instead of hand-duplicated interfaces. `npm run openapi:check` (both workspaces, wired into CI)
+regenerates both artifacts and fails on any uncommitted drift — verified failing on a
+deliberately un-synced file before wiring the fix, not just assumed.
+
+A real defect this caught along the way: `@ApiPropertyOptional` on a `string | null` request
+field reflects as `type: object` unless `type: String` is given explicitly (TypeScript's
+decorator-metadata reflection collapses union types to `Object`) — `CreatePatientRequestDto`'s
+`latinName`/`phone`/`dateOfBirth` would otherwise have generated as opaque objects, not strings,
+in the Angular client.
+
+The generic `amountRial` string→`Money` client adapter
+(`apps/web/src/app/core/http/money-codec.ts`) is built and unit-tested per this slice's test
+list, ahead of any endpoint actually returning `amountRial` — there isn't one yet in Release 0.5.
+
+Post-S8, a live Swagger UI was also mounted at `/api/docs` (dev/staging only, gated off in
+production) so the contract is browsable, not just a committed JSON file — `main.ts` and the
+generator script now share one `buildOpenApiDocument()` helper so the two can't drift apart.

@@ -32,7 +32,7 @@
     "preopenapi:generate": "npm run build --workspace @dentix/kernel",
     "openapi:generate": "ts-node -T scripts/generate-openapi.ts",
     "preopenapi:check": "npm run build --workspace @dentix/kernel",
-    "openapi:check": "ts-node -T scripts/generate-openapi.ts && test -z \"$(git status --porcelain -- openapi.json)\""
+    "openapi:check": "ts-node -T scripts/generate-openapi.ts && git ls-files --error-unmatch openapi.json > /dev/null && git diff --exit-code -- openapi.json"
   },
   "dependencies": {
     "@dentix/kernel": "0.5.0",
@@ -44,6 +44,8 @@
     "@nestjs/swagger": "11.4.6",
     "@nestjs/throttler": "6.5.0",
     "@nestjs/typeorm": "11.0.3",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
     "cookie-parser": "1.4.7",
     "dotenv": "17.4.2",
     "openid-client": "6.8.4",

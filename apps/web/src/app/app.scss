@@ -1,8 +1,15 @@
+// UX-DS-001 §6.4 ("Do not assign strong background colors to entire
+// modules") + §10.3 ("shell uses quiet neutral surfaces") — the toolbar is
+// chrome, not a primary action or selected state, so it stays neutral;
+// brand color is reserved for the logo mark and interactive elements.
 .app-toolbar {
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
   height: 56px;
+  background: var(--ds-surface);
+  color: var(--ds-text-primary);
+  border-block-end: 1px solid var(--ds-border);
 
   &__logo {
     display: block;
@@ -11,6 +18,7 @@
   &__title {
     font-weight: 650;
     font-size: 16px;
+    color: var(--ds-brand-700);
   }
 
   &__spacer {
@@ -19,7 +27,7 @@
 
   &__user {
     font-size: 13px;
-    opacity: 0.9;
+    color: var(--ds-text-secondary);
   }
 }
 

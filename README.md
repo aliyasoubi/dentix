@@ -4,14 +4,20 @@
 **The markdown files in `docs/` are the version-controlled source of truth** — see
 `docs/document-control.md` for versioning and ownership.
 
+**New here, or just want to know what's actually built?** Read **[`STATUS.md`](STATUS.md)** first —
+plain-language, no jargon, answers "what works, what doesn't, and why." This file is about
+running the code, not explaining the project.
+
 ## Layout
 
 ```
+STATUS.md                  Plain-language project status — read this first
 CLAUDE.md                  AI-assisted development guide (invariants, conventions)
 assets/brand/               Dentix logo — icon, EN/FA lockups, monochrome variant
-docker-compose.yml         Dev-only Postgres + Keycloak + MinIO (see 00-build-sequencing.md for what's deliberately not here yet)
+docker-compose.yml         Dev-only Postgres + Keycloak + MinIO
+keycloak/                  Realm export (ADR-007) + dev user seed scripts
 apps/
-  api/                     NestJS modular monolith (ADR-001)
+  api/                     NestJS modular monolith (ADR-001); also serves the built Angular app (see "Running the app")
   web/                     Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)
   worker/                  Headless-Chromium document rendering (ADR-009)
 packages/
@@ -40,7 +46,13 @@ docs/
 4. Put this directory at the root of the product git repository so spec changes ride in the same PRs as code.
 5. Decisions that contradict an accepted ADR require a replacement ADR.
 
-## Getting started (Release 0.5, slice S1)
+## Where the project stands
+
+Short version in `STATUS.md`. The precise, itemized version — every checklist item, every ADR's
+exact per-item status — lives in `docs/07-plans/release-0.5-walking-skeleton.md` and
+`docs/04-architecture/adr/`; those are kept honest rather than flipped to "done" early.
+
+## Getting started
 
 Prerequisites: Node 22.23.2 (`nvm use`, matching `.nvmrc`) and Docker.
 
@@ -56,13 +68,71 @@ Prerequisites: Node 22.23.2 (`nvm use`, matching `.nvmrc`) and Docker.
 ```bash
 npm install                        # installs all workspaces (apps/*, packages/*)
 cp .env.example .env               # dev-only credentials, see the file for why the Postgres port is 5433
-docker compose up -d               # Postgres 18 + Keycloak (dev mode) — nothing else yet, see 00-build-sequencing.md
-npm run lint && npm run test && npm run test:api   # S1's verification gate
-docker compose down                # when done
+docker compose up -d               # Postgres 18 + Keycloak (dev mode) + MinIO
+npm run db:migrate --workspace apps/api
 ```
 
-`npm run start:dev --workspace apps/api` serves the API on `:3000` (`/health` is unversioned; everything else sits under `/api/v1`). `npm run start --workspace apps/web` serves the Angular shell on `:4200`. Neither has real product behavior yet — S1 only proves the pipeline; the first real feature is S4.
+First-time Keycloak setup (fetch the client secret, seed a dev user) is documented in `keycloak/README.md` — do that once, right after `docker compose up -d`, before trying to log in.
 
-**S1 human check:** a person clones the repository fresh and reaches green CI (the four commands above, in order) using only this section — no undocumented steps.
+### The canonical verification gate
 
-Version 0.5.0 · Baseline 2026-08-06
+These are the same commands CI runs, in this order (`docs/08-implementation/01-workflow.md`):
+
+```bash
+npm run format      # Prettier check
+npm run lint        # ESLint across all workspaces
+npm run lint:arch   # module-boundary rules (no framework imports in domain/, entity registration, etc.)
+npm run test         # unit tests, all workspaces
+npm run openapi:check  # regenerates the OpenAPI contract + Angular client types, fails on drift
+npm run db:migrate && npm run db:migrate:down && npm run db:migrate  # migration round-trip
+npm run test:int     # integration tests against real Postgres — see the warning below before running this
+npm run test:api     # API contract tests against the real Keycloak container
+npm run build         # all workspaces
+```
+
+> **`npm run test:int` truncates shared dev data.** Several integration specs
+> (`identity-access.int-spec.ts`, `patients.int-spec.ts`, `office.int-spec.ts`,
+> `outbox.int-spec.ts`) `TRUNCATE ... CASCADE` the `office`, `office_user`,
+> `user_account`, and `patient` tables as part of their own cleanup — correct
+> for test isolation, but it runs against the **same** Postgres database this
+> section just told you to use for interactive dev/testing. Running
+> `npm run test:int` will silently delete your dev-bootstrapped login (and
+> any patients you created by hand through the UI). If that happens, re-run
+> the dev user bootstrap (`keycloak/README.md`, step 2, plus
+> `bootstrap-dev-office-user.ts` — see below) rather than wondering why login
+> suddenly fails with `NO_ACTIVE_ACCOUNT`. Don't run `test:int` in the middle
+> of a manual testing session unless you're prepared to re-seed afterward.
+
+### Running the app locally
+
+The Angular app and the API **must** run combined, on one origin — the BFF
+session cookie and CSRF design assume it (`09-authentication-session-
+architecture.md`: "Browser API calls use the same origin"). Angular's own
+`ng serve` (`:4200`) is not proxied to the API, so it cannot complete login.
+
+```bash
+npm run build --workspace apps/web       # Angular build the API will serve statically
+npm run start:dev --workspace apps/api   # serves both API and the built Angular app on :3000
+```
+
+Open **http://localhost:3000** — not `:4200`. `/health` is unversioned; everything else sits under `/api/v1` (see the generated contract at `apps/api/openapi.json`).
+
+If this is a fresh Postgres/Keycloak pair (or you just ran `test:int` and lost your dev login — see above), link the Keycloak dev user to a Dentix office/account before logging in:
+
+```bash
+# <keycloak-user-id> is printed by keycloak/seed-dev-user.sh, or read it
+# from the Keycloak admin console (localhost:8080) → Users → dr.dev
+npx ts-node -T scripts/bootstrap-dev-office-user.ts <keycloak-user-id>
+# (run from apps/api/)
+```
+
+Sign in as `dr.dev` / `DevPassword123!` (dev-only, see `keycloak/README.md`); first login prompts for TOTP enrollment.
+
+### Other things you can run
+
+```bash
+npm run storybook --workspace apps/web              # design-system components in isolation
+npm run render:receipt-fixture --workspace apps/worker  # renders a real Persian PDF receipt to apps/worker/tmp/
+```
+
+Version 0.5.0 · Baseline 2026-08-12

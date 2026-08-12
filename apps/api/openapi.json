@@ -1,6 +1,28 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/bootstrap": {
+      "get": {
+        "operationId": "BootstrapController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapConfigResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Public frontend bootstrap configuration, fetched before shell render",
+        "tags": [
+          "bootstrap"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "get": {
         "operationId": "AuthController_login",
@@ -203,6 +225,72 @@
       }
     },
     "schemas": {
+      "MoneyBootstrapConfigDto": {
+        "type": "object",
+        "properties": {
+          "defaultUnit": {
+            "type": "string",
+            "enum": [
+              "RIAL",
+              "TOMAN"
+            ]
+          },
+          "showUnitLabel": {
+            "type": "boolean",
+            "description": "Always true in v1 — the unit label can never be configured away."
+          }
+        },
+        "required": [
+          "defaultUnit",
+          "showUnitLabel"
+        ]
+      },
+      "BootstrapConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "fa-IR"
+            ]
+          },
+          "dir": {
+            "type": "string",
+            "enum": [
+              "rtl"
+            ]
+          },
+          "calendarDisplay": {
+            "type": "string",
+            "enum": [
+              "JALALI"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone identifier."
+          },
+          "money": {
+            "$ref": "#/components/schemas/MoneyBootstrapConfigDto"
+          },
+          "apiBaseUrl": {
+            "type": "string",
+            "description": "Same-origin API path prefix; relative, never an absolute host."
+          },
+          "appVersion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "locale",
+          "dir",
+          "calendarDisplay",
+          "timezone",
+          "money",
+          "apiBaseUrl",
+          "appVersion"
+        ]
+      },
       "ErrorResponseDto": {
         "type": "object",
         "properties": {

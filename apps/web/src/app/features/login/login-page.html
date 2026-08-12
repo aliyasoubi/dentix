@@ -1,0 +1,11 @@
+<section class="login-page">
+  <h1 class="login-page__title ds-text-page-title">{{ "login.title" | translate }}</h1>
+
+  @if (errorMessageKey(); as key) {
+  <p class="ds-alert ds-alert--danger" role="alert">{{ key | translate }}</p>
+  }
+
+  <button mat-flat-button color="primary" type="button" (click)="signIn()">
+    {{ "login.action.signIn" | translate }}
+  </button>
+</section>

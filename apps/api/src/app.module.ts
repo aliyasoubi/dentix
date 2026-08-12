@@ -1,10 +1,14 @@
-import { Module } from "@nestjs/common";
+import { Module, ValidationPipe } from "@nestjs/common";
+import { APP_PIPE } from "@nestjs/core";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { join } from "path";
+import { VALIDATION_PIPE_OPTIONS } from "./platform/validation.pipe-options";
+import { BootstrapController } from "./bootstrap.controller";
 import { HealthController } from "./health.controller";
 import { IdentityAccessModule } from "./modules/identity-access/identity-access.module";
 import { OfficeAdministrationModule } from "./modules/office-administration/office-administration.module";
+import { OutboxModule } from "./modules/outbox/outbox.module";
 import { PatientsModule } from "./modules/patients/patients.module";
 import { findRepoRoot } from "./platform/find-repo-root";
 import { dataSourceOptions } from "./persistence/data-source";
@@ -32,10 +36,19 @@ const webBuildRoot = repoRoot ? join(repoRoot, "apps", "web", "dist", "web", "br
       exclude: ["/api/{*splat}", "/health"],
     }),
     OfficeAdministrationModule,
+    OutboxModule,
     IdentityAccessModule,
     PatientsModule,
   ],
-  controllers: [HealthController],
-  providers: [],
+  controllers: [HealthController, BootstrapController],
+  providers: [
+    // Registered here rather than via main.ts's useGlobalPipes on purpose:
+    // every api-spec builds its own app from AppModule, so an entry-point-only
+    // pipe would leave the tests exercising a different request pipeline than
+    // production — which is exactly how "no validation at all" went unnoticed
+    // by a green suite. As an APP_PIPE it is part of the module, so anything
+    // that boots AppModule gets it.
+    { provide: APP_PIPE, useValue: new ValidationPipe(VALIDATION_PIPE_OPTIONS) },
+  ],
 })
 export class AppModule {}
