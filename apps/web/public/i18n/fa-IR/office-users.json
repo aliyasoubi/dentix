@@ -1,0 +1,19 @@
+{
+  "officeUsers.page.title": "کاربران مطب",
+  "officeUsers.page.description": "افزودن کاربری که پیش‌تر در سامانه احراز هویت ثبت شده است",
+
+  "officeUsers.form.title": "افزودن کاربر جدید",
+  "officeUsers.form.email.label": "ایمیل کاربر",
+  "officeUsers.form.submit": "افزودن کاربر",
+  "officeUsers.form.success": "کاربر «{{email}}» با موفقیت به مطب افزوده شد.",
+  "officeUsers.form.reauthenticate": "ورود دوباره و ادامه",
+
+  "officeUsers.form.error.EMAIL_REQUIRED": "وارد کردن ایمیل الزامی است.",
+  "officeUsers.form.error.FORBIDDEN": "شما اجازه افزودن کاربر جدید را ندارید.",
+  "officeUsers.form.error.RECENT_AUTHENTICATION_REQUIRED": "برای افزودن کاربر، باید به‌تازگی وارد شده باشید. لطفاً دوباره وارد شوید و تلاش کنید.",
+  "officeUsers.form.error.INVALID_EMAIL": "ایمیل واردشده معتبر نیست.",
+  "officeUsers.form.error.NOT_FOUND_IN_PROVIDER": "حسابی با این ایمیل یافت نشد. ابتدا باید حساب کاربری در سامانه احراز هویت ایجاد شود.",
+  "officeUsers.form.error.PROVIDER_ACCOUNT_DISABLED": "حساب کاربری یافت‌شده غیرفعال است.",
+  "officeUsers.form.error.ALREADY_LINKED": "این کاربر پیش‌تر به مطب افزوده شده است.",
+  "officeUsers.form.error.VALIDATION_FAILED": "اطلاعات واردشده معتبر نیست. لطفاً مقادیر فرم را بررسی کنید."
+}

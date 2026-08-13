@@ -2,7 +2,9 @@
   <img src="/brand/dentix-icon.svg" alt="" class="app-toolbar__logo" width="24" height="24" />
   <span class="app-toolbar__title">{{ "app.title" | translate }}</span>
   <span class="app-toolbar__spacer"></span>
-  @if (auth.isAuthenticated()) {
+  @if (auth.isAuthenticated()) { @if (auth.session()?.isOfficeAdmin) {
+  <a mat-button routerLink="/office-users">{{ "common.nav.addUser" | translate }}</a>
+  }
   <span class="app-toolbar__user">{{ auth.session()?.displayName }}</span>
   <button mat-stroked-button (click)="logout()">{{ "common.actions.logout" | translate }}</button>
   }

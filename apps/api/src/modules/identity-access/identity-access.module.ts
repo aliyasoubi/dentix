@@ -4,6 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuditModule } from "../audit/public-api";
 import { TypeOrmUnitOfWork } from "../../platform/typeorm-unit-of-work";
 import { UNIT_OF_WORK_PORT } from "../../platform/unit-of-work.port";
+import { AddOfficeUserUseCase } from "./application/use-cases/add-office-user.use-case";
 import { CompleteLoginUseCase } from "./application/use-cases/complete-login.use-case";
 import { GetSessionUseCase } from "./application/use-cases/get-session.use-case";
 import { LogoutUseCase } from "./application/use-cases/logout.use-case";
@@ -14,10 +15,12 @@ import { OIDC_AUTHORIZATION_REQUEST_REPOSITORY } from "./domain/repositories/oid
 import { USER_ACCOUNT_REPOSITORY } from "./domain/repositories/user-account.repository";
 import { USER_SESSION_REPOSITORY } from "./domain/repositories/user-session.repository";
 import { ENCRYPTION_PORT } from "./application/ports/encryption.port";
+import { KEYCLOAK_ADMIN_PORT } from "./application/ports/keycloak-admin.port";
 import { OIDC_CLIENT_PORT } from "./application/ports/oidc-client.port";
 import { SESSION_TOKEN_PORT } from "./application/ports/session-token.port";
 import { EnvelopeEncryptionService } from "./infrastructure/crypto/envelope-encryption.service";
 import { SessionTokenService } from "./infrastructure/crypto/session-token.service";
+import { KeycloakAdminHttpAdapter } from "./infrastructure/keycloak/keycloak-admin-http.adapter";
 import { OpenIdClientAdapter } from "./infrastructure/oidc/openid-client.adapter";
 import { OfficeUserOrmEntity } from "./infrastructure/persistence/office-user.orm-entity";
 import { TypeOrmOfficeUserRepository } from "./infrastructure/persistence/office-user.typeorm-repository";
@@ -28,6 +31,7 @@ import { TypeOrmUserAccountRepository } from "./infrastructure/persistence/user-
 import { UserSessionOrmEntity } from "./infrastructure/persistence/user-session.orm-entity";
 import { TypeOrmUserSessionRepository } from "./infrastructure/persistence/user-session.typeorm-repository";
 import { AuthController } from "./presentation/http/auth.controller";
+import { OfficeUsersController } from "./presentation/http/office-users.controller";
 import { CsrfGuard } from "./presentation/guards/csrf.guard";
 import { SessionGuard } from "./presentation/guards/session.guard";
 
@@ -48,7 +52,7 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     // guessing) independent of what the provider does.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, OfficeUsersController],
   providers: [
     // Registered under both their concrete class (presentation/guards uses
     // these directly — HTTP-layer plumbing, not application logic) and
@@ -65,11 +69,13 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     { provide: OIDC_AUTHORIZATION_REQUEST_REPOSITORY, useClass: TypeOrmOidcAuthorizationRequestRepository },
     { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
     { provide: OIDC_CLIENT_PORT, useClass: OpenIdClientAdapter },
+    { provide: KEYCLOAK_ADMIN_PORT, useClass: KeycloakAdminHttpAdapter },
     StartLoginUseCase,
     CompleteLoginUseCase,
     ResolveActiveSessionUseCase,
     GetSessionUseCase,
     LogoutUseCase,
+    AddOfficeUserUseCase,
     SessionGuard,
     CsrfGuard,
     ThrottlerGuard,

@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Uuid } from "@dentix/kernel";
+import { TransactionContext, Uuid } from "@dentix/kernel";
 import { Repository } from "typeorm";
 import { UserAccount } from "../../domain/entities/user-account.entity";
 import { UserAccountRepository } from "../../domain/repositories/user-account.repository";
 import { UserAccountMapper } from "../mappers/user-account.mapper";
 import { UserAccountOrmEntity } from "./user-account.orm-entity";
+import { repositoryFor } from "../../../../platform/typeorm-transaction";
 
 @Injectable()
 export class TypeOrmUserAccountRepository implements UserAccountRepository {
@@ -24,7 +25,7 @@ export class TypeOrmUserAccountRepository implements UserAccountRepository {
     return record ? UserAccountMapper.toDomain(record) : null;
   }
 
-  async create(userAccount: UserAccount): Promise<void> {
-    await this.repository.insert(UserAccountMapper.toOrmForInsert(userAccount));
+  async create(userAccount: UserAccount, tx?: TransactionContext): Promise<void> {
+    await repositoryFor(this.repository, tx).insert(UserAccountMapper.toOrmForInsert(userAccount));
   }
 }

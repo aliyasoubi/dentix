@@ -61,6 +61,25 @@ describe("AuthService", () => {
     expect(service.checked()).toBe(true);
   });
 
+  describe("reauthenticate", () => {
+    // The whole reason this is separate from login(): without prompt=login
+    // the provider answers from its existing SSO session and returns the
+    // same stale auth_time, so a RECENT_AUTHENTICATION_REQUIRED recovery
+    // would loop straight back to the same refusal.
+    it("asks the provider for a fresh interactive login", () => {
+      service.reauthenticate("/office-users");
+
+      const url = redirectSpy.mock.calls[0][0] as string;
+      expect(url).toContain("prompt=login");
+      expect(url).toContain(`returnTo=${encodeURIComponent("/office-users")}`);
+    });
+
+    it("leaves ordinary login() without the prompt, so SSO still works", () => {
+      service.login("/patients");
+      expect(redirectSpy.mock.calls[0][0] as string).not.toContain("prompt=login");
+    });
+  });
+
   describe("markSessionExpired", () => {
     it("clears the session, un-checks it, and redirects to login with the current location as returnTo", () => {
       service.markSessionExpired();

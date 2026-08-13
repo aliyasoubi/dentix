@@ -11,4 +11,20 @@ export const SESSION_POLICY = {
   recentAuthenticationWindowMs: 5 * 60 * 1000,
 } as const;
 
+/**
+ * The recent-authentication comparison itself, as a pure function so the
+ * two callers that need it share one definition: `UserSession`'s own
+ * `isRecentlyAuthenticated()` (which has the entity in hand) and use cases
+ * gating a sensitive action on a session's `authenticatedAt` passed to them
+ * as a plain value. Duplicating the comparison is how the window silently
+ * drifts between the check and what whoami reports.
+ */
+export function isWithinRecentAuthenticationWindow(
+  authenticatedAt: Date,
+  now: Date,
+  windowMs: number = SESSION_POLICY.recentAuthenticationWindowMs,
+): boolean {
+  return now.getTime() - authenticatedAt.getTime() <= windowMs;
+}
+
 export const OIDC_AUTHORIZATION_REQUEST_TTL_MS = 10 * 60 * 1000;

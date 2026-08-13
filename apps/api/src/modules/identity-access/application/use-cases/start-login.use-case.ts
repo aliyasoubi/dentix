@@ -34,6 +34,13 @@ export class StartLoginUseCase {
 
   async execute(params: {
     readonly returnPath: string;
+    /**
+     * Set when the caller is recovering from RECENT_AUTHENTICATION_REQUIRED
+     * — forces `prompt=login` so the provider re-authenticates the user
+     * interactively and issues a fresh `auth_time`, which is the only thing
+     * that actually advances the recent-authentication window.
+     */
+    readonly forceReauthentication?: boolean;
   }): Promise<Result<{ readonly authorizationUrl: URL }, StartLoginErrorCode>> {
     const now = new Date();
     const state = this.sessionTokens.generateOpaqueToken();
@@ -61,6 +68,7 @@ export class StartLoginUseCase {
       nonce,
       pkceCodeVerifier,
       pkceCodeChallenge,
+      ...(params.forceReauthentication ? { forceReauthentication: true } : {}),
     });
 
     return ok({ authorizationUrl });

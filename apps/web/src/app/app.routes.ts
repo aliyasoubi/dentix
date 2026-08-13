@@ -1,5 +1,6 @@
 import { Routes } from "@angular/router";
 import { authGuard } from "./core/auth/auth.guard";
+import { officeAdminGuard } from "./core/auth/office-admin.guard";
 
 export const routes: Routes = [
   {
@@ -14,6 +15,14 @@ export const routes: Routes = [
     path: "patients",
     canActivate: [authGuard],
     loadComponent: () => import("./features/patients/patients-page").then((m) => m.PatientsPage),
+  },
+  {
+    path: "office-users",
+    // Order matters: authGuard resolves the session first (loadSession() if
+    // not already checked), and officeAdminGuard's isOfficeAdmin read
+    // assumes that already happened.
+    canActivate: [authGuard, officeAdminGuard],
+    loadComponent: () => import("./features/office-users/office-users-page").then((m) => m.OfficeUsersPage),
   },
   { path: "", pathMatch: "full", redirectTo: "patients" },
   { path: "**", redirectTo: "patients" },

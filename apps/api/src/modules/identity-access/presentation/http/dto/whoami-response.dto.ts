@@ -21,4 +21,10 @@ export class WhoAmIResponseDto {
 
   @ApiProperty({ description: "Whether authentication happened recently enough for sensitive actions." })
   readonly isRecentlyAuthenticated!: boolean;
+
+  @ApiProperty({
+    description:
+      "UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request.",
+  })
+  readonly isOfficeAdmin!: boolean;
 }

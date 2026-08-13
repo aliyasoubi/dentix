@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { DataSource } from "typeorm";
 import { asUuid } from "@dentix/kernel";
 import { AuditEvent } from "../../src/modules/audit/domain/entities/audit-event.entity";
+import { OfficeUser } from "../../src/modules/identity-access/domain/entities/office-user.entity";
 import { UserAccount } from "../../src/modules/identity-access/domain/entities/user-account.entity";
 import { UserSession } from "../../src/modules/identity-access/domain/entities/user-session.entity";
 import { OidcAuthorizationRequest } from "../../src/modules/identity-access/domain/entities/oidc-authorization-request.entity";
@@ -113,8 +114,10 @@ describe("Identity and Access persistence (integration)", () => {
       });
       await userAccountRepo.create(account);
 
-      // office_user has no create() in the port (S3 links accounts via the
-      // dev bootstrap script, not a domain use case yet) — seed directly.
+      // Seeded via a direct ORM insert rather than officeUserRepo.create()
+      // specifically to prove findByUserId() against a row nothing in this
+      // module's own write path produced — officeUserRepo.create() gets its
+      // own round-trip test just below.
       await dataSource!.getRepository(OfficeUserOrmEntity).insert({
         id: randomUUID(),
         officeId: office.id,
@@ -133,11 +136,45 @@ describe("Identity and Access persistence (integration)", () => {
       expect(found?.officeId).toBe(office.id);
       expect(found?.permissionVersion).toBe(1);
       expect(found?.isActive).toBe(true);
+      // The column defaults to false at the DB level; this row's insert
+      // above didn't set it, and the mapper must read that default back
+      // rather than silently coercing an absent value to something else.
+      expect(found?.isOfficeAdmin).toBe(false);
     });
 
     it("returns null for a user with no office membership", async () => {
       const found = await officeUserRepo.findByUserId(asUuid(randomUUID()));
       expect(found).toBeNull();
+    });
+
+    it("create() round-trips isOfficeAdmin and records the acting admin as createdBy — real SQL, not a mock", async () => {
+      const { userId, officeId } = await seedAccountAndOffice();
+      const actor = await seedAccountAndOffice();
+
+      const officeUser = OfficeUser.create({ id: asUuid(randomUUID()), officeId, userId });
+      await officeUserRepo.create(officeUser, actor.userId);
+
+      const found = await officeUserRepo.findByUserId(userId);
+      expect(found?.officeId).toBe(officeId);
+      // OfficeUser.create() always starts non-admin — this is the same
+      // guarantee AddOfficeUserUseCase's own test locks in, proven here
+      // against the real column default and mapper round trip instead of a
+      // mock.
+      expect(found?.isOfficeAdmin).toBe(false);
+
+      const raw = await dataSource!.getRepository(OfficeUserOrmEntity).findOneOrFail({
+        where: { userId },
+      });
+      expect(raw.createdBy).toBe(actor.userId);
+    });
+
+    it("rejects a second membership for the same office_id/user_id pair", async () => {
+      const { userId, officeId } = await seedAccountAndOffice();
+      await officeUserRepo.create(OfficeUser.create({ id: asUuid(randomUUID()), officeId, userId }), null);
+
+      await expect(
+        officeUserRepo.create(OfficeUser.create({ id: asUuid(randomUUID()), officeId, userId }), null),
+      ).rejects.toThrow(/duplicate key value/i);
     });
   });
 

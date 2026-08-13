@@ -10,6 +10,14 @@ export interface AuthorizationRequestParams {
   readonly nonce: string;
   readonly pkceCodeVerifier: string;
   readonly pkceCodeChallenge: string;
+  /**
+   * `prompt=login` forces the provider to re-authenticate interactively even
+   * when it still holds a valid SSO session, which is what makes the
+   * returned `auth_time` — and therefore the recent-authentication window in
+   * 09-authentication-session-architecture.md — actually move forward.
+   * Omitted for ordinary logins so an existing SSO session is still reused.
+   */
+  readonly forceReauthentication?: boolean;
 }
 
 export interface ExchangedIdentity {

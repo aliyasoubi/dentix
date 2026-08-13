@@ -1,5 +1,5 @@
 import { Uuid } from "@dentix/kernel";
-import { SESSION_POLICY } from "../value-objects/session-policy";
+import { isWithinRecentAuthenticationWindow, SESSION_POLICY } from "../value-objects/session-policy";
 
 export interface UserSessionProps {
   readonly id: Uuid;
@@ -132,7 +132,7 @@ export class UserSession {
     now: Date,
     windowMs: number = SESSION_POLICY.recentAuthenticationWindowMs,
   ): boolean {
-    return now.getTime() - this.props.authenticatedAt.getTime() <= windowMs;
+    return isWithinRecentAuthenticationWindow(this.props.authenticatedAt, now, windowMs);
   }
 
   touch(now: Date): void {

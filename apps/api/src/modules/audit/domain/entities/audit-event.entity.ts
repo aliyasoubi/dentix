@@ -12,7 +12,8 @@ export type AuditAction =
   | "logout"
   | "session_revoked_account_inactive"
   | "session_revoked_membership_inactive"
-  | "patient_created";
+  | "patient_created"
+  | "office_user_added";
 
 export interface AuditEventProps {
   readonly id: Uuid;

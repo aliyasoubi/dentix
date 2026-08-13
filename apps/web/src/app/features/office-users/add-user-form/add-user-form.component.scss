@@ -1,0 +1,16 @@
+// Same shape as patient-registration-form.component.scss's own layout rules.
+.add-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  max-width: 360px;
+
+  &__field--ltr input {
+    text-align: start;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}

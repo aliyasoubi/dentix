@@ -30,7 +30,9 @@ export const appConfig: ApplicationConfig = {
     // locale (ADR-012), so there's no later switch to react to, and a
     // render-then-flash-in-Persian-text sequence would just be visible
     // jank for no benefit.
-    provideAppInitializer(() => inject(TranslationService).loadNamespaces(["common", "patients", "login"])),
+    provideAppInitializer(() =>
+      inject(TranslationService).loadNamespaces(["common", "patients", "login", "office-users"]),
+    ),
     // Replaces MONEY_CONFIG's placeholder default (see that token's own
     // comment) with the real bootstrap-loaded value — evaluated lazily on
     // first injection, which happens only after the initializer above has

@@ -1,5 +1,5 @@
 import { Component, inject } from "@angular/core";
-import { RouterOutlet } from "@angular/router";
+import { RouterLink, RouterOutlet } from "@angular/router";
 import { MatToolbarModule } from "@angular/material/toolbar";
 import { MatButtonModule } from "@angular/material/button";
 import { AuthService } from "./core/auth/auth.service";
@@ -7,7 +7,7 @@ import { TranslatePipe } from "./core/i18n/translate.pipe";
 
 @Component({
   selector: "app-root",
-  imports: [RouterOutlet, MatToolbarModule, MatButtonModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, TranslatePipe],
   templateUrl: "./app.html",
   styleUrl: "./app.scss",
 })

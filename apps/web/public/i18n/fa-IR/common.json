@@ -3,6 +3,7 @@
   "common.actions.save": "ذخیره",
   "common.actions.cancel": "انصراف",
   "common.actions.logout": "خروج",
+  "common.nav.addUser": "افزودن کاربر",
   "common.actions.retry": "تلاش مجدد",
   "common.loading": "در حال بارگذاری…",
   "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",

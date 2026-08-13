@@ -39,6 +39,17 @@ export class AuthService {
     this.redirectTo(`/api/v1/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
+  /**
+   * Recovery path for the server's RECENT_AUTHENTICATION_REQUIRED: the
+   * session is still valid, so an ordinary login() would be answered from
+   * the provider's existing SSO session with the same stale `auth_time` and
+   * land the user right back on the same refusal. `prompt=login` is what
+   * forces a real interactive re-authentication.
+   */
+  reauthenticate(returnTo: string): void {
+    this.redirectTo(`/api/v1/auth/login?returnTo=${encodeURIComponent(returnTo)}&prompt=login`);
+  }
+
   /** Isolates the one line that's unit-testable only by mocking, rather than by asserting on a real browser navigation. */
   private redirectTo(url: string): void {
     window.location.href = url;

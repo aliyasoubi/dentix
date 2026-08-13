@@ -43,12 +43,22 @@ export class AuthController {
 
   @Get("login")
   @UseGuards(ThrottlerGuard)
-  @ApiOperation({ summary: "Start the OIDC login redirect (top-level browser navigation, not an XHR call)" })
+  @ApiOperation({
+    summary: "Start the OIDC login redirect (top-level browser navigation, not an XHR call)",
+    description:
+      "Pass `prompt=login` to force interactive re-authentication — used to recover from RECENT_AUTHENTICATION_REQUIRED, since only a fresh interactive login advances `auth_time`.",
+  })
   @ApiResponse({ status: 302, description: "Redirect to the OIDC provider's authorization endpoint." })
   @ApiResponse({ status: 400, type: ErrorResponseDto, description: "Malformed returnTo path." })
   async login(@Req() request: Request, @Res() response: Response): Promise<void> {
     const returnTo = typeof request.query["returnTo"] === "string" ? request.query["returnTo"] : "/";
-    const result = await this.startLogin.execute({ returnPath: returnTo });
+    // Only the exact literal counts — anything else is treated as an ordinary
+    // login rather than trusted into the OIDC request as a `prompt` value.
+    const forceReauthentication = request.query["prompt"] === "login";
+    const result = await this.startLogin.execute({
+      returnPath: returnTo,
+      ...(forceReauthentication ? { forceReauthentication: true } : {}),
+    });
     if (!result.ok) {
       // A malformed client-supplied returnTo is the caller's mistake, not
       // ours — 400, not the 500 an uncaught exception would have produced.
@@ -107,6 +117,7 @@ export class AuthController {
       permissionVersion: result.value.permissionVersion,
       authenticatedAt: result.value.authenticatedAt.toISOString(),
       isRecentlyAuthenticated: result.value.isRecentlyAuthenticated,
+      isOfficeAdmin: result.value.isOfficeAdmin,
     });
   }
 

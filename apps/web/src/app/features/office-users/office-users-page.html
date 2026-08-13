@@ -1,0 +1,23 @@
+<app-ds-page-header
+  [title]="'officeUsers.page.title' | translate"
+  [description]="'officeUsers.page.description' | translate"
+/>
+
+<section class="office-users-page__section">
+  <h2 class="office-users-page__section-title ds-text-section-title">
+    {{ "officeUsers.form.title" | translate }}
+  </h2>
+
+  <app-add-user-form
+    [submitting]="submitting()"
+    [errorMessage]="submitError()"
+    [successMessage]="successMessage()"
+    (submitted)="add($event)"
+  />
+
+  @if (needsReauthentication()) {
+  <button mat-stroked-button type="button" class="office-users-page__reauth" (click)="reauthenticate()">
+    {{ "officeUsers.form.reauthenticate" | translate }}
+  </button>
+  }
+</section>

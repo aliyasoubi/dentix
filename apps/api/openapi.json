@@ -25,6 +25,7 @@
     },
     "/api/v1/auth/login": {
       "get": {
+        "description": "Pass `prompt=login` to force interactive re-authentication — used to recover from RECENT_AUTHENTICATION_REQUIRED, since only a fresh interactive login advances `auth_time`.",
         "operationId": "AuthController_login",
         "parameters": [],
         "responses": {
@@ -119,6 +120,63 @@
         "summary": "Revoke the current Dentix session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/office-users": {
+      "post": {
+        "operationId": "OfficeUsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddOfficeUserRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddOfficeUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN (actor is not an office admin) or RECENT_AUTHENTICATION_REQUIRED (session authenticated too long ago for permission administration).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Link an existing identity-provider account to this office",
+        "tags": [
+          "office-users"
         ]
       }
     },
@@ -329,6 +387,10 @@
           "isRecentlyAuthenticated": {
             "type": "boolean",
             "description": "Whether authentication happened recently enough for sensitive actions."
+          },
+          "isOfficeAdmin": {
+            "type": "boolean",
+            "description": "UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request."
           }
         },
         "required": [
@@ -337,7 +399,8 @@
           "displayName",
           "permissionVersion",
           "authenticatedAt",
-          "isRecentlyAuthenticated"
+          "isRecentlyAuthenticated",
+          "isOfficeAdmin"
         ]
       },
       "LogoutResponseDto": {
@@ -351,6 +414,30 @@
         },
         "required": [
           "providerEndSessionUrl"
+        ]
+      },
+      "AddOfficeUserRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Must match an existing, enabled account in the identity provider."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "AddOfficeUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "officeUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "officeUserId"
         ]
       },
       "CreatePatientRequestDto": {

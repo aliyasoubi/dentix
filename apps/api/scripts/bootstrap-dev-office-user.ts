@@ -71,6 +71,13 @@ async function main() {
       userId: account.id,
       permissionVersion: 1,
       isActive: true,
+      // Admin, and deliberately only here: OfficeUser.create() (the path
+      // AddOfficeUserUseCase goes through) always starts a new membership
+      // as non-admin, on purpose — someone has to be the first admin for
+      // that use case to have an actor at all, and a raw dev bootstrap
+      // script bypassing the domain factory is the one place that's meant
+      // to happen outside the normal flow.
+      isOfficeAdmin: true,
       createdAt: now,
       createdBy: null,
       updatedAt: now,
@@ -78,7 +85,7 @@ async function main() {
       archivedAt: null,
       archivedBy: null,
     });
-    console.log(`Linked office_user membership: ${account.id} -> office ${office.id}`);
+    console.log(`Linked office_user membership: ${account.id} -> office ${office.id} (admin)`);
   } else {
     console.log(`office_user membership already exists (${existingMembership.id})`);
   }

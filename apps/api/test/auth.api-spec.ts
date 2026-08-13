@@ -99,11 +99,12 @@ describe("Auth (API contract)", () => {
     });
     await userAccounts.create(account);
 
-    // office_user has no domain create() yet (S3 links accounts via the
-    // dev bootstrap script) — seed the row directly, same as the
-    // integration suite. A session without this row is exactly the bug
-    // the membership-revalidation fix below closes: whoami must not
-    // succeed for a user who no longer has (or never had) office access.
+    // Seeded directly rather than through officeUserRepo.create(), same as
+    // the integration suite — this helper needs full control over isActive
+    // or the "revoked membership" case below can't be constructed at all.
+    // A session without this row is exactly the bug the membership-
+    // revalidation fix closes: whoami must not succeed for a user who no
+    // longer has (or never had) office access.
     await officeUserOrmRepo.insert({
       id: randomUUID(),
       officeId: office.id,

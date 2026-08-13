@@ -81,6 +81,9 @@ export class OpenIdClientAdapter implements OidcClientPort, OnModuleInit {
       nonce: params.nonce,
       code_challenge: params.pkceCodeChallenge,
       code_challenge_method: "S256",
+      // Only sent when a caller explicitly asks to re-authenticate: adding
+      // it unconditionally would defeat SSO for every ordinary login.
+      ...(params.forceReauthentication ? { prompt: "login" } : {}),
     });
   }
 

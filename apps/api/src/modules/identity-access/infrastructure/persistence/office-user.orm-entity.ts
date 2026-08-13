@@ -19,6 +19,9 @@ export class OfficeUserOrmEntity {
   @Column({ name: "is_active", type: "boolean", default: true })
   isActive!: boolean;
 
+  @Column({ name: "is_office_admin", type: "boolean", default: false })
+  isOfficeAdmin!: boolean;
+
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 

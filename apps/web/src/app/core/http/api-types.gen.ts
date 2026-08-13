@@ -28,7 +28,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Start the OIDC login redirect (top-level browser navigation, not an XHR call) */
+        /**
+         * Start the OIDC login redirect (top-level browser navigation, not an XHR call)
+         * @description Pass `prompt=login` to force interactive re-authentication — used to recover from RECENT_AUTHENTICATION_REQUIRED, since only a fresh interactive login advances `auth_time`.
+         */
         get: operations["AuthController_login"];
         put?: never;
         post?: never;
@@ -83,6 +86,23 @@ export interface paths {
         put?: never;
         /** Revoke the current Dentix session */
         post: operations["AuthController_logoutHandler"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/office-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link an existing identity-provider account to this office */
+        post: operations["OfficeUsersController_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -150,6 +170,8 @@ export interface components {
             authenticatedAt: string;
             /** @description Whether authentication happened recently enough for sensitive actions. */
             isRecentlyAuthenticated: boolean;
+            /** @description UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request. */
+            isOfficeAdmin: boolean;
         };
         LogoutResponseDto: {
             /**
@@ -157,6 +179,14 @@ export interface components {
              * @description Provider end-session URL the browser should follow to also end the Keycloak SSO session.
              */
             providerEndSessionUrl: string;
+        };
+        AddOfficeUserRequestDto: {
+            /** @description Must match an existing, enabled account in the identity provider. */
+            email: string;
+        };
+        AddOfficeUserResponseDto: {
+            /** Format: uuid */
+            officeUserId: string;
         };
         CreatePatientRequestDto: {
             /** @description Patient's name as entered, typically Persian. */
@@ -310,6 +340,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LogoutResponseDto"];
+                };
+            };
+        };
+    };
+    OfficeUsersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOfficeUserRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddOfficeUserResponseDto"];
+                };
+            };
+            /** @description e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description FORBIDDEN (actor is not an office admin) or RECENT_AUTHENTICATION_REQUIRED (session authenticated too long ago for permission administration). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
                 };
             };
         };
