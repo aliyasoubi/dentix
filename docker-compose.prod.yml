@@ -187,9 +187,43 @@ services:
       timeout: 5s
       retries: 20
 
+  # 06-operations/02-backup-recovery.md: "automated encrypted backups run
+  # from Release 1." Cron-scheduled inside the container (see
+  # ops/backup/entrypoint.sh) rather than a host-level cron job, so the whole
+  # stack — including its own backup schedule — comes up with one `docker
+  # compose up` and isn't tied to whatever else happens to be configured on
+  # the host.
+  backup:
+    build:
+      context: ./ops/backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE:-0 3 * * *}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_HEALTHCHECK_URL: ${BACKUP_HEALTHCHECK_URL:-}
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+      BACKUP_ENCRYPTION_PASSPHRASE_FILE: /run/secrets/backup_passphrase
+      RCLONE_CONFIG: /etc/rclone/rclone.conf
+    volumes:
+      - dentix_prod_backups:/backups
+      # :ro — this container only ever needs to encrypt with the passphrase
+      # (backup) or decrypt with it (a restore run manually inside this same
+      # container); nothing here should be able to overwrite it.
+      - ./ops/backup/passphrase:/run/secrets/backup_passphrase:ro
+      - ./ops/backup/rclone.conf:/etc/rclone/rclone.conf:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   dentix_prod_postgres_data:
   # Holds Caddy's certificates *and* its internal CA — the API mounts this
   # read-only to trust the local CA, so it is shared rather than private.
   caddy_data:
   caddy_config:
+  dentix_prod_backups:

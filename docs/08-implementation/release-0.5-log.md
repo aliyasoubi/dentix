@@ -428,3 +428,52 @@ Two process changes, since the fix alone would not have caught it:
 
 Discovered only because containerising the API for ADR-010 ran `npm ci` on Linux for the first
 time and hit the identical error — which is itself the argument for having containerised earlier.
+
+## Backup pipeline, drilled against the running rehearsal stack
+
+ADR-010's third acceptance item, and per `07-plans/risks.md` R-04 the single most consequential
+gap remaining: losing the host without backups means losing the office's records outright, a
+different class of problem than any bug fixed so far.
+
+Built as its own service (`ops/backup/`) rather than a host cron job, on purpose — the whole
+point of the Compose stack is that `docker compose up` brings up everything it needs, including
+its own backup schedule, without depending on what else happens to be configured on whichever
+host it runs on. `pg_dump --format=custom` (matches `pg_restore`'s expectations, unlike a plain
+SQL dump), piped to `gpg --symmetric --cipher-algo AES256` with the passphrase read from a
+mounted file rather than an environment variable — env vars are readable via `docker inspect`
+and `ps aux`, a file mounted read-only is not. The unencrypted dump is deleted the moment
+encryption finishes; it must never survive on disk once this runs against real patient data.
+A sha256 checksum is written alongside every backup and re-verified by the restore script before
+it ever touches the passphrase, so a corrupted or tampered file fails loudly at the integrity
+check rather than partway through a confusing `pg_restore` error.
+
+Scheduling is real cron inside the container, not a hand-rolled sleep loop — the one genuine
+Docker+cron gotcha (cron jobs don't inherit the container's own environment) is handled by
+`entrypoint.sh` capturing `POSTGRES_*`/`BACKUP_*` to a file the cron job explicitly sources.
+
+**Actually drilled, not just built** — the restore procedure was run twice against this
+rehearsal's real data (the seeded office/user rows), each into an isolated database
+(`restore_drill`, never the live one, per `06-operations/02-backup-recovery.md`'s own restore
+procedure):
+
+- Both restores completed in under a second and matched the live database exactly — same office
+  UUID, same row counts across `office`/`office_user`/`user_account`, all 5 migrations present.
+- Confirmed the file is genuinely encrypted rather than just named `.gpg`: `pg_restore --list`
+  against it directly failed ("does not appear to be a valid archive"), and `gpg --list-packets`
+  reported `AES256.CFB encrypted data`.
+- One honest caveat about that sub-second number: this rehearsal's dataset is walking-skeleton
+  scale (no patients — creating one needs an authenticated browser session, which needs the
+  CA-trust step that's the operator's to run). A real office's `pg_restore` time will scale with
+  data volume, and the full 8-step restore procedure includes incident declaration and integrity
+  validation this drill had no incident to exercise. What is proven: the mechanism is correct
+  end to end. What is estimated, not measured: RTO against a real dataset and a real incident.
+
+**The gap this pass does *not* close, stated plainly rather than glossed over:** this pipeline
+runs once daily, giving up to 24 hours of RPO — not the 15-minute target in `risks.md` R-04 and
+ADR-010. Closing that means continuous WAL archiving (pgBackRest or wal-g), which
+`00-build-sequencing.md` explicitly places at pre-pilot, not Release 1 — building it now would be
+exactly the overengineering that document exists to prevent. Also not done: the off-host copy.
+`BACKUP_RCLONE_REMOTE` is unset in the rehearsal, so backups exist only in a Docker volume on the
+one host taking them — not a second failure domain by any definition. Configuring a real
+destination is the operator's decision, the same category as ADR-010's own hosting choice, and
+`ops/backup/rclone.conf.example` is ready for whichever one gets picked.

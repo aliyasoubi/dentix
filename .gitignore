@@ -9,3 +9,7 @@ tmp/
 .DS_Store
 .angular/
 coverage/
+
+# Real backup secrets/config — ops/backup/*.example are the committed templates.
+ops/backup/passphrase
+ops/backup/rclone.conf

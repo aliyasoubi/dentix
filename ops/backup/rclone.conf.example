@@ -1,0 +1,21 @@
+# Copy to ops/backup/rclone.conf and fill in a real remote, or leave
+# BACKUP_RCLONE_REMOTE unset in .env.production to skip the off-host copy.
+#
+# rclone supports dozens of backends behind one config format — an SFTP
+# target on a second VPS, any S3-compatible bucket, Backblaze B2, etc. Which
+# one is right depends on what "a different provider or physical location"
+# (ADR-010) actually means for this office, which is an operator decision,
+# not something to default for you — same category as the ADR-010 hosting
+# choice itself.
+#
+# Full reference: https://rclone.org/docs/
+#
+# Example: a second VPS reachable over SFTP.
+# [dentix-backup]
+# type = sftp
+# host = backup.example.com
+# user = dentix-backup
+# key_file = /run/secrets/backup_ssh_key
+#
+# Then set in .env.production:
+#   BACKUP_RCLONE_REMOTE=dentix-backup:/backups/dentix/

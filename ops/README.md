@@ -5,9 +5,10 @@ same `docker-compose.prod.yml` with the same variables.** Only the values in
 `.env.production` differ. A rehearsal that used a different compose file, a
 different TLS story, or a different Keycloak mode would prove much less.
 
-What this is _not_ yet: backed up. See "Still missing" at the bottom — that is
-the remaining ADR-010 acceptance item and it blocks real patient data, not the
-rehearsal.
+Backups are now built and drilled (see "Backups" below) — but read that
+section's honest RPO number before treating this as production-ready. See
+"Still missing" at the bottom for what genuinely still blocks real patient
+data.
 
 ---
 
@@ -150,6 +151,107 @@ password) and a TOTP app, so it is yours to run.
 
 ---
 
+## Backups
+
+`06-operations/02-backup-recovery.md`: "automated encrypted backups run from
+Release 1." The `backup` service does this — `ops/backup/` — cron-scheduled
+inside its own container so the schedule comes up with `docker compose up`
+rather than depending on whatever else is configured on the host.
+
+**One-time setup**, before the first `up`:
+
+```bash
+openssl rand -base64 32 > ops/backup/passphrase
+chmod 600 ops/backup/passphrase
+touch ops/backup/rclone.conf   # empty is fine until you configure a remote — see below
+```
+
+Both files are gitignored; `ops/backup/*.example` are the committed
+templates. **Store the passphrase somewhere outside this host** (a password
+manager, printed and locked in a drawer) — losing it makes every backup
+permanently unreadable, which defeats the entire point.
+
+**What each backup does** (`ops/backup/backup-postgres.sh`):
+`pg_dump --format=custom` → `gpg --symmetric --cipher-algo AES256` → the
+plaintext dump is deleted immediately, never left on disk → a `.sha256`
+checksum is written alongside it → local files older than
+`BACKUP_RETENTION_DAYS` (default 14) are pruned → if `BACKUP_RCLONE_REMOTE`
+is set, the encrypted file is copied off-host and the same retention is
+applied there too.
+
+**Run one on demand** (don't wait for the 03:00 UTC schedule to check it works):
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  exec backup /scripts/backup-postgres.sh
+```
+
+**Restore into an isolated database** — never the live one; that's what
+`06-operations/02-backup-recovery.md`'s restore procedure requires before any
+promotion:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  exec backup sh -c 'ls -t /backups/*.dump.gpg | head -1'   # pick a backup
+
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  exec backup /scripts/restore-postgres.sh /backups/<file>.dump.gpg restore_drill
+```
+
+It verifies the checksum before decrypting, restores into the named database
+(`restore_drill` here — anything but the real `POSTGRES_DB` name), and prints
+elapsed time. Validate the data, then `DROP DATABASE restore_drill` when done
+— it is scratch space, not a standing second copy.
+
+### Drilled, not just built
+
+Two restores were actually run against this rehearsal stack, not asserted:
+
+- Both completed in under a second and both matched the live database
+  exactly — same office UUID, same row counts across `office`,
+  `office_user`, `user_account`, and all 5 applied migrations present.
+- `pg_restore --list` against the encrypted file directly failed as expected
+  ("does not appear to be a valid archive") and `gpg --list-packets`
+  confirmed `AES256.CFB encrypted data` — the file is genuinely encrypted,
+  not just named `.gpg`.
+
+**That sub-second number is not the real-world RTO.** This rehearsal's
+dataset is walking-skeleton scale — one office, one user, no patients (the
+one thing this drill couldn't include: creating a patient needs an
+authenticated browser session, which needs the CA-trust step that's yours to
+run). A real office's database will be larger and `pg_restore` time scales
+with it, and the 8-step procedure in `06-operations/02-backup-recovery.md`
+includes declaring an incident, validating referential integrity, and
+obtaining recovery approval — steps this drill didn't exercise because there
+was nothing wrong to declare. What's actually proven: the mechanism is
+correct end to end (encryption, integrity check, restore, data fidelity).
+What's still estimated, not measured: total RTO against a real dataset and a
+real incident.
+
+### The honest gap: RPO is 24 hours, not 15 minutes
+
+`07-plans/risks.md` (R-04) and ADR-010 both target **RPO 15 minutes**. This
+pipeline runs once daily. Worst case — data changes right after the 03:00
+backup and the host is lost an hour before the next one — **up to 24 hours of
+data is unrecoverable.** That gap is real and is not hidden in a comment
+somewhere: `07-plans/00-build-sequencing.md` explicitly defers "RPO
+15-minute/PITR infrastructure" to **pre-pilot**, not Release 1 — closing it
+means continuous WAL archiving (pgBackRest or wal-g, ADR-010's own
+recommendation), which is meaningfully more operational surface than a daily
+dump and belongs to that later stage, not bolted on here to make a number
+look better today.
+
+**What is NOT done, and is the operator's call, not mine:** the off-host
+copy. `BACKUP_RCLONE_REMOTE` is unset in this rehearsal — backups exist only
+in the `dentix_prod_backups` Docker volume on this one host, which is **not**
+a second failure domain. Losing the host loses the backups with it. Same
+category of decision as ADR-010's hosting choice itself: rclone supports
+dozens of destinations (a second VPS over SFTP, any S3-compatible bucket,
+etc.) and which one makes sense is not something to default on your behalf.
+See `ops/backup/rclone.conf.example` when you're ready to pick one.
+
+---
+
 ## Moving to the VPS
 
 The stack is host-agnostic; this is a data and DNS exercise, not a redesign.
@@ -176,6 +278,12 @@ The stack is host-agnostic; this is a data and DNS exercise, not a redesign.
    verify) against the real domain. TLS is automatic — no cert steps, no
    trust steps; the browser warning from the rehearsal does not recur because
    Let's Encrypt is already trusted.
+7. **Set up backups before anything else touches this host**: the one-time
+   setup in the Backups section, then decide and configure
+   `BACKUP_RCLONE_REMOTE` — this is the step the local rehearsal deliberately
+   left undone since it needs a real second location. Run one backup and one
+   restore drill against the VPS itself before calling it done; the
+   rehearsal's numbers don't transfer to different hardware.
 
 Nothing else changes. That is the whole point of rehearsing locally first.
 
@@ -183,15 +291,26 @@ Nothing else changes. That is the whole point of rehearsing locally first.
 
 ## Still missing before real patient data
 
-ADR-010's acceptance checklist has four items. The rehearsal above covers the
-deployment and TLS ones. **Backups are not built yet**, and that is the real
-gate:
+ADR-010's acceptance checklist has four items:
 
-- No WAL archiving, so the RPO 15-minute target is currently unmet.
-- No nightly base backup, no off-host copy, no restore drill.
+- [x] Host pattern chosen and deployed.
+- [x] Walking skeleton deployed over TLS.
+- [x] Backup pipeline running; one timed restore performed (see "Backups"
+      above) — with the RPO caveat stated there, not glossed over.
+- [ ] Registry mirror/cache strategy, verified by building with the public
+      registry blocked. Not attempted — R-03 (registry access from Iran) is
+      mitigated today only by the Dockerfile's retry/timeout tuning, which
+      helps a slow connection, not a blocked one.
 
-`06-operations/02-backup-recovery.md` specifies the target. Until it is built
-and one timed restore has actually been performed, this stack is fine for
-fictional data and unfit for a real office — losing the host means losing the
-practice's records. That, not the deployment, is what stands between here and
-production, and it is deliberately called out rather than left implicit.
+Two gaps carry forward, both already named above rather than hidden:
+
+1. **RPO is 24 hours, not the 15-minute target** — daily backups only; PITR
+   is explicitly a pre-pilot item per `00-build-sequencing.md`, not a
+   Release 1 gap.
+2. **No off-host copy configured** — `BACKUP_RCLONE_REMOTE` needs a real
+   second location, which is the operator's decision.
+
+Fictional data is fine today. Real patient data needs both of these closed,
+plus the Real-Data Authorization Gate (`05-quality/01-security-privacy.md`)
+separately approved — that gate is not a deployment concern at all and isn't
+addressed by anything in this directory.

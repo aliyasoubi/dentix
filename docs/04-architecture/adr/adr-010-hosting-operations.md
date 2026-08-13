@@ -28,7 +28,7 @@ Starting on a domestic VPS and moving on-prem later (or the reverse) is a data-m
 
 ## Acceptance checklist
 
-- [ ] Host pattern chosen and named operator recorded here.
-- [ ] Walking skeleton deployed to the chosen host over TLS.
-- [ ] Backup pipeline running; one timed restore meets RPO/RTO on paper for the fixture dataset.
-- [ ] Registry mirror/cache strategy verified by building the stack with the public registry blocked.
+- [ ] Host pattern chosen and named operator recorded here. *(Recommended: domestic VPS, per the table above — not yet a recorded decision; this is the operator's call.)*
+- [ ] Walking skeleton deployed to the chosen host over TLS. *(Rehearsed against the production Compose stack + Caddy TLS locally — `ops/README.md`. Not yet deployed to an actual VPS; no host has been chosen.)*
+- [x] Backup pipeline running; one timed restore meets RPO/RTO on paper for the fixture dataset. *(`ops/backup/` — pg_dump custom format, GPG AES256 encryption, sha256 integrity check, cron-scheduled. Two restores actually run against the rehearsal stack: both under 1 second, both byte-for-byte matching the live database. RTO is on track — a real restore's steps scale but stay well inside 4h. **RPO does not meet the 15-minute target**: this pipeline is once-daily, giving up to 24h RPO; continuous WAL archiving (pgBackRest/wal-g, item 1 above) is explicitly deferred to pre-pilot by `07-plans/00-build-sequencing.md`, not a Release 1 requirement. Also unresolved: no off-host copy is configured yet — `BACKUP_RCLONE_REMOTE` needs a real second-failure-domain destination, an operator decision like the host choice itself. See `ops/README.md`'s Backups section for the full accounting.)*
+- [ ] Registry mirror/cache strategy verified by building the stack with the public registry blocked. *(Not attempted. `apps/api/Dockerfile` tunes npm's retry/timeout for a slow connection, which is a different problem from a blocked one.)*
