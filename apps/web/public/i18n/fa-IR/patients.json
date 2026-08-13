@@ -16,6 +16,7 @@
   "patients.form.nativeName.label": "نام و نام خانوادگی (فارسی)",
   "patients.form.latinName.label": "نام لاتین (اختیاری)",
   "patients.form.phone.label": "شماره موبایل",
+  "patients.form.phone.placeholder": "09xxxxxxxxx",
   "patients.form.dateOfBirth.label": "تاریخ تولد (اختیاری)",
   "patients.form.moreDetails": "جزئیات بیشتر (اختیاری)",
   "patients.form.contactUnavailable.label": "بیمار روش تماسی ندارد",

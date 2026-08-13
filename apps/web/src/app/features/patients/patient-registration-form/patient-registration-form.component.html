@@ -17,7 +17,7 @@
       [errors]="PHONE_ERRORS"
       [latin]="true"
       inputMode="tel"
-      placeholder="09xxxxxxxxx"
+      [placeholder]="'patients.form.phone.placeholder' | translate"
     />
   </div>
 
@@ -39,11 +39,7 @@
        inside can carry a validation error while collapsed (latinName and
        dateOfBirth have no validators; sex always has a default) — so there
        is nothing here that would need to force itself open. -->
-  <mat-expansion-panel class="patients-form__more">
-    <mat-expansion-panel-header>
-      <mat-panel-title>{{ "patients.form.moreDetails" | translate }}</mat-panel-title>
-    </mat-expansion-panel-header>
-
+  <app-ds-disclosure [title]="'patients.form.moreDetails' | translate">
     <div class="patients-form__row">
       <app-ds-text-field
         [label]="'patients.form.latinName.label' | translate"
@@ -64,7 +60,7 @@
         [control]="form.controls.dateOfBirth"
       />
     </div>
-  </mat-expansion-panel>
+  </app-ds-disclosure>
 
   @if (errorMessage(); as message) {
     <app-ds-alert variant="danger">{{ message }}</app-ds-alert>

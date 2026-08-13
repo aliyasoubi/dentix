@@ -1,7 +1,7 @@
 {
   "name": "@dentix/web",
   "version": "0.5.0",
-  "description": "Dentix web — Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)",
+  "description": "Dentix web \u2014 Angular 22 + Material/CDK, Farsi-only RTL shell (ADR-012)",
   "scripts": {
     "ng": "ng",
     "prestart": "npm run build --workspace @dentix/kernel",
@@ -13,11 +13,12 @@
     "test": "ng test",
     "test:e2e": "playwright test",
     "lint": "ng lint",
-    "lint:arch": "depcruise src --config .dependency-cruiser.json",
+    "lint:arch": "depcruise src --config .dependency-cruiser.json && npm run lint:i18n",
     "storybook": "ng run web:storybook",
     "build-storybook": "ng run web:build-storybook",
     "openapi:generate": "openapi-typescript ../api/openapi.json -o src/app/core/http/api-types.gen.ts",
-    "openapi:check": "npm run openapi:generate && git ls-files --error-unmatch src/app/core/http/api-types.gen.ts > /dev/null && git diff --exit-code -- src/app/core/http/api-types.gen.ts"
+    "openapi:check": "npm run openapi:generate && git ls-files --error-unmatch src/app/core/http/api-types.gen.ts > /dev/null && git diff --exit-code -- src/app/core/http/api-types.gen.ts",
+    "lint:i18n": "node scripts/check-no-hardcoded-ui-text.mjs"
   },
   "private": true,
   "dependencies": {

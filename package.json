@@ -2,7 +2,7 @@
   "name": "dentix",
   "private": true,
   "version": "0.5.0",
-  "description": "Dentix — Farsi-first single-office dental PMS (monorepo root)",
+  "description": "Dentix \u2014 Farsi-first single-office dental PMS (monorepo root)",
   "engines": {
     "node": ">=22.22.3 <23",
     "npm": ">=10"
@@ -14,7 +14,7 @@
   "scripts": {
     "prelint": "npm run build --workspace @dentix/kernel",
     "lint": "npm run lint --workspaces --if-present",
-    "lint:arch": "npm run lint:arch --workspace apps/api && npm run lint:arch --workspace apps/worker",
+    "lint:arch": "npm run lint:arch --workspace apps/api && npm run lint:arch --workspace apps/worker && npm run lint:arch --workspace apps/web",
     "pretest": "npm run build --workspace @dentix/kernel",
     "test": "npm run test --workspaces --if-present",
     "pretest:int": "npm run build --workspace @dentix/kernel",
@@ -41,12 +41,12 @@
     "regenerating the lockfile on macOS silently dropped every Linux binary. The failure mode is",
     "deliberately quiet: `npm ci` on Linux SUCCEEDS having installed no native binding at all, and",
     "the error only appears later as 'Cannot find native binding' during the web build or tests.",
-    "Note `npm install` does NOT repair this — it honours the lockfile, so absent entries stay",
+    "Note `npm install` does NOT repair this \u2014 it honours the lockfile, so absent entries stay",
     "absent; the entries have to be declared here to exist for any platform.",
     "Each package's own os/cpu constraints mean a machine still installs only the variant it can",
     "use, so this costs a Mac developer nothing. glibc (-gnu/-glibc) variants only: the runtime",
     "image is Debian-based. Versions track the ROOT copy of each package.",
-    "KEEP THESE IN LOCKSTEP with their parent packages after any Angular/build-tooling upgrade —",
+    "KEEP THESE IN LOCKSTEP with their parent packages after any Angular/build-tooling upgrade \u2014",
     "a stale version reintroduces the identical failure. CI now builds the production image, so a",
     "regression fails there; to check locally run:",
     "  docker build -f apps/api/Dockerfile -t dentix-api:local ."

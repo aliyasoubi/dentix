@@ -9,6 +9,18 @@
   "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
   "common.error.unauthenticated": "برای ادامه وارد شوید.",
 
+  "common.datepicker.calendar": "تقویم",
+  "common.datepicker.open": "باز کردن تقویم",
+  "common.datepicker.close": "بستن تقویم",
+  "common.datepicker.prevMonth": "ماه قبل",
+  "common.datepicker.nextMonth": "ماه بعد",
+  "common.datepicker.prevYear": "سال قبل",
+  "common.datepicker.nextYear": "سال بعد",
+  "common.datepicker.prevYearRange": "بازه سال‌های قبل",
+  "common.datepicker.nextYearRange": "بازه سال‌های بعد",
+  "common.datepicker.switchToMonthView": "نمایش تقویم ماه",
+  "common.datepicker.switchToYearView": "انتخاب ماه و سال",
+
   "common.money.unit.rial": "ریال",
   "common.money.unit.toman": "تومان",
   "common.money.canonicalEquivalent": "معادل ثبت‌شده: {{amount}} ریال",
