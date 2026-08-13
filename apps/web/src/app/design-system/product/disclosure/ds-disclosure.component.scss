@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+// Moved verbatim from patients-form's own SCSS. §9.2 keeps this flat: the
+// panel is a grouping boundary inside an already-elevated surface, so it
+// gets a border rather than a second shadow stacked on the card behind it.
+// The !important pair beats Material's own element-level styles, which is
+// the only reason they are here.
+.ds-disclosure.mat-expansion-panel {
+  box-shadow: none !important;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md) !important;
+
+  .mat-expansion-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+    padding-block-start: var(--ds-space-2);
+  }
+}

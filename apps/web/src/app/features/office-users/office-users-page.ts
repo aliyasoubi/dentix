@@ -1,9 +1,9 @@
 import { Component, inject, signal, viewChild } from "@angular/core";
-import { MatButtonModule } from "@angular/material/button";
 import { AuthService } from "../../core/auth/auth.service";
 import { ApiErrorMessageService, extractApiErrorCode } from "../../core/errors/api-error-message.service";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { TranslationService } from "../../core/i18n/translation.service";
+import { DsButtonComponent } from "../../design-system/foundation/button/ds-button.component";
 import { DsPageHeaderComponent } from "../../design-system/product/page-header/ds-page-header.component";
 import { DsSectionComponent } from "../../design-system/product/section/ds-section.component";
 import { AddUserFormComponent } from "./add-user-form/add-user-form.component";
@@ -29,7 +29,13 @@ const KNOWN_ERROR_CODES = new Set([
  */
 @Component({
   selector: "app-office-users-page",
-  imports: [DsPageHeaderComponent, DsSectionComponent, AddUserFormComponent, MatButtonModule, TranslatePipe],
+  imports: [
+    DsPageHeaderComponent,
+    DsSectionComponent,
+    AddUserFormComponent,
+    DsButtonComponent,
+    TranslatePipe,
+  ],
   templateUrl: "./office-users-page.html",
   styleUrl: "./office-users-page.scss",
 })

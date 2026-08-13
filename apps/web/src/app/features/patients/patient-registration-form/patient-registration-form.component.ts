@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from "@angular/core";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { DateAdapter } from "@angular/material/core";
-import { MatExpansionModule } from "@angular/material/expansion";
 import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
 import { DsCheckboxFieldComponent } from "../../../design-system/foundation/field/ds-checkbox-field.component";
 import { DsDateFieldComponent } from "../../../design-system/foundation/field/ds-date-field.component";
@@ -11,6 +10,7 @@ import {
   DsSelectOption,
 } from "../../../design-system/foundation/field/ds-select-field.component";
 import { DsTextFieldComponent } from "../../../design-system/foundation/field/ds-text-field.component";
+import { DsDisclosureComponent } from "../../../design-system/product/disclosure/ds-disclosure.component";
 import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { CreatePatientRequest } from "../patients-api.service";
@@ -35,14 +35,12 @@ import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form
   selector: "app-patient-registration-form",
   imports: [
     ReactiveFormsModule,
-    // Still Material directly: the expansion panel is layout this form owns,
-    // not a repeated pattern with a design-system component behind it yet.
-    MatExpansionModule,
     DsTextFieldComponent,
     DsSelectFieldComponent,
     DsDateFieldComponent,
     DsCheckboxFieldComponent,
     DsAlertComponent,
+    DsDisclosureComponent,
     DsSubmitButtonComponent,
     TranslatePipe,
   ],

@@ -12,8 +12,8 @@
   />
 
   @if (needsReauthentication()) {
-  <button mat-stroked-button type="button" class="office-users-page__reauth" (click)="reauthenticate()">
+  <app-ds-button tier="secondary" class="office-users-page__reauth" (pressed)="reauthenticate()">
     {{ "officeUsers.form.reauthenticate" | translate }}
-  </button>
+  </app-ds-button>
   }
 </app-ds-section>

@@ -9,39 +9,24 @@
     display: flex;
     gap: var(--ds-space-4);
 
+    // Targets the row's children rather than a class each field has to
+    // carry: the fields are design-system components now, and how they
+    // share a row is this form's layout decision, not something a caller
+    // should restate on every field.
+    > * {
+      flex: 1 1 0;
+      // Without this, a long validation message forces the field wider than
+      // its share of the row instead of wrapping inside it.
+      min-width: 0;
+    }
+
     @media (max-width: 640px) {
       flex-direction: column;
     }
   }
 
-  &__field {
-    flex: 1 1 0;
-  }
-
-  &__field--ltr input {
-    text-align: start;
-  }
-
   &__actions {
     display: flex;
     justify-content: flex-end;
-  }
-
-  // §9.2: "Use borders for ordinary containers... Do not wrap every section
-  // in a raised card" — overrides Material's default panel elevation/shadow
-  // with the same border treatment the rest of this design system uses,
-  // rather than introducing a second "raised" visual language for one field
-  // group.
-  &__more.mat-expansion-panel {
-    box-shadow: none !important;
-    border: 1px solid var(--ds-border);
-    border-radius: var(--ds-radius-md) !important;
-
-    .mat-expansion-panel-body {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ds-space-4);
-      padding-block-start: var(--ds-space-2);
-    }
   }
 }

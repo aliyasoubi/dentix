@@ -1,0 +1,21 @@
+:host {
+  display: inline-block;
+}
+
+// primary/secondary/tertiary take the theme's own colours — the Material
+// appearance already carries their weight, so restating it here would just
+// be a second source of truth for the same decision.
+//
+// danger is the exception: it is filled like primary, so colour is the only
+// thing distinguishing "record payment" from "reverse payment" (§14). The
+// surface comes from the semantic token, never a literal (§6.3).
+//
+// The label is plain white rather than a token: §6.3 defines the semantic
+// hues but no paired on-colour for them, and inventing a `--ds-danger-on`
+// token here would be adding to the palette from inside a component, which
+// §25 reserves for the foundation tier. White is what --ds-danger (#b42318)
+// is contrast-safe against; revisit if §6.3 ever gains real on-colours.
+.ds-button--danger {
+  --mdc-filled-button-container-color: var(--ds-danger);
+  --mdc-filled-button-label-text-color: #ffffff;
+}

@@ -5,7 +5,5 @@
   <app-ds-alert variant="danger">{{ key | translate }}</app-ds-alert>
   }
 
-  <button mat-flat-button color="primary" type="button" (click)="signIn()">
-    {{ "login.action.signIn" | translate }}
-  </button>
+  <app-ds-button tier="primary" (pressed)="signIn()"> {{ "login.action.signIn" | translate }} </app-ds-button>
 </section>
