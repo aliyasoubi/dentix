@@ -5,5 +5,7 @@
   "testRegex": ".int-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "globalSetup": "<rootDir>/support/global-setup.ts",
+  "setupFiles": ["<rootDir>/support/set-test-database-env.ts"]
 }

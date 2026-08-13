@@ -77,9 +77,9 @@ to find frustrating if you were expecting to see product features by now.
   matter of taste — made Angular Material's own component styling silently not load at all
   (buttons rendered as invisible plain text, etc.). Fixed; see
   `docs/08-implementation/release-0.5-log.md` for the technical detail if you want it.
-- **Running the integration test suite (`npm run test:int`) wipes your local login and any
-  patients you created by hand** — it shares one database with interactive testing today. See
-  the README's warning box before you run it.
+- **The integration test suite used to wipe your local login and any patients you created by
+  hand** — it shared one database with interactive testing. Fixed: tests now run against a
+  separate `dentix_test` database, created and migrated automatically. See the README for detail.
 - **The Angular Material theme is intentionally spare** — teal/clinical color palette, Persian
   Vazirmatn font, minimal decoration. That's the actual design direction (`docs/03-ux/05-ui-design-system.md`),
   not an unfinished skin.

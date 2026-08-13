@@ -44,6 +44,19 @@ async function bootstrap() {
   // so process.env.NODE_ENV is undefined and `undefined !== "production"`
   // is true. A gate protecting an externally reachable surface has to fail
   // closed — an operator who sets nothing gets no docs endpoint.
+  //
+  // Known, evaluated dependency finding (not blocking): @nestjs/swagger@11.4.6
+  // pins js-yaml@5.2.1, which carries GHSA-pm4m-ph32-ghv5 (parser DoS via
+  // exponential-time flow collections). A `package.json` override to the
+  // patched 5.2.3 was tried and reverted — reproducibly refused by npm across
+  // three independent clean-install attempts (npm ls kept reporting the
+  // pre-override version as "invalid", even from a fully cold cache with the
+  // lockfile deleted), and no @nestjs/swagger release exists yet that bumps
+  // it. Not exploitable here regardless: SwaggerModule's only js-yaml call is
+  // `jsyaml.dump()` on this app's own generated document, at the
+  // `-yaml`-suffixed variant of this route — the CVE is in the *parser*
+  // (`.load()`/`.loadAll()`), which this codebase never calls with any
+  // input, let alone external input. Revisit when @nestjs/swagger ships a fix.
   if (process.env.ENABLE_API_DOCS === "true") {
     SwaggerModule.setup("api/docs", app, buildOpenApiDocument(app));
   }

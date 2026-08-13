@@ -85,23 +85,23 @@ npm run lint:arch   # module-boundary rules (no framework imports in domain/, en
 npm run test         # unit tests, all workspaces
 npm run openapi:check  # regenerates the OpenAPI contract + Angular client types, fails on drift
 npm run db:migrate && npm run db:migrate:down && npm run db:migrate  # migration round-trip
-npm run test:int     # integration tests against real Postgres — see the warning below before running this
+npm run test:int     # integration tests — see the note below on which database this hits
 npm run test:api     # API contract tests against the real Keycloak container
 npm run build         # all workspaces
 ```
 
-> **`npm run test:int` truncates shared dev data.** Several integration specs
-> (`identity-access.int-spec.ts`, `patients.int-spec.ts`, `office.int-spec.ts`,
-> `outbox.int-spec.ts`) `TRUNCATE ... CASCADE` the `office`, `office_user`,
-> `user_account`, and `patient` tables as part of their own cleanup — correct
-> for test isolation, but it runs against the **same** Postgres database this
-> section just told you to use for interactive dev/testing. Running
-> `npm run test:int` will silently delete your dev-bootstrapped login (and
-> any patients you created by hand through the UI). If that happens, re-run
-> the dev user bootstrap (`keycloak/README.md`, step 2, plus
-> `bootstrap-dev-office-user.ts` — see below) rather than wondering why login
-> suddenly fails with `NO_ACTIVE_ACCOUNT`. Don't run `test:int` in the middle
-> of a manual testing session unless you're prepared to re-seed afterward.
+> **`test:int`/`test:api` run against a separate `dentix_test` database, not
+> your dev data.** Several integration specs (`identity-access.int-spec.ts`,
+> `patients.int-spec.ts`, `office.int-spec.ts`, `outbox.int-spec.ts`)
+> `TRUNCATE ... CASCADE` tables between cases — correct for test isolation,
+> and previously ran against the same database this section tells you to use
+> for interactive dev/testing, silently wiping your dev login. `apps/api/test/support/global-setup.ts`
+> now creates and migrates `dentix_test` on the same Postgres instance
+> automatically (idempotent — safe to run repeatedly), and
+> `set-test-database-env.ts` points every test worker at it, overriding
+> whatever `POSTGRES_DB` is set to in your shell or `.env`. Your dev login
+> and any patients you created by hand through the UI are untouched by
+> `test:int`/`test:api`, in any order, at any time.
 
 ### Running the app locally
 
@@ -117,7 +117,7 @@ npm run start:dev --workspace apps/api   # serves both API and the built Angular
 
 Open **http://localhost:3000** — not `:4200`. `/health` is unversioned; everything else sits under `/api/v1` (see the generated contract at `apps/api/openapi.json`).
 
-If this is a fresh Postgres/Keycloak pair (or you just ran `test:int` and lost your dev login — see above), link the Keycloak dev user to a Dentix office/account before logging in:
+If this is a fresh Postgres/Keycloak pair, link the Keycloak dev user to a Dentix office/account before logging in:
 
 ```bash
 # <keycloak-user-id> is printed by keycloak/seed-dev-user.sh, or read it

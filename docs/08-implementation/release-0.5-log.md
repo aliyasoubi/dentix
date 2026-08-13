@@ -349,3 +349,44 @@ theming machinery is fed. §24's own "illustrative structure" code sample in the
 shows the stock-palette shape (same reasoning as its `density: -1` sample, see above): it
 demonstrates `mat.define-theme`'s call shape, not a literal value to copy — it was never the
 authoritative color, §6.1 always was.
+
+## Fourth hardening pass — test-database isolation, and the js-yaml advisory investigated properly
+
+**`test:int`/`test:api` no longer touch the dev database.** They previously ran against the same
+`dentix` Postgres database used for interactive dev/manual testing, `TRUNCATE ... CASCADE`-ing
+`office`, `office_user`, `user_account`, and `patient` as part of test cleanup — silently
+deleting the dev-bootstrapped login and any manually-created patients, four times in one working
+session alone. Fixed with `apps/api/test/support/global-setup.ts` (Jest `globalSetup`, runs once
+per suite invocation): creates `dentix_test` on the same Postgres instance if it doesn't exist yet
+and migrates it, both idempotent. `set-test-database-env.ts` (`setupFiles`, runs per worker,
+before `data-source.ts` reads `POSTGRES_DB` at import time) forces every test process onto that
+database regardless of what's in the shell environment, `.env`, or CI's job-wide `POSTGRES_DB`.
+`resolveTestDatabaseName()` refuses any override that doesn't end in `_test` — a destructive
+suite must never be able to silently point at a database that isn't visibly a test one. Verified
+concretely, not assumed: recorded dev-DB row counts (`office_user`/`patient`) before and after a
+full `test:int` + `test:api` run, byte-for-byte identical, with `dentix_test` confirmed created
+and migrated alongside. CI needed no changes — the override happens entirely inside the two Jest
+configs, so it applies there too without touching `ci.yml`'s own `POSTGRES_DB=dentix` (used
+correctly, and unaffected, by the separate migration-proof step).
+
+**The js-yaml advisory in `@nestjs/swagger` was investigated, not just noted.** `@nestjs/swagger@11.4.6`
+pins `js-yaml@5.2.1` (GHSA-pm4m-ph32-ghv5, exponential-time DoS in flow-collection parsing), with
+no newer `@nestjs/swagger` release available that bumps it. A `package.json` `overrides` entry
+scoping `js-yaml` to the patched `5.2.3` specifically under `@nestjs/swagger` was tried and
+reverted after genuinely failing across three independent clean-install attempts — an incremental
+`npm install`, a full `node_modules` wipe, and a fully cold-cache reinstall with `package-lock.json`
+itself deleted — every one left `npm ls` reporting the pre-override `5.2.1` as `invalid`, an npm
+resolution limitation for this specific nested-override shape, not a mistake in how it was applied.
+(The cold-cache attempt separately surfaced a real, pre-existing, unrelated peer conflict —
+`openapi-typescript@7.13.0` wants `typescript@^5.x` against this project's pinned `6.0.3` — that the
+committed lockfile had been quietly masking; noted here since a future lockfile regeneration will
+hit it, but out of scope to resolve as part of this investigation. Recovered with `npm ci` against
+the untouched committed lockfile — verified zero drift in `package.json`/`package-lock.json`
+afterward.) Before accepting this as a tracked, non-blocking gap, actually checked whether it's
+exploitable: grepped `@nestjs/swagger`'s compiled output for every `js-yaml` call site — there is
+exactly one, `jsyaml.dump()` serializing this app's own generated OpenAPI document for the
+`-yaml`-suffixed docs route. The CVE is in the *parser* (`.load()`/`.loadAll()`), which nothing in
+this codebase calls with any input, let alone attacker-controlled input — and that route only
+exists at all behind the `ENABLE_API_DOCS` opt-in, itself fail-closed in production. Documented at
+the call site in `main.ts` rather than left as a silent `npm audit` line item; revisit when
+`@nestjs/swagger` ships a fix.
