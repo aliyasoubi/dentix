@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/angular-vite";
 import { DsEmptyStateComponent } from "./ds-empty-state.component";
 
 const meta: Meta<DsEmptyStateComponent> = {
-  title: "Design System/EmptyState/DsEmptyState",
+  title: "Product/EmptyState/DsEmptyState",
   component: DsEmptyStateComponent,
   parameters: {
     docs: {

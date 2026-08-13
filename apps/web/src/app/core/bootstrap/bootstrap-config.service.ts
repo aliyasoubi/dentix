@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable, inject, signal } from "@angular/core";
 import { firstValueFrom } from "rxjs";
 import type { components } from "../http/api-types.gen";
-import type { MoneyConfiguration } from "../../design-system/money/money-config";
+import type { MoneyConfiguration } from "../../design-system/foundation/money/money-config";
 
 export type BootstrapConfig = components["schemas"]["BootstrapConfigResponseDto"];
 

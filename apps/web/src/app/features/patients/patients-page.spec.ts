@@ -1,14 +1,19 @@
 import { provideHttpClient } from "@angular/common/http";
 import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
+import { By } from "@angular/platform-browser";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
-import { provideJalaliDateAdapter } from "../../core/jalali/provide-jalali-date-adapter";
 import { TranslationService } from "../../core/i18n/translation.service";
+import { provideJalaliDateAdapter } from "../../core/jalali/provide-jalali-date-adapter";
+import { PatientRegistrationFormComponent } from "./patient-registration-form/patient-registration-form.component";
+import { PatientSearchComponent } from "./patient-search/patient-search.component";
+import { CreatePatientRequest, PatientSearchResult } from "./patients-api.service";
 import { PatientsPage } from "./patients-page";
 
 const STUB_TRANSLATIONS: Record<string, string> = {
   "patients.form.error.INVALID_PHONE": "شماره موبایل معتبر نیست.",
   "common.error.generic": "خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+  "patients.form.success": "بیمار ثبت شد.",
 };
 
 class StubTranslationService {
@@ -17,6 +22,22 @@ class StubTranslationService {
   }
 }
 
+const VALID_REQUEST: CreatePatientRequest = {
+  nativeName: "زهرا کریمی",
+  latinName: "Zahra Karimi",
+  phone: "09123456789",
+  contactUnavailable: false,
+  sex: "unspecified",
+  dateOfBirth: null,
+};
+
+/**
+ * These tests exercise the page as the orchestrator it now is: they drive the
+ * child components through their *public* contracts (the form's `submitted`
+ * output, the search's `queryChange`) rather than reaching into the page's
+ * internals. Form validation lives in the form component's own spec, and
+ * error-code mapping in ApiErrorMessageService's.
+ */
 describe("PatientsPage", () => {
   let fixture: ComponentFixture<PatientsPage>;
   let httpMock: HttpTestingController;
@@ -42,171 +63,112 @@ describe("PatientsPage", () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  afterEach(() => httpMock.verify());
 
-  it("accepts a Persian native name and an optional Latin name, and submits both as entered", async () => {
-    fixture.componentInstance["form"].setValue({
-      nativeName: "زهرا کریمی",
-      latinName: "Zahra Karimi",
-      phone: "09123456789",
-      dateOfBirth: null,
-      contactUnavailable: false,
-      sex: "unspecified",
-    });
+  function registrationForm(): PatientRegistrationFormComponent {
+    return fixture.debugElement.query(By.directive(PatientRegistrationFormComponent))
+      .componentInstance as PatientRegistrationFormComponent;
+  }
 
-    const submitPromise = fixture.componentInstance["submit"]();
+  function search(): PatientSearchComponent {
+    return fixture.debugElement.query(By.directive(PatientSearchComponent))
+      .componentInstance as PatientSearchComponent;
+  }
+
+  it("posts what the form emitted, verbatim", async () => {
+    registrationForm().submitted.emit(VALID_REQUEST);
 
     const createReq = httpMock.expectOne("/api/v1/patients");
     expect(createReq.request.method).toBe("POST");
-    expect(createReq.request.body).toEqual({
-      nativeName: "زهرا کریمی",
-      latinName: "Zahra Karimi",
-      phone: "09123456789",
-      contactUnavailable: false,
-      sex: "unspecified",
-      dateOfBirth: null,
-    });
+    expect(createReq.request.body).toEqual(VALID_REQUEST);
+
     createReq.flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
     await fixture.whenStable();
-
-    // submit() re-runs the search after a successful create.
     httpMock.expectOne((req) => req.url === "/api/v1/patients").flush([]);
     await fixture.whenStable();
-    await submitPromise;
-
-    expect(fixture.componentInstance["lastCreated"]()?.patientNumber).toBe(1);
-    expect(fixture.componentInstance["form"].value.nativeName).toBe("");
   });
 
-  it("converts a picked Jalali date of birth to the canonical Gregorian ISO string on submit", async () => {
-    // 1403/01/01 (Farvardin 1, Nowruz) — the ADR-008 boundary fixture.
-    const nowruz1403 = fixture.componentInstance["dateAdapter"].createDate(1403, 0, 1);
+  it("confirms success and clears the form for the next patient", async () => {
+    const resetSpy = vi.spyOn(registrationForm(), "reset");
+    registrationForm().submitted.emit(VALID_REQUEST);
 
-    fixture.componentInstance["form"].setValue({
-      nativeName: "زهرا کریمی",
-      latinName: "",
-      phone: "",
-      dateOfBirth: nowruz1403,
-      contactUnavailable: true,
-      sex: "unspecified",
-    });
-
-    const submitPromise = fixture.componentInstance["submit"]();
-    const createReq = httpMock.expectOne("/api/v1/patients");
-    expect((createReq.request.body as { dateOfBirth: string | null }).dateOfBirth).toBe("2024-03-20");
-    createReq.flush({ id: "22222222-2222-2222-2222-222222222222", patientNumber: 2 });
+    httpMock
+      .expectOne("/api/v1/patients")
+      .flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
     await fixture.whenStable();
-
     httpMock.expectOne((req) => req.url === "/api/v1/patients").flush([]);
     await fixture.whenStable();
-    await submitPromise;
+
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance["successMessage"]()).toBe("بیمار ثبت شد.");
   });
 
-  it("does not submit when the native name is blank", async () => {
-    fixture.componentInstance["form"].patchValue({ nativeName: "   " });
-    await fixture.componentInstance["submit"]();
-    httpMock.expectNone((req) => req.method === "POST");
-  });
+  it("shows the translated message for a backend error code, and does not clear the form", async () => {
+    const resetSpy = vi.spyOn(registrationForm(), "reset");
+    registrationForm().submitted.emit(VALID_REQUEST);
 
-  it("shows the translated error message for a backend validation failure", async () => {
-    // A well-formed phone that the client accepts, so the request actually
-    // reaches the server — this test is about mapping a server error code to
-    // localized text, not about client-side validation.
-    fixture.componentInstance["form"].setValue({
-      nativeName: "رضا احمدی",
-      latinName: "",
-      phone: "09123456789",
-      dateOfBirth: null,
-      contactUnavailable: false,
-      sex: "unspecified",
-    });
-
-    const submitPromise = fixture.componentInstance["submit"]();
-    const createReq = httpMock.expectOne("/api/v1/patients");
-    createReq.flush({ code: "INVALID_PHONE" }, { status: 400, statusText: "Bad Request" });
+    httpMock
+      .expectOne("/api/v1/patients")
+      .flush({ code: "INVALID_PHONE" }, { status: 400, statusText: "Bad Request" });
     await fixture.whenStable();
-    await submitPromise;
 
     expect(fixture.componentInstance["submitError"]()).toBe("شماره موبایل معتبر نیست.");
+    // Losing everything the user typed because the server rejected one field
+    // would be its own bug.
+    expect(resetSpy).not.toHaveBeenCalled();
   });
 
-  describe("client-side validation (mirrors the server's rules)", () => {
-    it("blocks submit for a malformed Iranian mobile instead of round-tripping to the server", async () => {
-      fixture.componentInstance["form"].setValue({
-        nativeName: "رضا احمدی",
-        latinName: "",
-        phone: "not-a-phone",
+  it("refreshes the list after a successful create", async () => {
+    const created: PatientSearchResult[] = [
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        patientNumber: 1,
+        nativeName: "زهرا کریمی",
+        latinName: "Zahra Karimi",
+        phone: "09123456789",
         dateOfBirth: null,
-        contactUnavailable: false,
-        sex: "unspecified",
-      });
-
-      expect(fixture.componentInstance["form"].controls.phone.hasError("iranianMobile")).toBe(true);
-      await fixture.componentInstance["submit"]();
-      httpMock.expectNone((req) => req.method === "POST");
-    });
-
-    it.each(["09123456789", "+989123456789", "۰۹۱۲۳۴۵۶۷۸۹"])(
-      "accepts %s — every form the backend canonicalizes",
-      (phone) => {
-        fixture.componentInstance["form"].controls.phone.setValue(phone);
-        expect(fixture.componentInstance["form"].controls.phone.hasError("iranianMobile")).toBe(false);
       },
-    );
+    ];
 
-    it("flags the group when neither a phone nor contactUnavailable is given", () => {
-      fixture.componentInstance["form"].setValue({
-        nativeName: "رضا احمدی",
-        latinName: "",
-        phone: "",
-        dateOfBirth: null,
-        contactUnavailable: false,
-        sex: "unspecified",
-      });
-      expect(fixture.componentInstance["form"].hasError("contactRequired")).toBe(true);
-    });
+    registrationForm().submitted.emit(VALID_REQUEST);
+    httpMock
+      .expectOne("/api/v1/patients")
+      .flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
+    await fixture.whenStable();
+    httpMock.expectOne((req) => req.url === "/api/v1/patients").flush(created);
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    it("clears the group error once contactUnavailable is ticked", () => {
-      fixture.componentInstance["form"].setValue({
-        nativeName: "رضا احمدی",
-        latinName: "",
-        phone: "",
-        dateOfBirth: null,
-        contactUnavailable: true,
-        sex: "unspecified",
-      });
-      expect(fixture.componentInstance["form"].hasError("contactRequired")).toBe(false);
-    });
+    expect(search().results()).toEqual(created);
   });
 
-  describe("search failures", () => {
+  describe("search", () => {
+    it("passes the typed query to the API", async () => {
+      const promise = fixture.componentInstance["onQueryChange"]("رضا");
+      const req = httpMock.expectOne((r) => r.url === "/api/v1/patients");
+      expect(req.request.params.get("query")).toBe("رضا");
+      req.flush([]);
+      await fixture.whenStable();
+      await promise;
+    });
+
     it("surfaces an error and clears stale rows instead of leaving the old list looking current", async () => {
-      const searchPromise = fixture.componentInstance["onSearchInput"]("رضا");
+      const promise = fixture.componentInstance["onQueryChange"]("رضا");
       httpMock
         .expectOne((req) => req.url === "/api/v1/patients")
         .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
       await fixture.whenStable();
-      await searchPromise;
+      await promise;
+      fixture.detectChanges();
 
-      expect(fixture.componentInstance["searchError"]()).toBe("خطایی رخ داد. لطفاً دوباره تلاش کنید.");
-      expect(fixture.componentInstance["results"]()).toEqual([]);
+      expect(search().errorMessage()).toBe("خطایی رخ داد. لطفاً دوباره تلاش کنید.");
+      expect(search().results()).toEqual([]);
     });
 
     // The duplicate-patient bug: a failing list refresh must not be reported
     // as a failed creation, or the user retries a create that already worked.
     it("does not report a creation failure when only the post-create refresh fails", async () => {
-      fixture.componentInstance["form"].setValue({
-        nativeName: "زهرا کریمی",
-        latinName: "",
-        phone: "09123456789",
-        dateOfBirth: null,
-        contactUnavailable: false,
-        sex: "unspecified",
-      });
-
-      const submitPromise = fixture.componentInstance["submit"]();
+      registrationForm().submitted.emit(VALID_REQUEST);
       httpMock
         .expectOne("/api/v1/patients")
         .flush({ id: "33333333-3333-3333-3333-333333333333", patientNumber: 3 });
@@ -216,11 +178,11 @@ describe("PatientsPage", () => {
         .expectOne((req) => req.url === "/api/v1/patients")
         .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
       await fixture.whenStable();
-      await submitPromise;
+      fixture.detectChanges();
 
       expect(fixture.componentInstance["submitError"]()).toBeNull();
-      expect(fixture.componentInstance["lastCreated"]()?.patientNumber).toBe(3);
-      expect(fixture.componentInstance["searchError"]()).not.toBeNull();
+      expect(fixture.componentInstance["successMessage"]()).toBe("بیمار ثبت شد.");
+      expect(search().errorMessage()).not.toBeNull();
     });
   });
 });

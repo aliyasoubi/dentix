@@ -5,7 +5,7 @@ import { DsMoneyDisplayComponent } from "./ds-money-display.component";
 import { MONEY_CONFIG } from "./money-config";
 
 const meta: Meta<DsMoneyDisplayComponent> = {
-  title: "Design System/Money/DsMoneyDisplay",
+  title: "Foundation/Money/DsMoneyDisplay",
   component: DsMoneyDisplayComponent,
   // ADR-005 / UX-DS-001 §2.1: canonical storage is always rial; every
   // story's amountRial is the same underlying value, only the

@@ -1,0 +1,29 @@
+// Moved from patients-page.scss with the form itself — these rules only ever
+// applied to this form's own layout.
+.patients-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+
+  &__row {
+    display: flex;
+    gap: var(--ds-space-4);
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  &__field {
+    flex: 1 1 0;
+  }
+
+  &__field--ltr input {
+    text-align: start;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}

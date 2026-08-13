@@ -1,0 +1,34 @@
+// Moved verbatim from the patients page when the table became a shared
+// component — these rules were never patient-specific.
+//
+// §22 "Financial values are right-aligned... Use tabular numerals" applies
+// equally well to a record-number column: a stable, scannable list of numbers
+// reads better tabular regardless of the column's meaning.
+.ds-data-table {
+  width: 100%;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-header-row {
+    background: var(--ds-surface-subtle);
+  }
+
+  ::ng-deep .mat-mdc-header-cell {
+    color: var(--ds-text-secondary);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  // §23.3's motion matrix puts hover/press at 80–120ms — instant (80ms) so
+  // scanning a list stays snappy rather than smearing. Only the hover tint
+  // transitions; the rows themselves must not animate on re-render (§23.6
+  // rules out motion for "every table update").
+  ::ng-deep .mat-mdc-row {
+    transition: background var(--ds-motion-instant) var(--ds-ease-standard);
+  }
+
+  ::ng-deep .mat-mdc-row:hover {
+    background: var(--ds-surface-subtle);
+  }
+}

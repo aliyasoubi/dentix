@@ -1,0 +1,26 @@
+// Moved from patients-page.scss with the search UI itself. The table's own
+// styling travelled with DsDataTableComponent, since none of it was
+// patient-specific.
+.patient-search {
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ds-space-4);
+    margin-block-end: var(--ds-space-4);
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  &__title {
+    margin-block-end: 0;
+  }
+
+  &__field {
+    width: 100%;
+    max-width: 360px;
+    margin: 0;
+  }
+}

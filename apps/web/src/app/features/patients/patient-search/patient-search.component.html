@@ -1,0 +1,21 @@
+<div class="patient-search__header">
+  <h2 class="patient-search__title ds-text-section-title">
+    {{ "patients.list.title" | translate }}
+  </h2>
+  <mat-form-field appearance="outline" class="patient-search__field">
+    <mat-label>{{ "patients.search.placeholder" | translate }}</mat-label>
+    <input matInput [value]="query()" (input)="onInput($any($event.target).value)" />
+  </mat-form-field>
+</div>
+
+@if (errorMessage(); as message) {
+  <p class="ds-alert ds-alert--danger" role="alert">{{ message }}</p>
+}
+
+@if (results().length > 0) {
+  <app-ds-data-table [columns]="columns" [rows]="results()" />
+} @else if (hasSearched() && !searching()) {
+  <app-ds-empty-state
+    [title]="(query() ? 'patients.list.empty' : 'patients.list.empty.noQuery') | translate"
+  />
+}

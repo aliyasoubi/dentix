@@ -1,8 +1,12 @@
 // §9.2: "Use borders for ordinary containers... Do not wrap every section
 // in a raised card" — border + md radius, no shadow.
+//
+// Only the page's own section chrome lives here now. The form's layout moved
+// to PatientRegistrationFormComponent, the search header to
+// PatientSearchComponent, and the table styling to DsDataTableComponent —
+// each next to the markup it actually styles.
 .patients-page {
-  &__form-section,
-  &__list-section {
+  &__section {
     background: var(--ds-surface);
     border: 1px solid var(--ds-border);
     border-radius: var(--ds-radius-md);
@@ -12,83 +16,5 @@
 
   &__section-title {
     margin-block-end: var(--ds-space-4);
-  }
-
-  &__list-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--ds-space-4);
-    margin-block-end: var(--ds-space-4);
-
-    @media (max-width: 640px) {
-      flex-direction: column;
-    }
-  }
-
-  &__search {
-    width: 100%;
-    max-width: 360px;
-    margin: 0;
-  }
-}
-
-.patients-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-space-4);
-
-  &__row {
-    display: flex;
-    gap: var(--ds-space-4);
-
-    @media (max-width: 640px) {
-      flex-direction: column;
-    }
-  }
-
-  &__field {
-    flex: 1 1 0;
-  }
-
-  &__field--ltr input {
-    text-align: start;
-  }
-
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-// §22 "Financial values are right-aligned... Use tabular numerals" applies
-// equally well to the patient-number column here — a stable, scannable
-// list of numbers reads better tabular regardless of the column's meaning.
-.patients-table {
-  width: 100%;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-  overflow: hidden;
-
-  ::ng-deep .mat-mdc-header-row {
-    background: var(--ds-surface-subtle);
-  }
-
-  ::ng-deep .mat-mdc-header-cell {
-    color: var(--ds-text-secondary);
-    font-weight: 600;
-    font-size: 13px;
-  }
-
-  // §23.3's motion matrix puts hover/press at 80–120ms — instant (80ms) so
-  // scanning a patient list stays snappy rather than smearing. Only the
-  // hover tint transitions; the rows themselves must not animate on search
-  // re-render (§23.6 rules out motion for "every table update").
-  ::ng-deep .mat-mdc-row {
-    transition: background var(--ds-motion-instant) var(--ds-ease-standard);
-  }
-
-  ::ng-deep .mat-mdc-row:hover {
-    background: var(--ds-surface-subtle);
   }
 }

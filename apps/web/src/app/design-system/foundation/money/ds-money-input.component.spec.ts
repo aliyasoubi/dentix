@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
 import { asMoney } from "@dentix/kernel";
-import { TranslationService } from "../../core/i18n/translation.service";
+import { TranslationService } from "../../../core/i18n/translation.service";
 import { DsMoneyInputComponent } from "./ds-money-input.component";
 import { MONEY_CONFIG } from "./money-config";
 

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { TranslationService } from "../../core/i18n/translation.service";
+import { TranslationService } from "../../../core/i18n/translation.service";
 import { DsMoneyDisplayComponent } from "./ds-money-display.component";
 import { MONEY_CONFIG } from "./money-config";
 

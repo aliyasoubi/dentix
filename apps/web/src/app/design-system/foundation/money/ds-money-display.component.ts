@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from "@angular/core";
 import { formatMoneyForDisplay, formatMoneyInputGrouped, Money, MoneyDisplayUnit } from "@dentix/kernel";
-import { TranslatePipe } from "../../core/i18n/translate.pipe";
+import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { MONEY_CONFIG } from "./money-config";
 
 /**

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/angular-vite";
 import { DsStatusChipComponent } from "./ds-status-chip.component";
 
 const meta: Meta<DsStatusChipComponent> = {
-  title: "Design System/StatusChip/DsStatusChip",
+  title: "Product/StatusChip/DsStatusChip",
   component: DsStatusChipComponent,
   parameters: {
     docs: {

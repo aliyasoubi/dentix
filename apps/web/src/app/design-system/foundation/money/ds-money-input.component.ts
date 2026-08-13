@@ -26,8 +26,8 @@ import {
   parseMoneyInput,
   toCanonicalRials,
 } from "@dentix/kernel";
-import { TranslatePipe } from "../../core/i18n/translate.pipe";
-import { TranslationService } from "../../core/i18n/translation.service";
+import { TranslatePipe } from "../../../core/i18n/translate.pipe";
+import { TranslationService } from "../../../core/i18n/translation.service";
 import { MONEY_CONFIG } from "./money-config";
 
 /**

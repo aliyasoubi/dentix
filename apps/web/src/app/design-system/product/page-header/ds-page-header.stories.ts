@@ -3,7 +3,7 @@ import { moduleMetadata } from "@storybook/angular-vite";
 import { DsPageHeaderComponent } from "./ds-page-header.component";
 
 const meta: Meta<DsPageHeaderComponent> = {
-  title: "Design System/PageHeader/DsPageHeader",
+  title: "Product/PageHeader/DsPageHeader",
   component: DsPageHeaderComponent,
   decorators: [moduleMetadata({ imports: [DsPageHeaderComponent] })],
   parameters: {

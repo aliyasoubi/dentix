@@ -11,7 +11,7 @@ import { BootstrapConfigService } from "./core/bootstrap/bootstrap-config.servic
 import { apiInterceptor } from "./core/http/api.interceptor";
 import { TranslationService } from "./core/i18n/translation.service";
 import { provideJalaliDateAdapter } from "./core/jalali/provide-jalali-date-adapter";
-import { MONEY_CONFIG } from "./design-system/money/money-config";
+import { MONEY_CONFIG } from "./design-system/foundation/money/money-config";
 import { routes } from "./app.routes";
 
 export const appConfig: ApplicationConfig = {

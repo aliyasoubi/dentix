@@ -6,7 +6,7 @@ import { DsMoneyInputComponent } from "./ds-money-input.component";
 import { MONEY_CONFIG } from "./money-config";
 
 const meta: Meta<DsMoneyInputComponent> = {
-  title: "Design System/Money/DsMoneyInput",
+  title: "Foundation/Money/DsMoneyInput",
   component: DsMoneyInputComponent,
   parameters: {
     docs: {
