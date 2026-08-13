@@ -477,3 +477,94 @@ exactly the overengineering that document exists to prevent. Also not done: the 
 one host taking them — not a second failure domain by any definition. Configuring a real
 destination is the operator's decision, the same category as ADR-010's own hosting choice, and
 `ops/backup/rclone.conf.example` is ready for whichever one gets picked.
+
+## First real authorization gate: office admins, add-user, and the recent-authentication check
+
+Started from two plain questions — "is the auth service complete, as in permission roles and
+adding a user?" and "does patient registration need this many fields?" — and both turned out to
+have a smaller correct answer than the obvious one.
+
+**Permissions: a boolean, deliberately, not the role matrix.** `01-product/04-roles-and-permissions.md`
+describes six roles and dozens of permission families, and it is tempting to start building that.
+It is also explicitly Release 1 scope (`07-plans/release-1-foundation.md`) and gated on DISC-003,
+which no operational or clinical approver has signed. What *was* genuinely missing is narrower:
+there was no way to add an office user at all except a dev-only script, and nothing to gate who
+may do it. So `office_user` gained a single `is_office_admin` boolean — not a role code, not a
+permission table — chosen so it reads as the stopgap it is instead of being mistaken later for
+the target design. `OfficeUser.create()` hardcodes it to `false`, which is what makes admin
+rights ungrantable through the new endpoint even if a request tried.
+
+**Adding a user links an identity; it never provisions one.** ADR-007 is unambiguous: Dentix
+administrators "may link or disable an external identity but never set or view passwords."
+`AddOfficeUserUseCase` therefore looks the person up in Keycloak by email through a new
+read-only `KeycloakAdminPort` and links them, returning `NOT_FOUND_IN_PROVIDER` when no such
+account exists rather than helpfully creating one. Authorization is a fresh `office_user`
+lookup inside the use case, not a claim trusted from the session — whoami's `isOfficeAdmin` is
+UI convenience, and the route guard in front of the page is convenience too; the use case is
+the actual gate. Checks that decide whether to write anything happen *before* the transaction
+opens, so the transaction only ever performs unconditional writes: returning a `Result` rolls
+nothing back, so a check inside it could leave a `user_account` created while the caller was
+told `ALREADY_LINKED`.
+
+**The gap the first pass missed, found by reviewing against the docs rather than the diff.**
+`04-architecture/09-authentication-session-architecture.md` lists **permission administration**
+alongside clinical signing and refunds as requiring `authenticatedAt` inside the
+recent-authentication window, and ADR-007's second acceptance item had deferred that flow to
+"whichever slice first needs it." Adding an office user — handing someone access to patient
+data — *is* that slice, and the first implementation shipped without the check;
+`UserSession.isRecentlyAuthenticated()` had existed since S3 and was wired to nothing. Now:
+the use case refuses a stale session with `RECENT_AUTHENTICATION_REQUIRED`, and the SPA offers
+a re-authenticate action instead of a dead end.
+
+Three details that are decisions, not incidentals:
+
+- **403, not 401.** The session is perfectly valid; it merely authenticated too long ago. A 401
+  gets absorbed by the SPA's generic session-expired interceptor and retried as an ordinary
+  login — which the provider answers from its existing SSO session with the *same stale*
+  `auth_time`, bouncing the user off the same refusal forever. Locked in by a test.
+- **`prompt=login`, not `login`.** Same reason: only forced interactive re-authentication moves
+  `auth_time`. `AuthService.reauthenticate()` is separate from `login()` precisely so ordinary
+  logins keep reusing SSO.
+- **Admin check before the recency check.** Telling a non-admin to go re-authenticate invites a
+  round trip that cannot help them, so a stale non-admin still gets `FORBIDDEN`. Also tested.
+
+**Proven in the browser, not just in Jest** (this is ADR-007 acceptance item 2, now ticked): an
+admin session was aged six minutes past the window directly in `user_session`; the next add was
+refused with the Persian message and the typed email preserved; the re-authenticate action
+produced Keycloak's own **"Please re-authenticate to continue"** screen — the actual evidence
+`prompt=login` was honored rather than silently satisfied from SSO — demanded password and TOTP
+again, returned to `/office-users` via `returnTo`, and the identical add then succeeded and
+wrote an `office_user_added` audit event.
+
+**Patient registration: nothing was actually required that shouldn't be.** Checked against
+`02-requirements/` before touching anything — only the native name and a contact method (phone,
+or an explicit "no contact method" checkbox) were ever mandatory; Latin name, sex, and date of
+birth were already optional. The form just *presented* all six at once. They now sit behind a
+closed "جزئیات بیشتر (اختیاری)" panel. Pure presentation: no validation, DTO, or schema change.
+
+**A real Angular bug, found only because the flow was walked in a browser.** Guards listed
+together in one route's `canActivate` array run **concurrently** — Angular subscribes to all of
+them at once and merely combines the results in declaration order (`prioritizedGuardValue`).
+`officeAdminGuard` had assumed `authGuard` ran first and left a session behind, so a cold or
+deep-link navigation to `/office-users` read `session()` as still `null` and bounced a genuine
+admin to `/patients`. Every unit test passed, because each guard was tested alone. It now loads
+the session itself, with a regression test naming the concurrency.
+
+**Verification.** `test:api` gained `office-users.api-spec.ts` (12 cases) covering the whole
+authorization matrix — no session → 401, missing CSRF → 403, non-admin → 403 `FORBIDDEN`, stale
+session → 403 `RECENT_AUTHENTICATION_REQUIRED`, the provider-outcome codes, and that a body
+smuggling `officeId`/`isOfficeAdmin` is rejected outright (`forbidNonWhitelisted`) rather than
+quietly ignored. Both no-write paths assert nothing was persisted, and the non-admin and stale
+cases assert the provider was never even queried, so a caller who fails the gate learns nothing
+about which emails exist.
+
+**Two things deliberately left open rather than quietly done:**
+
+- The Keycloak lookup authenticates as the **master-realm admin** to perform what is a read-only
+  `view-users` query. It works and is confined to the internal Docker network, but a dedicated
+  service account scoped to the `dentix` realm is the least-privilege shape. That is a realm
+  configuration change with its own restore-rehearsal burden, so it is named here rather than
+  bundled in.
+- `office_user` rows can be created and audited, but nothing yet **removes** access or flips
+  `is_office_admin`. Deactivation exists in the schema (`is_active`) and is honored at login; no
+  endpoint drives it. Both belong with the real role work behind DISC-003.
