@@ -2,14 +2,16 @@
   <h2 class="patient-search__title ds-text-section-title">
     {{ "patients.list.title" | translate }}
   </h2>
-  <mat-form-field appearance="outline" class="patient-search__field">
-    <mat-label>{{ "patients.search.placeholder" | translate }}</mat-label>
-    <input matInput [value]="query()" (input)="onInput($any($event.target).value)" />
-  </mat-form-field>
+  <app-ds-search-field
+    class="patient-search__field"
+    [label]="'patients.search.placeholder' | translate"
+    [value]="query()"
+    (valueChange)="onInput($event)"
+  />
 </div>
 
 @if (errorMessage(); as message) {
-  <p class="ds-alert ds-alert--danger" role="alert">{{ message }}</p>
+  <app-ds-alert variant="danger">{{ message }}</app-ds-alert>
 }
 
 @if (results().length > 0) {

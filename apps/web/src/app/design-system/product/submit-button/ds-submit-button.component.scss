@@ -1,0 +1,6 @@
+// The spinner inherits the button's foreground colour so it stays legible
+// on the filled primary surface, rather than falling back to the theme's
+// accent on a same-hue background.
+:host ::ng-deep .mat-mdc-progress-spinner {
+  --mdc-circular-progress-active-indicator-color: currentColor;
+}

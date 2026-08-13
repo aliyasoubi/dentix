@@ -1,29 +1,26 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="add-user-form">
-  <mat-form-field appearance="outline" class="add-user-form__field add-user-form__field--ltr">
-    <mat-label>{{ "officeUsers.form.email.label" | translate }}</mat-label>
-    <input matInput formControlName="email" dir="ltr" type="email" required />
-    @if (form.controls.email.hasError("required")) {
-      <mat-error>{{ "officeUsers.form.error.EMAIL_REQUIRED" | translate }}</mat-error>
-    } @else if (form.controls.email.hasError("email")) {
-      <mat-error>{{ "officeUsers.form.error.INVALID_EMAIL" | translate }}</mat-error>
-    }
-  </mat-form-field>
+  <app-ds-text-field
+    [label]="'officeUsers.form.email.label' | translate"
+    [control]="form.controls.email"
+    [errors]="EMAIL_ERRORS"
+    [required]="true"
+    [latin]="true"
+    type="email"
+  />
 
   @if (errorMessage(); as message) {
-    <p class="ds-alert ds-alert--danger" role="alert">{{ message }}</p>
+    <app-ds-alert variant="danger">{{ message }}</app-ds-alert>
   }
 
   @if (successMessage(); as message) {
-    <p class="ds-alert ds-alert--success" role="status">{{ message }}</p>
+    <app-ds-alert variant="success">{{ message }}</app-ds-alert>
   }
 
   <div class="add-user-form__actions">
-    <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
-      @if (submitting()) {
-        <mat-progress-spinner diameter="18" mode="indeterminate" />
-      } @else {
-        {{ "officeUsers.form.submit" | translate }}
-      }
-    </button>
+    <app-ds-submit-button
+      [label]="'officeUsers.form.submit' | translate"
+      [submitting]="submitting()"
+      [disabled]="form.invalid"
+    />
   </div>
 </form>

@@ -307,26 +307,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-// Inline feedback banners (form validation failure, success confirmation).
-// Shared so every feature gets the same treatment instead of each page
-// hand-rolling colored text (§6.4: "every state must include readable
-// text," not color alone — these still rely on the surrounding label/icon
-// context, e.g. role="alert", to not be color-only in a screen reader).
-.ds-alert {
-  margin: 0;
-  padding: var(--ds-space-3);
-  border-radius: var(--ds-radius-sm);
-}
-
-.ds-alert--danger {
-  background: var(--ds-danger-soft);
-  color: var(--ds-danger);
-}
-
-.ds-alert--success {
-  background: var(--ds-success-soft);
-  color: var(--ds-success);
-}
+// Feedback banners moved to DsAlertComponent (design-system/foundation/alert).
+// Not left here as a fallback on purpose: a global class would keep the old
+// hand-written `<p class="ds-alert" role="alert">` markup working, and the
+// component exists precisely because pairing the right ARIA role with the
+// right variant should not be a thing each caller remembers.
 
 // 23.7 Reduced motion. §23 closes with "Functional feedback must remain
 // available without animation" — so this neutralizes duration, never the

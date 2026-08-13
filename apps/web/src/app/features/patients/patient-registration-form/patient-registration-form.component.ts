@@ -1,14 +1,17 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from "@angular/core";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
-import { MatButtonModule } from "@angular/material/button";
-import { MatCheckboxModule } from "@angular/material/checkbox";
 import { DateAdapter } from "@angular/material/core";
-import { MatDatepickerModule } from "@angular/material/datepicker";
 import { MatExpansionModule } from "@angular/material/expansion";
-import { MatFormFieldModule } from "@angular/material/form-field";
-import { MatInputModule } from "@angular/material/input";
-import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
-import { MatSelectModule } from "@angular/material/select";
+import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
+import { DsCheckboxFieldComponent } from "../../../design-system/foundation/field/ds-checkbox-field.component";
+import { DsDateFieldComponent } from "../../../design-system/foundation/field/ds-date-field.component";
+import { DsFieldErrorKeys } from "../../../design-system/foundation/field/ds-field-errors";
+import {
+  DsSelectFieldComponent,
+  DsSelectOption,
+} from "../../../design-system/foundation/field/ds-select-field.component";
+import { DsTextFieldComponent } from "../../../design-system/foundation/field/ds-text-field.component";
+import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { CreatePatientRequest } from "../patients-api.service";
 import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form.validators";
@@ -32,14 +35,15 @@ import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form
   selector: "app-patient-registration-form",
   imports: [
     ReactiveFormsModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    MatDatepickerModule,
+    // Still Material directly: the expansion panel is layout this form owns,
+    // not a repeated pattern with a design-system component behind it yet.
     MatExpansionModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
-    MatSelectModule,
+    DsTextFieldComponent,
+    DsSelectFieldComponent,
+    DsDateFieldComponent,
+    DsCheckboxFieldComponent,
+    DsAlertComponent,
+    DsSubmitButtonComponent,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +78,24 @@ export class PatientRegistrationFormComponent {
     },
     { validators: [contactRequired] },
   );
+
+  // Declaration order is display priority — a blank name reports that it is
+  // required rather than that it is blank, which are the same failure said
+  // two ways.
+  protected readonly NATIVE_NAME_ERRORS: DsFieldErrorKeys = {
+    required: "patients.form.error.NATIVE_NAME_REQUIRED",
+    requiredNonBlank: "patients.form.error.NATIVE_NAME_REQUIRED",
+  };
+
+  protected readonly PHONE_ERRORS: DsFieldErrorKeys = {
+    iranianMobile: "patients.form.error.INVALID_PHONE",
+  };
+
+  protected readonly SEX_OPTIONS: readonly DsSelectOption[] = [
+    { value: "unspecified", label: "patients.form.sex.unspecified" },
+    { value: "male", label: "patients.form.sex.male" },
+    { value: "female", label: "patients.form.sex.female" },
+  ];
 
   protected submit(): void {
     if (this.form.invalid) {

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from "@angular/cor
 import { MatButtonModule } from "@angular/material/button";
 import { ActivatedRoute } from "@angular/router";
 import { AuthService } from "../../core/auth/auth.service";
+import { DsAlertComponent } from "../../design-system/foundation/alert/ds-alert.component";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { TranslationService } from "../../core/i18n/translation.service";
 
@@ -28,7 +29,7 @@ const KNOWN_LOGIN_ERROR_CODES = new Set([
  */
 @Component({
   selector: "app-login-page",
-  imports: [MatButtonModule, TranslatePipe],
+  imports: [MatButtonModule, DsAlertComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./login-page.html",
   styleUrl: "./login-page.scss",

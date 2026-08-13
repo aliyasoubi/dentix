@@ -1,0 +1,17 @@
+// Fills whatever the form row gives it; the row owns the layout, the field
+// owns only its own chrome.
+:host {
+  display: block;
+}
+
+.ds-text-field {
+  width: 100%;
+}
+
+// §2.1: Latin-script values stay left-to-right inside the RTL form. dir="ltr"
+// alone still right-aligns the text inside an RTL ancestor, so the alignment
+// has to be stated too — the reason `latin` is one named input rather than
+// leaving callers to remember both halves.
+.ds-text-field--latin input {
+  text-align: start;
+}

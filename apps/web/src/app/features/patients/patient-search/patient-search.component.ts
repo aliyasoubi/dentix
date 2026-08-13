@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
-import { MatFormFieldModule } from "@angular/material/form-field";
-import { MatInputModule } from "@angular/material/input";
 import { formatJalali, isoDateToJalali, toPersianDigits } from "@dentix/kernel";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
+import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
 import {
   DsDataTableColumn,
   DsDataTableComponent,
 } from "../../../design-system/product/data-table/ds-data-table.component";
 import { DsEmptyStateComponent } from "../../../design-system/product/empty-state/ds-empty-state.component";
+import { DsSearchFieldComponent } from "../../../design-system/product/search-field/ds-search-field.component";
 import { PatientSearchResult } from "../patients-api.service";
 
 /** Table-cell display only (never a datepicker instance) — reaches Jalali behavior through kernel's pure functions directly, per ADR-008's implementation note, rather than the Material DateAdapter reserved for actual picker controls. */
@@ -25,7 +25,13 @@ function formatDateOfBirth(isoDate: string | null): string {
  */
 @Component({
   selector: "app-patient-search",
-  imports: [MatFormFieldModule, MatInputModule, DsDataTableComponent, DsEmptyStateComponent, TranslatePipe],
+  imports: [
+    DsSearchFieldComponent,
+    DsAlertComponent,
+    DsDataTableComponent,
+    DsEmptyStateComponent,
+    TranslatePipe,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./patient-search.component.html",
   styleUrl: "./patient-search.component.scss",

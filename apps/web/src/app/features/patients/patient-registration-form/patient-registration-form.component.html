@@ -4,34 +4,35 @@
        but optional data, tucked behind the panel below rather than shown
        up front on every single registration. -->
   <div class="patients-form__row">
-    <mat-form-field appearance="outline" class="patients-form__field">
-      <mat-label>{{ "patients.form.nativeName.label" | translate }}</mat-label>
-      <input matInput formControlName="nativeName" required />
-      @if (form.controls.nativeName.hasError("required")) {
-        <mat-error>{{ "patients.form.error.NATIVE_NAME_REQUIRED" | translate }}</mat-error>
-      }
-    </mat-form-field>
+    <app-ds-text-field
+      [label]="'patients.form.nativeName.label' | translate"
+      [control]="form.controls.nativeName"
+      [errors]="NATIVE_NAME_ERRORS"
+      [required]="true"
+    />
 
-    <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
-      <mat-label>{{ "patients.form.phone.label" | translate }}</mat-label>
-      <input matInput formControlName="phone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" />
-      @if (form.controls.phone.hasError("iranianMobile")) {
-        <mat-error>{{ "patients.form.error.INVALID_PHONE" | translate }}</mat-error>
-      }
-    </mat-form-field>
+    <app-ds-text-field
+      [label]="'patients.form.phone.label' | translate"
+      [control]="form.controls.phone"
+      [errors]="PHONE_ERRORS"
+      [latin]="true"
+      inputMode="tel"
+      placeholder="09xxxxxxxxx"
+    />
   </div>
 
-  <mat-checkbox formControlName="contactUnavailable">
-    {{ "patients.form.contactUnavailable.label" | translate }}
-  </mat-checkbox>
+  <app-ds-checkbox-field
+    [label]="'patients.form.contactUnavailable.label' | translate"
+    [control]="form.controls.contactUnavailable"
+  />
 
-  <!-- Group-level rule, so it can't live in a single field's mat-error.
-       Shown only after the user has engaged with the form, per §15
-       ("Validation appears after blur or submit"). -->
+  <!-- Group-level rule, so it has no single field to attach to. Shown only
+       after the user has engaged with the form, per §15 ("Validation
+       appears after blur or submit"). -->
   @if (form.hasError("contactRequired") && form.touched) {
-    <p class="ds-alert ds-alert--danger" role="alert">
+    <app-ds-alert variant="danger">
       {{ "patients.form.error.CONTACT_REQUIRED" | translate }}
-    </p>
+    </app-ds-alert>
   }
 
   <!-- No [expanded] binding: it defaults to closed, and none of the fields
@@ -44,46 +45,40 @@
     </mat-expansion-panel-header>
 
     <div class="patients-form__row">
-      <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
-        <mat-label>{{ "patients.form.latinName.label" | translate }}</mat-label>
-        <input matInput formControlName="latinName" dir="ltr" />
-      </mat-form-field>
+      <app-ds-text-field
+        [label]="'patients.form.latinName.label' | translate"
+        [control]="form.controls.latinName"
+        [latin]="true"
+      />
 
-      <mat-form-field appearance="outline" class="patients-form__field">
-        <mat-label>{{ "patients.form.sex.label" | translate }}</mat-label>
-        <mat-select formControlName="sex">
-          <mat-option value="unspecified">{{ "patients.form.sex.unspecified" | translate }}</mat-option>
-          <mat-option value="male">{{ "patients.form.sex.male" | translate }}</mat-option>
-          <mat-option value="female">{{ "patients.form.sex.female" | translate }}</mat-option>
-        </mat-select>
-      </mat-form-field>
+      <app-ds-select-field
+        [label]="'patients.form.sex.label' | translate"
+        [control]="form.controls.sex"
+        [options]="SEX_OPTIONS"
+      />
     </div>
 
     <div class="patients-form__row">
-      <mat-form-field appearance="outline" class="patients-form__field">
-        <mat-label>{{ "patients.form.dateOfBirth.label" | translate }}</mat-label>
-        <input matInput [matDatepicker]="dateOfBirthPicker" formControlName="dateOfBirth" />
-        <mat-datepicker-toggle matIconSuffix [for]="dateOfBirthPicker"></mat-datepicker-toggle>
-        <mat-datepicker #dateOfBirthPicker></mat-datepicker>
-      </mat-form-field>
+      <app-ds-date-field
+        [label]="'patients.form.dateOfBirth.label' | translate"
+        [control]="form.controls.dateOfBirth"
+      />
     </div>
   </mat-expansion-panel>
 
   @if (errorMessage(); as message) {
-    <p class="ds-alert ds-alert--danger" role="alert">{{ message }}</p>
+    <app-ds-alert variant="danger">{{ message }}</app-ds-alert>
   }
 
   @if (successMessage(); as message) {
-    <p class="ds-alert ds-alert--success" role="status">{{ message }}</p>
+    <app-ds-alert variant="success">{{ message }}</app-ds-alert>
   }
 
   <div class="patients-form__actions">
-    <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
-      @if (submitting()) {
-        <mat-progress-spinner diameter="18" mode="indeterminate" />
-      } @else {
-        {{ "patients.form.submit" | translate }}
-      }
-    </button>
+    <app-ds-submit-button
+      [label]="'patients.form.submit' | translate"
+      [submitting]="submitting()"
+      [disabled]="form.invalid"
+    />
   </div>
 </form>

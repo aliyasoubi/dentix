@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from "@angular/core";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
-import { MatButtonModule } from "@angular/material/button";
-import { MatFormFieldModule } from "@angular/material/form-field";
-import { MatInputModule } from "@angular/material/input";
-import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
+import { DsFieldErrorKeys } from "../../../design-system/foundation/field/ds-field-errors";
+import { DsTextFieldComponent } from "../../../design-system/foundation/field/ds-text-field.component";
+import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { AddOfficeUserRequest } from "../office-users-api.service";
 
@@ -23,10 +23,9 @@ import { AddOfficeUserRequest } from "../office-users-api.service";
   selector: "app-add-user-form",
   imports: [
     ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
+    DsTextFieldComponent,
+    DsAlertComponent,
+    DsSubmitButtonComponent,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +44,15 @@ export class AddUserFormComponent {
   protected readonly form = this.formBuilder.nonNullable.group({
     email: ["", [Validators.required, Validators.email]],
   });
+
+  /**
+   * Declaration order is the display priority: an empty field should say it
+   * is required, not that it is a malformed address.
+   */
+  protected readonly EMAIL_ERRORS: DsFieldErrorKeys = {
+    required: "officeUsers.form.error.EMAIL_REQUIRED",
+    email: "officeUsers.form.error.INVALID_EMAIL",
+  };
 
   protected submit(): void {
     if (this.form.invalid) {

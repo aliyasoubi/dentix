@@ -1,0 +1,20 @@
+// Moved here from the global styles.scss when this became a component.
+// Scoped now rather than global: nothing outside the component needs to
+// name these classes, and keeping them global would have left the old
+// hand-rolled `<p class="ds-alert">` markup working, which is exactly the
+// duplication the component exists to end.
+.ds-alert {
+  margin: 0;
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+}
+
+.ds-alert--danger {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}
+
+.ds-alert--success {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
