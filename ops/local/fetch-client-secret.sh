@@ -4,11 +4,16 @@
 #
 # Needed because Keycloak regenerates this secret on every realm import and
 # keycloak/dentix-realm.json deliberately does not contain it (a committed
-# realm export must never carry a secret). Same procedure as the dev stack's
-# keycloak/README.md and CI's own fetch step — this just wraps it so the
-# rehearsal doesn't need a hand-assembled curl pipeline.
+# realm export must never carry a secret).
 #
-# Usage (from the repo root, after `docker compose -f docker-compose.prod.yml up -d keycloak`):
+# Uses Keycloak's own kcadm.sh rather than curl against the admin REST API:
+# the production Keycloak image ships no curl (verified — it is a UBI-micro
+# base), and unlike the dev stack this compose file publishes no Keycloak
+# port for the host to reach, since ADR-007 wants the admin surface off the
+# network entirely. kcadm.sh runs inside the container against localhost,
+# which satisfies both.
+#
+# Usage (from the repo root, after Keycloak reports healthy):
 #   ./ops/local/fetch-client-secret.sh
 set -euo pipefail
 
@@ -28,43 +33,30 @@ set -a && . "$ENV_FILE" && set +a
 CLIENT_ID="${OIDC_CLIENT_ID:-dentix-bff}"
 REALM="${KEYCLOAK_REALM:-dentix}"
 
-# Talks to Keycloak through the compose network rather than a published
-# port: the production stack deliberately exposes only Caddy, and the admin
-# API should not be reachable from outside the host at all (ADR-007: "Admin
-# console reachable only from an allow-listed network path").
 kc() {
   docker compose -f docker-compose.prod.yml --env-file "$ENV_FILE" \
-    exec -T keycloak "$@"
+    exec -T keycloak /opt/keycloak/bin/kcadm.sh "$@"
 }
 
-TOKEN=$(kc curl -sf \
-  -d "client_id=admin-cli" \
-  -d "username=${KEYCLOAK_ADMIN}" \
-  -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
-  -d "grant_type=password" \
-  "http://127.0.0.1:8080/realms/master/protocol/openid-connect/token" |
-  sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+# kcadm stores the session in the container, so this is one login followed by
+# two authenticated reads.
+kc config credentials \
+  --server http://127.0.0.1:8080 \
+  --realm master \
+  --user "$KEYCLOAK_ADMIN" \
+  --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
 
-if [ -z "$TOKEN" ]; then
-  echo "error: could not authenticate to Keycloak admin API" >&2
-  exit 1
-fi
-
-UUID=$(kc curl -sf -H "Authorization: Bearer ${TOKEN}" \
-  "http://127.0.0.1:8080/admin/realms/${REALM}/clients?clientId=${CLIENT_ID}" |
-  sed -n 's/^\[{"id":"\([^"]*\)".*/\1/p')
+UUID=$(kc get clients -r "$REALM" -q "clientId=${CLIENT_ID}" --fields id --format csv --noquotes | tr -d '\r')
 
 if [ -z "$UUID" ]; then
   echo "error: client '${CLIENT_ID}' not found in realm '${REALM}'" >&2
   exit 1
 fi
 
-SECRET=$(kc curl -sf -H "Authorization: Bearer ${TOKEN}" \
-  "http://127.0.0.1:8080/admin/realms/${REALM}/clients/${UUID}/client-secret" |
-  sed -n 's/.*"value":"\([^"]*\)".*/\1/p')
+SECRET=$(kc get "clients/${UUID}/client-secret" -r "$REALM" --fields value --format csv --noquotes | tr -d '\r')
 
 if [ -z "$SECRET" ]; then
-  echo "error: could not read client secret" >&2
+  echo "error: could not read the client secret" >&2
   exit 1
 fi
 

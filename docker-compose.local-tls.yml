@@ -1,0 +1,49 @@
+# Local-rehearsal overlay: makes the API trust Caddy's self-signed internal CA.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.local-tls.yml \
+#     --env-file .env.production up -d --build
+#
+# Why this is an overlay and not part of docker-compose.prod.yml: it solves a
+# problem that exists ONLY when the certificate is self-signed. On the VPS the
+# domains are public, Caddy uses Let's Encrypt, and its chain is already in the
+# system trust store — adding a CA-export service there would be dead weight
+# that also fails whenever Caddy has no local CA to export. Keeping it separate
+# means the production file describes exactly what production runs, and the one
+# genuine local-vs-deployed difference is visible on the command line instead of
+# hidden behind a conditional inside the deployed configuration.
+#
+# The API cannot simply read the CA out of Caddy's data volume directly: it runs
+# as an unprivileged user and Caddy keeps its PKI directory root-only, so the
+# read fails with a permissions error that looks exactly like a missing file.
+# This copies the root certificate into a small dedicated volume with
+# world-readable permissions instead.
+
+services:
+  caddy-ca-export:
+    image: alpine:3.22
+    restart: "no"
+    # `install -m 0644` rather than `cp`: it sets the mode as it copies, so the
+    # file is readable by the API's unprivileged user in one step.
+    command:
+      - sh
+      - -c
+      - install -m 0644 /caddy-data/caddy/pki/authorities/local/root.crt /ca/root.crt
+        && echo "exported Caddy local root CA"
+    volumes:
+      - caddy_data:/caddy-data:ro
+      - caddy_local_ca:/ca
+    depends_on:
+      caddy:
+        condition: service_healthy
+
+  api:
+    environment:
+      NODE_EXTRA_CA_CERTS: /ca/root.crt
+    volumes:
+      - caddy_local_ca:/ca:ro
+    depends_on:
+      caddy-ca-export:
+        condition: service_completed_successfully
+
+volumes:
+  caddy_local_ca:

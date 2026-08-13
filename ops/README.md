@@ -33,8 +33,13 @@ replaced**, taking every user's TOTP enrolment with it.
 
 ## Local rehearsal
 
-Everything runs on your machine. `*.localhost` resolves to 127.0.0.1 in
-current browsers, so no `/etc/hosts` editing is needed.
+Everything runs on your machine. `*.localhost` resolves to 127.0.0.1 on
+macOS and in current browsers, so no `/etc/hosts` editing is needed.
+
+Local runs add `-f docker-compose.local-tls.yml`, which teaches the API to
+trust Caddy's self-signed CA. That overlay is the one deliberate
+local-vs-deployed difference, and it exists only because the certificate is
+self-signed — see the file's own header.
 
 **1. Create the env file**
 
@@ -49,6 +54,11 @@ values, and generate the session key:
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
+Leave `OIDC_CLIENT_SECRET` at its placeholder for now. It has to be
+_something_ — Compose interpolates every service in the file even when you
+start a subset, so an empty value blocks the very `up` that brings Keycloak
+online to generate the real secret.
+
 **2. Stop the dev stack first** — it holds ports 5433/8080 and would compete:
 
 ```bash
@@ -59,7 +69,8 @@ docker compose down
 that Keycloak generates on first realm import):
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build postgres keycloak caddy
+docker compose -f docker-compose.prod.yml -f docker-compose.local-tls.yml \
+  --env-file .env.production up -d --build postgres keycloak caddy
 ```
 
 **4. Fetch the OIDC client secret and put it in `.env.production`**
@@ -68,45 +79,74 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 ./ops/local/fetch-client-secret.sh
 ```
 
-Copy the printed `OIDC_CLIENT_SECRET=...` line into `.env.production`,
-replacing the empty one.
+Replace the placeholder `OIDC_CLIENT_SECRET=` line with the printed one.
 
 **5. Start the rest** (runs migrations, then the API):
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml -f docker-compose.local-tls.yml \
+  --env-file .env.production up -d --build
 ```
 
 **6. Seed the office and a user.** The production image contains no seed
-scripts by design, so these run from the repo against the loopback-published
-Postgres port:
+scripts by design, so these run from the repo. Note both env overrides — they
+are not optional:
 
 ```bash
-./keycloak/seed-dev-user.sh                      # creates dr.dev in Keycloak
-POSTGRES_PORT=5434 npx ts-node -T apps/api/scripts/bootstrap-dev-office-user.ts <keycloak-user-id>
-```
+set -a && . ./.env.production && set +a
 
-**7. Open <https://dentix.localhost>.**
-
-Your browser will warn about the certificate: Caddy issued it from its own
-internal CA, which the OS does not trust yet. Either click through (you will
-need to do it for `auth.dentix.localhost` too, since the login redirect goes
-there), or trust the CA once:
-
-```bash
+# Keycloak has no published port here (ADR-007 keeps the admin surface off
+# the network), so reach it through Caddy, trusting Caddy's CA.
 docker compose -f docker-compose.prod.yml --env-file .env.production \
   cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/caddy-root.crt
-sudo security add-trusted-cert -d -r trustRoot \
-  -k /Library/Keychains/System.keychain /tmp/caddy-root.crt   # macOS
+KEYCLOAK_URL="https://${DENTIX_AUTH_DOMAIN}" CURL_CA_BUNDLE=/tmp/caddy-root.crt \
+  ./keycloak/seed-dev-user.sh          # prints the new user's id
+
+# OIDC_ISSUER_URL must match what the API will compute at login. Without it
+# the script records the dev default (http://localhost:8080/...), the subject
+# identifiers never match, and login fails with NO_ACTIVE_ACCOUNT.
+POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="${POSTGRES_HOST_PORT}" \
+OIDC_ISSUER_URL="https://${DENTIX_AUTH_DOMAIN}/realms/dentix" \
+  npx ts-node -T apps/api/scripts/bootstrap-dev-office-user.ts <keycloak-user-id>
 ```
 
-The API itself already trusts that CA — `docker-compose.prod.yml` mounts
-Caddy's data volume read-only and points `NODE_EXTRA_CA_CERTS` at the root
-certificate, because the server-to-server token exchange with Keycloak goes
-over the same HTTPS URL the browser uses.
+**7. Trust the CA, then open <https://dentix.localhost>.**
 
-**Rehearsal is successful when** you can log in through Keycloak over HTTPS,
-create a patient, and see it in the list — all against images, not `ng serve`.
+Caddy issued the certificate from its own internal CA, which your OS does not
+trust yet. Clicking through the warning is not enough here — the OIDC flow
+redirects between two hostnames and some browsers refuse a self-signed origin
+outright — so install the root certificate once:
+
+```bash
+# macOS; needs your password, so run it yourself
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain /tmp/caddy-root.crt
+```
+
+**Rehearsal is successful when** you can log in through Keycloak over HTTPS
+(first login enrols TOTP), create a patient, and see it in the list — all
+against built images, not `ng serve`.
+
+### Verified so far
+
+Everything up to the interactive login has been exercised end to end against
+this stack:
+
+- Keycloak in production mode on Postgres, healthy; realm imported.
+- Migrations applied by the one-shot `api-migrate` service.
+- HTTPS through Caddy with genuine certificate verification (not `curl -k`).
+- `/health` and `/api/v1/bootstrap` → 200.
+- `/` serves the Angular shell with `lang="fa-IR" dir="rtl"` from inside the
+  container, and `/patients` deep-links to it rather than 404ing — which is
+  what proves the image's `WEB_BUILD_ROOT` wiring.
+- `/api/docs` → **404**, confirming the Swagger gate fails closed in production.
+- `/api/v1/auth/login` → 302 to Keycloak carrying PKCE `S256` and the HTTPS
+  production `redirect_uri`; Keycloak serves the real "Sign in to Dentix" form
+  over TLS in response.
+
+The remaining step is the interactive one: entering credentials, enrolling
+TOTP, and creating a patient in a browser. It needs the CA trusted (your
+password) and a TOTP app, so it is yours to run.
 
 ---
 

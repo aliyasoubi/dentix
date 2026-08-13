@@ -127,16 +127,16 @@ services:
       # Caddy is the one proxy in front of this process. Without it the
       # throttler buckets the whole office under Caddy's container IP.
       TRUST_PROXY_HOPS: 1
-      # The API's server-to-server calls to Keycloak (token exchange, JWKS)
-      # go to the public HTTPS URL, so Node has to trust whoever issued that
-      # certificate. Locally that is Caddy's internal CA, mounted read-only
-      # below; with a real public domain the Let's Encrypt chain is already
-      # in the system store and this simply goes unused.
-      NODE_EXTRA_CA_CERTS: /caddy-data/caddy/pki/authorities/local/root.crt
       # ENABLE_API_DOCS is deliberately unset — the Swagger gate fails
       # closed, so production gets no /api/docs endpoint.
-    volumes:
-      - caddy_data:/caddy-data:ro
+      #
+      # NOTE: the API's server-to-server calls to Keycloak (OIDC discovery,
+      # token exchange, JWKS) go to the public HTTPS issuer URL — they must,
+      # since the issuer inside the token is what gets validated. With a real
+      # public domain the Let's Encrypt chain is already in the system trust
+      # store and nothing further is needed. For a *local* rehearsal against
+      # Caddy's self-signed internal CA, add the overlay:
+      #   -f docker-compose.prod.yml -f docker-compose.local-tls.yml
     depends_on:
       api-migrate:
         condition: service_completed_successfully
@@ -169,6 +169,18 @@ services:
       - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    # Makes the public hostnames resolve to Caddy *inside* the compose network
+    # too. The API's OIDC discovery call goes to the same public issuer URL the
+    # browser uses (it must — the issuer in the token is what gets validated),
+    # and without this it fails with ENOTFOUND: `*.localhost` is a browser
+    # convention, not DNS, so nothing in the container network resolves it.
+    # Useful on the VPS as well, where it keeps API→Keycloak traffic inside the
+    # host instead of hairpinning out to the public IP and back.
+    networks:
+      default:
+        aliases:
+          - ${DENTIX_APP_DOMAIN}
+          - ${DENTIX_AUTH_DOMAIN}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:2019/config/"]
       interval: 5s
