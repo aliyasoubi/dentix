@@ -1,0 +1,30 @@
+# Keeps the build context small and, more importantly, keeps host state out
+# of the image: a copied node_modules would carry the host's platform-specific
+# binaries, and a copied .env would bake real secrets into an image layer.
+node_modules
+**/node_modules
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Build output — the image builds its own from source.
+dist
+**/dist
+**/.angular
+coverage
+**/coverage
+
+.git
+.github
+.claude
+*.log
+tmp
+**/tmp
+
+# Docs and tests aren't part of the runtime image.
+docs
+**/*.spec.ts
+**/*.int-spec.ts
+**/*.api-spec.ts
+**/*.stories.ts

@@ -34,5 +34,43 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.66.0",
     "prettier": "3.9.6"
+  },
+  "//optionalDependencies": [
+    "Workaround for npm/cli#4828, which broke CI from commit b764197 (S8) until it was found.",
+    "npm records ONLY the current platform's native binaries as installable lockfile entries, so",
+    "regenerating the lockfile on macOS silently dropped every Linux binary. The failure mode is",
+    "deliberately quiet: `npm ci` on Linux SUCCEEDS having installed no native binding at all, and",
+    "the error only appears later as 'Cannot find native binding' during the web build or tests.",
+    "Note `npm install` does NOT repair this — it honours the lockfile, so absent entries stay",
+    "absent; the entries have to be declared here to exist for any platform.",
+    "Each package's own os/cpu constraints mean a machine still installs only the variant it can",
+    "use, so this costs a Mac developer nothing. glibc (-gnu/-glibc) variants only: the runtime",
+    "image is Debian-based. Versions track the ROOT copy of each package.",
+    "KEEP THESE IN LOCKSTEP with their parent packages after any Angular/build-tooling upgrade —",
+    "a stale version reintroduces the identical failure. CI now builds the production image, so a",
+    "regression fails there; to check locally run:",
+    "  docker build -f apps/api/Dockerfile -t dentix-api:local ."
+  ],
+  "optionalDependencies": {
+    "@esbuild/linux-arm64": "0.28.1",
+    "@esbuild/linux-x64": "0.28.1",
+    "@lmdb/lmdb-linux-arm64": "3.5.6",
+    "@lmdb/lmdb-linux-x64": "3.5.6",
+    "@msgpackr-extract/msgpackr-extract-linux-arm64": "3.0.4",
+    "@msgpackr-extract/msgpackr-extract-linux-x64": "3.0.4",
+    "@napi-rs/nice-linux-arm64-gnu": "1.1.1",
+    "@napi-rs/nice-linux-x64-gnu": "1.1.1",
+    "@oxc-parser/binding-linux-arm64-gnu": "0.142.0",
+    "@oxc-parser/binding-linux-x64-gnu": "0.142.0",
+    "@oxc-resolver/binding-linux-arm64-gnu": "11.24.2",
+    "@oxc-resolver/binding-linux-x64-gnu": "11.24.2",
+    "@parcel/watcher-linux-arm64-glibc": "2.6.0",
+    "@parcel/watcher-linux-x64-glibc": "2.6.0",
+    "@rolldown/binding-linux-arm64-gnu": "1.2.0",
+    "@rolldown/binding-linux-x64-gnu": "1.2.0",
+    "@unrs/resolver-binding-linux-arm64-gnu": "1.12.2",
+    "@unrs/resolver-binding-linux-x64-gnu": "1.12.2",
+    "lightningcss-linux-arm64-gnu": "1.33.0",
+    "lightningcss-linux-x64-gnu": "1.33.0"
   }
 }

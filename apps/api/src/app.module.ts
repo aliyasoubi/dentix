@@ -16,17 +16,27 @@ import { dataSourceOptions } from "./persistence/data-source";
 // Same-origin by design (09-authentication-session-architecture.md:
 // "Browser API calls use the same origin; CORS is disabled by default")
 // — the __Host- session cookie and CsrfGuard's Origin check both depend
-// on it. In the ADR-010 target deployment a reverse proxy (nginx/Caddy)
-// presents that single origin, serving the built Angular app itself and
-// only forwarding /api to this process — this module wouldn't even see
-// static-asset requests there. Locally there's no reverse proxy yet, so
-// this process serves apps/web's build directly, on the same origin the
-// whole OIDC flow already assumes. Falls back to __dirname (an unbuilt
-// apps/web/dist is a normal state — `npm run build` hasn't run yet — 404s
-// on unknown paths, not a startup crash) when the repo root can't be
-// found, same reasoning as data-source.ts.
+// on it. The ADR-010 reverse proxy (Caddy) terminates TLS and presents
+// that single origin, but it forwards *everything* to this process rather
+// than serving the bundle itself, so this module is what actually serves
+// the Angular app in every environment — one code path, dev and
+// production, instead of a static-file arrangement that only exists in
+// one of them.
+//
+// Resolution order matters. WEB_BUILD_ROOT wins because a container image
+// is precisely the case the repo-walk cannot handle: findRepoRoot() keys
+// off docker-compose.yml, a dev-only file that must never ship in an
+// image, so inside the container the walk correctly finds nothing. Without
+// the override the fallback below would resolve to __dirname, quietly
+// serving 404s for every UI route while the API itself looked healthy.
+// The walk stays as the dev default so nobody has to set an env var to
+// run locally. Final fallback is __dirname: an unbuilt apps/web/dist is a
+// normal state (`npm run build` hasn't run yet) and should 404 on unknown
+// paths, not crash at startup — same reasoning as data-source.ts.
 const repoRoot = findRepoRoot(__dirname);
-const webBuildRoot = repoRoot ? join(repoRoot, "apps", "web", "dist", "web", "browser") : join(__dirname);
+const webBuildRoot =
+  process.env.WEB_BUILD_ROOT ??
+  (repoRoot ? join(repoRoot, "apps", "web", "dist", "web", "browser") : join(__dirname));
 
 @Module({
   imports: [

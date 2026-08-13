@@ -116,3 +116,14 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Builds the artifact that actually gets deployed (ADR-010 /
+      # 06-operations/01-deployment.md's "versioned API container"), rather
+      # than only the host-native build above. This runs `npm ci` inside a
+      # clean linux image, which is what makes it catch dependency problems
+      # that are invisible on a developer's machine — including the class of
+      # bug that broke this workflow from S8 onwards, where the lockfile
+      # carried only macOS native binaries and `npm ci` on Linux installed
+      # no native binding at all.
+      - name: Build the production API image
+        run: docker build -f apps/api/Dockerfile -t dentix-api:ci .

@@ -390,3 +390,41 @@ this codebase calls with any input, let alone attacker-controlled input — and 
 exists at all behind the `ENABLE_API_DOCS` opt-in, itself fail-closed in production. Documented at
 the call site in `main.ts` rather than left as a silent `npm audit` line item; revisit when
 `@nestjs/swagger` ships a fix.
+
+## CI had been red since S8 — found while containerising, not by watching CI
+
+**The most important defect in this release, and it was self-inflicted.** GitHub Actions had
+failed on *every* push since commit `b764197` (S8, the OpenAPI slice). The last green run was
+`9178d7a`. Nine consecutive red runs, including every "full gate green" claim made in the
+hardening passes above — those claims were true *locally* and were never checked against CI,
+which is exactly the gap that let this run for days.
+
+Root cause, and it is a nasty one because it is invisible on the machine that caused it: adding
+`openapi-typescript` in S8 regenerated `package-lock.json` on macOS/arm64, and npm (npm/cli#4828)
+records only the *current platform's* native binaries as installable lockfile entries. The
+regenerated lockfile therefore contained `@esbuild/darwin-arm64`, `lightningcss-darwin-arm64`, and
+`@napi-rs/nice-darwin-arm64` — and no Linux equivalents at all. The failure mode is deliberately
+quiet: `npm ci` on Linux **succeeds**, having installed no native binding whatsoever, and the
+error only appears later as esbuild's `Cannot find native binding` when the web build or Vitest
+first tries to run. CI's "Install dependencies" step was green on every one of those nine runs;
+"Unit tests" was where it died.
+
+Fixed by declaring the Linux variants as explicit root `optionalDependencies`, which forces them
+into the lockfile for every platform; each machine still installs only the variant its own
+`os`/`cpu` constraints permit, so nothing extra lands on a developer's Mac. `package.json` carries
+a `//optionalDependencies` note recording that these versions must be bumped in lockstep with
+`esbuild`/`lightningcss`/`@napi-rs/nice`, because a silent mismatch reproduces the identical
+failure.
+
+Two process changes, since the fix alone would not have caught it:
+
+1. **CI now builds the production API image** (`docker build -f apps/api/Dockerfile`). That runs
+   `npm ci` inside a clean Linux image, so any future dependency problem that is invisible on a
+   developer's machine fails the build directly rather than surfacing as a mysterious runtime
+   error — and it verifies the artifact that actually gets deployed, per
+   `06-operations/01-deployment.md`'s "versioned API container".
+2. **Check CI, don't infer it from a local run.** The local gate and CI are different machines
+   with different architectures; "green here" is evidence about here.
+
+Discovered only because containerising the API for ADR-010 ran `npm ci` on Linux for the first
+time and hit the identical error — which is itself the argument for having containerised earlier.
