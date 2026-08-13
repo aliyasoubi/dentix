@@ -17,6 +17,7 @@
   "patients.form.latinName.label": "نام لاتین (اختیاری)",
   "patients.form.phone.label": "شماره موبایل",
   "patients.form.dateOfBirth.label": "تاریخ تولد (اختیاری)",
+  "patients.form.moreDetails": "جزئیات بیشتر (اختیاری)",
   "patients.form.contactUnavailable.label": "بیمار روش تماسی ندارد",
   "patients.form.sex.label": "جنسیت",
   "patients.form.sex.male": "مرد",

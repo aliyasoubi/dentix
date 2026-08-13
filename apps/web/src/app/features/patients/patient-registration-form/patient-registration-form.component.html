@@ -1,4 +1,8 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="patients-form">
+  <!-- Only what a front-desk registration genuinely needs to start a chart:
+       the name, and one way to reach the patient. Everything else is real
+       but optional data, tucked behind the panel below rather than shown
+       up front on every single registration. -->
   <div class="patients-form__row">
     <mat-form-field appearance="outline" class="patients-form__field">
       <mat-label>{{ "patients.form.nativeName.label" | translate }}</mat-label>
@@ -9,36 +13,11 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
-      <mat-label>{{ "patients.form.latinName.label" | translate }}</mat-label>
-      <input matInput formControlName="latinName" dir="ltr" />
-    </mat-form-field>
-  </div>
-
-  <div class="patients-form__row">
-    <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
       <mat-label>{{ "patients.form.phone.label" | translate }}</mat-label>
       <input matInput formControlName="phone" dir="ltr" inputmode="tel" placeholder="09xxxxxxxxx" />
       @if (form.controls.phone.hasError("iranianMobile")) {
         <mat-error>{{ "patients.form.error.INVALID_PHONE" | translate }}</mat-error>
       }
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="patients-form__field">
-      <mat-label>{{ "patients.form.sex.label" | translate }}</mat-label>
-      <mat-select formControlName="sex">
-        <mat-option value="unspecified">{{ "patients.form.sex.unspecified" | translate }}</mat-option>
-        <mat-option value="male">{{ "patients.form.sex.male" | translate }}</mat-option>
-        <mat-option value="female">{{ "patients.form.sex.female" | translate }}</mat-option>
-      </mat-select>
-    </mat-form-field>
-  </div>
-
-  <div class="patients-form__row">
-    <mat-form-field appearance="outline" class="patients-form__field">
-      <mat-label>{{ "patients.form.dateOfBirth.label" | translate }}</mat-label>
-      <input matInput [matDatepicker]="dateOfBirthPicker" formControlName="dateOfBirth" />
-      <mat-datepicker-toggle matIconSuffix [for]="dateOfBirthPicker"></mat-datepicker-toggle>
-      <mat-datepicker #dateOfBirthPicker></mat-datepicker>
     </mat-form-field>
   </div>
 
@@ -54,6 +33,41 @@
       {{ "patients.form.error.CONTACT_REQUIRED" | translate }}
     </p>
   }
+
+  <!-- No [expanded] binding: it defaults to closed, and none of the fields
+       inside can carry a validation error while collapsed (latinName and
+       dateOfBirth have no validators; sex always has a default) — so there
+       is nothing here that would need to force itself open. -->
+  <mat-expansion-panel class="patients-form__more">
+    <mat-expansion-panel-header>
+      <mat-panel-title>{{ "patients.form.moreDetails" | translate }}</mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <div class="patients-form__row">
+      <mat-form-field appearance="outline" class="patients-form__field patients-form__field--ltr">
+        <mat-label>{{ "patients.form.latinName.label" | translate }}</mat-label>
+        <input matInput formControlName="latinName" dir="ltr" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="patients-form__field">
+        <mat-label>{{ "patients.form.sex.label" | translate }}</mat-label>
+        <mat-select formControlName="sex">
+          <mat-option value="unspecified">{{ "patients.form.sex.unspecified" | translate }}</mat-option>
+          <mat-option value="male">{{ "patients.form.sex.male" | translate }}</mat-option>
+          <mat-option value="female">{{ "patients.form.sex.female" | translate }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="patients-form__row">
+      <mat-form-field appearance="outline" class="patients-form__field">
+        <mat-label>{{ "patients.form.dateOfBirth.label" | translate }}</mat-label>
+        <input matInput [matDatepicker]="dateOfBirthPicker" formControlName="dateOfBirth" />
+        <mat-datepicker-toggle matIconSuffix [for]="dateOfBirthPicker"></mat-datepicker-toggle>
+        <mat-datepicker #dateOfBirthPicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+  </mat-expansion-panel>
 
   @if (errorMessage(); as message) {
     <p class="ds-alert ds-alert--danger" role="alert">{{ message }}</p>

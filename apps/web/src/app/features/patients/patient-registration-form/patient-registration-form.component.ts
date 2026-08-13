@@ -4,6 +4,7 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatCheckboxModule } from "@angular/material/checkbox";
 import { DateAdapter } from "@angular/material/core";
 import { MatDatepickerModule } from "@angular/material/datepicker";
+import { MatExpansionModule } from "@angular/material/expansion";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
@@ -34,6 +35,7 @@ import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form
     MatButtonModule,
     MatCheckboxModule,
     MatDatepickerModule,
+    MatExpansionModule,
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,

@@ -26,4 +26,22 @@
     display: flex;
     justify-content: flex-end;
   }
+
+  // §9.2: "Use borders for ordinary containers... Do not wrap every section
+  // in a raised card" — overrides Material's default panel elevation/shadow
+  // with the same border treatment the rest of this design system uses,
+  // rather than introducing a second "raised" visual language for one field
+  // group.
+  &__more.mat-expansion-panel {
+    box-shadow: none !important;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-md) !important;
+
+    .mat-expansion-panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ds-space-4);
+      padding-block-start: var(--ds-space-2);
+    }
+  }
 }
