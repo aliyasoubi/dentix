@@ -60,11 +60,15 @@ _something_ — Compose interpolates every service in the file even when you
 start a subset, so an empty value blocks the very `up` that brings Keycloak
 online to generate the real secret.
 
-**2. Stop the dev stack first** — it holds ports 5433/8080 and would compete:
-
-```bash
-docker compose down
-```
+**2. The dev stack can stay up.** `docker-compose.prod.yml` declares its own
+Compose project name (`dentix-prod`), so it no longer shares a container
+namespace with `docker-compose.yml` (dev), and their ports don't overlap
+either (5433/8080 vs. 5434, and dev's Keycloak publishes 8080 while this
+stack's doesn't publish one at all). **Always include `--env-file
+.env.production` on every command below, even plain `down`** — Compose needs
+it to resolve `${DENTIX_AUTH_DOMAIN}` etc. regardless of what you're asking
+it to do, and running a bare `docker compose <anything>` from this directory
+targets the dev stack, not this one.
 
 **3. Start the infrastructure** (not the API yet — it needs the client secret
 that Keycloak generates on first realm import):

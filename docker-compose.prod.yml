@@ -15,6 +15,21 @@
 #   - MinIO — dev/S7 only; "MinIO/S3 production setup" is explicitly R6.
 # Adding them here before they have a job to do is the overengineering this
 # project's sequencing document exists to prevent.
+#
+# `name:` below is load-bearing, not decoration. Compose derives a project
+# name from the directory when none is set — both this file and
+# docker-compose.yml (dev) live in the same directory, so without an explicit
+# name they collide under the identical default ("dentix") and share one
+# container/network namespace. Found the hard way: running `docker compose up`
+# for the dev stack while this one was up RECREATED this stack's postgres and
+# keycloak containers in place, swapping them onto the dev stack's volumes —
+# no data was lost (named volumes are independent of the container that was
+# just pointing at them), but it did take the rehearsal's identity provider
+# and database out from under its still-running api/caddy containers. An
+# explicit, distinct name makes the two stacks genuinely independent instead
+# of same-named siblings that happen not to collide as long as you remember
+# never to run both `docker compose` (bare) and this file at once.
+name: dentix-prod
 
 services:
   postgres:
@@ -124,6 +139,15 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?set OIDC_CLIENT_SECRET}
       OIDC_REDIRECT_URI: https://${DENTIX_APP_DOMAIN:?set DENTIX_APP_DOMAIN}/api/v1/auth/callback
       APP_BASE_URL: https://${DENTIX_APP_DOMAIN}
+      # AddOfficeUserUseCase's read-only Keycloak admin lookups. The internal
+      # service address, not the public HTTPS issuer — ADR-007 wants "admin
+      # console reachable only from an allow-listed network path", and this
+      # keeps that server-to-server call inside the compose network rather
+      # than round-tripping through the public domain.
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_REALM: dentix
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
       # Caddy is the one proxy in front of this process. Without it the
       # throttler buckets the whole office under Caddy's container IP.
       TRUST_PROXY_HOPS: 1
