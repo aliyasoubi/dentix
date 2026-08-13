@@ -3,11 +3,7 @@
   [description]="'officeUsers.page.description' | translate"
 />
 
-<section class="office-users-page__section">
-  <h2 class="office-users-page__section-title ds-text-section-title">
-    {{ "officeUsers.form.title" | translate }}
-  </h2>
-
+<app-ds-section [heading]="'officeUsers.form.title' | translate">
   <app-add-user-form
     [submitting]="submitting()"
     [errorMessage]="submitError()"
@@ -20,4 +16,4 @@
     {{ "officeUsers.form.reauthenticate" | translate }}
   </button>
   }
-</section>
+</app-ds-section>

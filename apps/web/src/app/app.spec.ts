@@ -18,10 +18,26 @@ describe("App", () => {
     expect(app).toBeTruthy();
   });
 
-  it("renders the RTL app shell with the product name", () => {
+  // Asserts the shell is composed and given a title, not the class names
+  // inside it — those are DsAppShellComponent's business, and the previous
+  // version of this test broke purely because the toolbar markup moved
+  // there, without anything the user sees having changed.
+  it("renders the product name inside the app shell", () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector(".app-toolbar__title")).toBeTruthy();
+
+    const shell = compiled.querySelector("app-ds-app-shell");
+    expect(shell).toBeTruthy();
+    expect(shell?.textContent?.trim()).not.toBe("");
+  });
+
+  it("gives routed pages a main landmark to render into", () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector("main")).toBeTruthy();
+    expect(compiled.querySelector("main router-outlet")).toBeTruthy();
   });
 });

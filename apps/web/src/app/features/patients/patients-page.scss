@@ -1,20 +1,5 @@
-// §9.2: "Use borders for ordinary containers... Do not wrap every section
-// in a raised card" — border + md radius, no shadow.
-//
-// Only the page's own section chrome lives here now. The form's layout moved
-// to PatientRegistrationFormComponent, the search header to
-// PatientSearchComponent, and the table styling to DsDataTableComponent —
-// each next to the markup it actually styles.
-.patients-page {
-  &__section {
-    background: var(--ds-surface);
-    border: 1px solid var(--ds-border);
-    border-radius: var(--ds-radius-md);
-    padding: var(--ds-space-6);
-    margin-block-end: var(--ds-space-6);
-  }
-
-  &__section-title {
-    margin-block-end: var(--ds-space-4);
-  }
-}
+// Intentionally minimal: the section chrome moved to DsSectionComponent,
+// the form's layout to PatientRegistrationFormComponent, the search header
+// to PatientSearchComponent, and the table styling to DsDataTableComponent
+// — each next to the markup it actually styles. This page composes them and
+// styles nothing itself.

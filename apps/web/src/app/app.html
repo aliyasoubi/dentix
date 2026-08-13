@@ -1,15 +1,17 @@
-<mat-toolbar class="app-toolbar">
-  <img src="/brand/dentix-icon.svg" alt="" class="app-toolbar__logo" width="24" height="24" />
-  <span class="app-toolbar__title">{{ "app.title" | translate }}</span>
-  <span class="app-toolbar__spacer"></span>
-  @if (auth.isAuthenticated()) { @if (auth.session()?.isOfficeAdmin) {
-  <a mat-button routerLink="/office-users">{{ "common.nav.addUser" | translate }}</a>
+<app-ds-app-shell [brandTitle]="'app.title' | translate">
+  <!-- One projectable root node per @if, deliberately. Angular only honours
+       a slot selector when the surrounding control-flow block has a single
+       root node; with several, the content silently falls through to the
+       default slot instead — which here would drop the session controls into
+       the page body rather than the toolbar (NG8011). -->
+  @if (auth.isAuthenticated() && auth.session()?.isOfficeAdmin) {
+  <a dsAppShellNav mat-button routerLink="/office-users"> {{ "common.nav.addUser" | translate }} </a>
+  } @if (auth.isAuthenticated()) {
+  <ng-container dsAppShellActions>
+    <span class="app__user">{{ auth.session()?.displayName }}</span>
+    <button mat-stroked-button (click)="logout()">{{ "common.actions.logout" | translate }}</button>
+  </ng-container>
   }
-  <span class="app-toolbar__user">{{ auth.session()?.displayName }}</span>
-  <button mat-stroked-button (click)="logout()">{{ "common.actions.logout" | translate }}</button>
-  }
-</mat-toolbar>
 
-<main class="app-main">
   <router-outlet />
-</main>
+</app-ds-app-shell>

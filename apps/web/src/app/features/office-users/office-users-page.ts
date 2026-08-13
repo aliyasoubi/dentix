@@ -5,6 +5,7 @@ import { ApiErrorMessageService, extractApiErrorCode } from "../../core/errors/a
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { TranslationService } from "../../core/i18n/translation.service";
 import { DsPageHeaderComponent } from "../../design-system/product/page-header/ds-page-header.component";
+import { DsSectionComponent } from "../../design-system/product/section/ds-section.component";
 import { AddUserFormComponent } from "./add-user-form/add-user-form.component";
 import { AddOfficeUserRequest, OfficeUsersApiService } from "./office-users-api.service";
 
@@ -28,7 +29,7 @@ const KNOWN_ERROR_CODES = new Set([
  */
 @Component({
   selector: "app-office-users-page",
-  imports: [DsPageHeaderComponent, AddUserFormComponent, MatButtonModule, TranslatePipe],
+  imports: [DsPageHeaderComponent, DsSectionComponent, AddUserFormComponent, MatButtonModule, TranslatePipe],
   templateUrl: "./office-users-page.html",
   styleUrl: "./office-users-page.scss",
 })

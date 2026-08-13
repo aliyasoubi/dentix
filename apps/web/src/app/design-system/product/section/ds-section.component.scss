@@ -1,0 +1,24 @@
+// §9.2: "Use borders for ordinary containers... Do not wrap every section
+// in a raised card" — border + md radius, deliberately no shadow.
+:host {
+  display: block;
+  margin-block-end: var(--ds-space-6);
+}
+
+// The last section on a page should not push space past the page's own
+// padding; :host-context isn't needed for this, the sibling rule is enough.
+:host(:last-child) {
+  margin-block-end: 0;
+}
+
+.ds-section {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-6);
+
+  &__heading {
+    margin-block-start: 0;
+    margin-block-end: var(--ds-space-4);
+  }
+}

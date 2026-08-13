@@ -3,18 +3,16 @@
   [description]="'patients.page.description' | translate"
 />
 
-<section class="patients-page__section">
-  <h2 class="patients-page__section-title ds-text-section-title">{{ "patients.form.title" | translate }}</h2>
-
+<app-ds-section [heading]="'patients.form.title' | translate">
   <app-patient-registration-form
     [submitting]="submitting()"
     [errorMessage]="submitError()"
     [successMessage]="successMessage()"
     (submitted)="create($event)"
   />
-</section>
+</app-ds-section>
 
-<section class="patients-page__section">
+<app-ds-section>
   <app-patient-search
     [query]="searchQuery()"
     [results]="results()"
@@ -23,4 +21,4 @@
     [errorMessage]="searchError()"
     (queryChange)="onQueryChange($event)"
   />
-</section>
+</app-ds-section>

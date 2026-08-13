@@ -1,13 +1,13 @@
 import { Component, inject } from "@angular/core";
 import { RouterLink, RouterOutlet } from "@angular/router";
-import { MatToolbarModule } from "@angular/material/toolbar";
 import { MatButtonModule } from "@angular/material/button";
 import { AuthService } from "./core/auth/auth.service";
 import { TranslatePipe } from "./core/i18n/translate.pipe";
+import { DsAppShellComponent } from "./design-system/product/app-shell/ds-app-shell.component";
 
 @Component({
   selector: "app-root",
-  imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, MatButtonModule, DsAppShellComponent, TranslatePipe],
   templateUrl: "./app.html",
   styleUrl: "./app.scss",
 })

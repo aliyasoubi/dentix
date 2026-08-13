@@ -3,6 +3,7 @@ import { ApiErrorMessageService } from "../../core/errors/api-error-message.serv
 import { TranslationService } from "../../core/i18n/translation.service";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
 import { DsPageHeaderComponent } from "../../design-system/product/page-header/ds-page-header.component";
+import { DsSectionComponent } from "../../design-system/product/section/ds-section.component";
 import { PatientRegistrationFormComponent } from "./patient-registration-form/patient-registration-form.component";
 import { PatientSearchComponent } from "./patient-search/patient-search.component";
 import { CreatePatientRequest, PatientSearchResult, PatientsApiService } from "./patients-api.service";
@@ -33,7 +34,13 @@ const KNOWN_ERROR_CODES = new Set([
  */
 @Component({
   selector: "app-patients-page",
-  imports: [DsPageHeaderComponent, PatientRegistrationFormComponent, PatientSearchComponent, TranslatePipe],
+  imports: [
+    DsPageHeaderComponent,
+    DsSectionComponent,
+    PatientRegistrationFormComponent,
+    PatientSearchComponent,
+    TranslatePipe,
+  ],
   templateUrl: "./patients-page.html",
   styleUrl: "./patients-page.scss",
 })
