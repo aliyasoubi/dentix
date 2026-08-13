@@ -1,0 +1,35 @@
+# ADR-010's reverse proxy: terminates TLS and presents the single origin the
+# BFF session design requires (09-authentication-session-architecture.md).
+#
+# No `tls` directive anywhere on purpose. Caddy's automatic HTTPS picks the
+# right issuer from the hostname itself: `localhost` and any `*.localhost`
+# name get a certificate from Caddy's own internal CA, and a real public
+# domain gets one from Let's Encrypt. That is what makes this the *same*
+# file locally and on the VPS — only the two domain variables change, so the
+# local run is a genuine rehearsal of the deployed configuration rather than
+# a lookalike with a different TLS story.
+#
+# Two hostnames rather than one, because OIDC redirects the *browser* to
+# Keycloak: the identity provider has to be reachable from the user's
+# machine over TLS, not just from the API over the container network.
+# `*.localhost` resolves to 127.0.0.1 in current browsers with no /etc/hosts
+# editing, so the local rehearsal needs no host-level setup.
+
+{
+	# Only used when the domains are public (ACME); ignored for *.localhost.
+	email {$ACME_EMAIL:ops@example.invalid}
+}
+
+{$DENTIX_APP_DOMAIN:dentix.localhost} {
+	encode zstd gzip
+
+	# Everything goes to the API, including the Angular bundle — the API
+	# serves it (see app.module.ts) so there is exactly one origin and one
+	# code path for static serving in every environment.
+	reverse_proxy api:3000
+}
+
+{$DENTIX_AUTH_DOMAIN:auth.dentix.localhost} {
+	encode zstd gzip
+	reverse_proxy keycloak:8080
+}

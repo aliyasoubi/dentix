@@ -28,6 +28,7 @@
     "test:api": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-api.json",
     "db:migrate": "typeorm-ts-node-commonjs migration:run -d src/persistence/data-source.ts",
     "db:migrate:down": "typeorm-ts-node-commonjs migration:revert -d src/persistence/data-source.ts",
+    "db:migrate:prod": "node ../../node_modules/typeorm/cli.js migration:run -d dist/src/persistence/data-source.js",
     "dev:bootstrap-office-user": "ts-node -T scripts/bootstrap-dev-office-user.ts",
     "preopenapi:generate": "npm run build --workspace @dentix/kernel",
     "openapi:generate": "ts-node -T scripts/generate-openapi.ts",

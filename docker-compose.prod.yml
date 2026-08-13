@@ -1,0 +1,183 @@
+# ADR-010's production stack: a single Docker-Compose deployment with every
+# service self-hosted. This is the *same* file for the local rehearsal and
+# the VPS — only the values in .env change (see .env.production.example).
+# That is the point: rehearsing locally is only meaningful if it exercises
+# the deployed configuration rather than a lookalike.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Deliberately NOT included yet, per 07-plans/00-build-sequencing.md:
+#   - Redis/BullMQ — "add only when the first reliable asynchronous workflow
+#     exists". Nothing here consumes a queue.
+#   - The worker — today it is a one-shot fixture renderer (apps/worker/src/main.ts),
+#     not a daemon. Containerising it as a long-running service would be
+#     building the R2 messaging platform ahead of any consumer.
+#   - MinIO — dev/S7 only; "MinIO/S3 production setup" is explicitly R6.
+# Adding them here before they have a job to do is the overengineering this
+# project's sequencing document exists to prevent.
+
+services:
+  postgres:
+    image: postgres:18.0
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - dentix_prod_postgres_data:/var/lib/postgresql
+      - ./ops/postgres:/docker-entrypoint-initdb.d:ro
+    # Loopback-bound and on a non-default port: needed locally so the
+    # one-off office/user bootstrap script can reach the database from the
+    # host during the rehearsal. On the VPS, delete this block — nothing
+    # outside the compose network should reach Postgres at all.
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7
+    restart: unless-stopped
+    # `start`, not `start-dev`. start-dev runs an embedded H2 database that
+    # Keycloak's own documentation excludes from production use: it is lost
+    # when the container is replaced, taking every user's TOTP enrolment
+    # with it — which for this system means every account silently losing
+    # its second factor on a routine redeploy.
+    command: start --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # The public URL Keycloak puts in its discovery document and tokens.
+      # Must be the browser-facing origin, not the container name, or the
+      # issuer in the token won't match what the API validates against.
+      KC_HOSTNAME: https://${DENTIX_AUTH_DOMAIN:?set DENTIX_AUTH_DOMAIN}
+      # TLS terminates at Caddy, so Keycloak itself speaks plain HTTP on the
+      # internal network and trusts the proxy's forwarded headers for the
+      # original scheme/host.
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # Migrations run as their own one-shot service that the API waits on,
+  # rather than from the API's entrypoint. 06-operations/01-deployment.md
+  # sequences it that way ("apply migration" precedes "deploy API/worker"),
+  # and keeping it separate means a failed migration fails visibly as its
+  # own unit instead of looking like a crash-looping application.
+  api-migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: dentix-api:${DENTIX_IMAGE_TAG:-local}
+    restart: "no"
+    command: ["npm", "run", "db:migrate:prod"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: dentix-api:${DENTIX_IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      # 5432 explicitly: data-source.ts defaults to the 5433 the *host*
+      # dev stack publishes, which is wrong inside the compose network.
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:?set SESSION_ENCRYPTION_KEY}
+      OIDC_ISSUER_URL: https://${DENTIX_AUTH_DOMAIN}/realms/dentix
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-dentix-bff}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?set OIDC_CLIENT_SECRET}
+      OIDC_REDIRECT_URI: https://${DENTIX_APP_DOMAIN:?set DENTIX_APP_DOMAIN}/api/v1/auth/callback
+      APP_BASE_URL: https://${DENTIX_APP_DOMAIN}
+      # Caddy is the one proxy in front of this process. Without it the
+      # throttler buckets the whole office under Caddy's container IP.
+      TRUST_PROXY_HOPS: 1
+      # The API's server-to-server calls to Keycloak (token exchange, JWKS)
+      # go to the public HTTPS URL, so Node has to trust whoever issued that
+      # certificate. Locally that is Caddy's internal CA, mounted read-only
+      # below; with a real public domain the Let's Encrypt chain is already
+      # in the system store and this simply goes unused.
+      NODE_EXTRA_CA_CERTS: /caddy-data/caddy/pki/authorities/local/root.crt
+      # ENABLE_API_DOCS is deliberately unset — the Swagger gate fails
+      # closed, so production gets no /api/docs endpoint.
+    volumes:
+      - caddy_data:/caddy-data:ro
+    depends_on:
+      api-migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://127.0.0.1:3000/health'',r=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DENTIX_APP_DOMAIN: ${DENTIX_APP_DOMAIN}
+      DENTIX_AUTH_DOMAIN: ${DENTIX_AUTH_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-ops@example.invalid}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:2019/config/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dentix_prod_postgres_data:
+  # Holds Caddy's certificates *and* its internal CA — the API mounts this
+  # read-only to trust the local CA, so it is shared rather than private.
+  caddy_data:
+  caddy_config:

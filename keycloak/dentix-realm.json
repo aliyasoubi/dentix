@@ -167,10 +167,12 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:3000/api/v1/auth/callback"
+        "http://localhost:3000/api/v1/auth/callback",
+        "https://dentix.localhost/api/v1/auth/callback"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://dentix.localhost"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -186,7 +188,7 @@
         "realm_client": "false",
         "client.secret.creation.time": "1786104578",
         "backchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3000##http://localhost:4200",
+        "post.logout.redirect.uris": "http://localhost:3000##http://localhost:4200##https://dentix.localhost",
         "pkce.code.challenge.method": "S256",
         "backchannel.logout.revoke.offline.tokens": "false"
       },
