@@ -106,6 +106,7 @@ One person may hold multiple roles. A role grants a starting permission set; ind
 | Manage lab order          | Yes                     | Yes           | View          | No           | Yes          | No              |
 | Post payment              | View                    | No            | Configurable  | Yes          | Yes          | No              |
 | Refund payment            | No                      | No            | No            | Configurable | Yes          | No              |
+| View audit log            | Limited patient history | No            | No            | No           | Yes          | Security events |
 
 ## Separation of duty
 
@@ -126,20 +127,24 @@ get an exception to this rule — it gets a queue: the transaction waits for a s
 approver rather than self-approving, the same way a disabled user retains history but cannot
 authenticate (rule 7) rather than the rule bending to fit a headcount of one.
 
-**Decided (2026-08-14, Ali):** Reception posts payments by default (`Post payment` / Reception =
-On), matching an office where the front desk also collects payment, not only the dedicated
-Cashier role.
+**Decided (2026-08-14, Ali):**
 
-**Still needs an actual rial figure — this office's decision, not a default invented here:**
+- Reception posts payments by default (`Post payment` / Reception = On), matching an office where
+  the front desk also collects payment, not only the dedicated Cashier role.
+- Refund, discount, and reversal **all require approval on every transaction, with no rial or
+  percentage threshold for now** — Ali considered setting real figures for each and chose the
+  simpler rule instead: `refund-approval-threshold`, `discount-approval-threshold`, and
+  `reversal-approval-threshold` all start at 0 (effectively "always"). They stay Layer 2
+  office-configurable values, not migration-time constants, precisely so this office can raise
+  them later once real transaction data exists to tune against — today's default is deliberately
+  the strict one, not the permanent one.
+- **Eligible approvers are Manager or System Administrator**, not Manager alone. Worth stating
+  explicitly since it's a departure from the `Default permission examples` table above, where
+  `Refund payment` shows Admin as `No` — that cell is about who can *initiate* a refund
+  unsupervised (still no), not who can satisfy the approval step this section adds. Not in tension
+  with rule 6 ("system administrators do not automatically receive clinical access"): that rule is
+  scoped to clinical access specifically, and financial approval is a separate grant this section
+  makes on its own terms.
 
-| Threshold (`06-configuration-catalog.md`, Finance) | What it gates | Needs |
-|---|---|---|
-| `refund-approval-threshold` | Above this rial amount, `ledger.refund` requires Manager approval in addition to Cashier initiation (below it, Rule 4's "policy may require" resolves to *not* required) | A rial amount (Ali chose "set a real number" over "always require" — the figure itself is still open) |
-| `discount-approval-threshold` | Above this rial amount (or this percentage — pick one basis), `ledger.discount` requires Manager approval | An amount or percentage, and which basis |
-| `reversal-approval-threshold` | Whether `ledger.reverse` ever proceeds without Manager approval, given reversals are rarer and higher-risk than routine refunds | A figure, or explicit confirmation reversals always require approval regardless of amount |
-
-These land as Layer 2 office configuration (`06-configuration-catalog.md`, Finance row) with
-office-editable values, not migration-time constants — whatever figures get decided here are the
-*starting* defaults a fresh office boots with, changeable later by whoever holds
-`configuration.manage`, itself an audited action per Rule 8.
-| View audit log            | Limited patient history | No            | No            | No           | Yes          | Security events |
+`discount-approval-threshold` is explicitly confirmed configurable (Ali: "also configurable") —
+the same as the other two, stated here because it was asked about by name.

@@ -26,14 +26,20 @@ since Release 0 discovery. What DISC-003 actually still needed was the
 separation-of-duty half, which had no content anywhere in the docs (`grep`
 for "separation of duty" found only this row). Drafted directly into that
 file, scoped narrowly to money-handling and access control per convention,
-not clinical scope-of-practice. Ali has decided two of the three open
-pieces: Reception posts payments by default, and refund/discount/reversal
-approval will use real rial thresholds rather than "always require
-approval" as the starting default — the actual figures are the one thing
-still outstanding, and are his to supply, not a number to invent here. This
-still needs a named operational and clinical approver (the same open half
-of DISC-006) before it can formally close, independent of the content being
-ready.
+not clinical scope-of-practice.
+
+**Content is now fully decided by Ali:** Reception posts payments by
+default; refund, discount, and reversal all require approval on every
+transaction with no threshold for now (`*-approval-threshold` configs start
+at 0, raisable later once real transaction volume exists to tune against —
+he considered real rial figures and chose the simpler always-require rule
+instead); eligible approvers are Manager **or System Administrator**, not
+Manager alone.
+
+**The one thing still blocking formal closure is procedural, not
+content:** DISC-003 needs a named operational and clinical approver (the
+same open half of DISC-006) to actually sign off — content readiness
+doesn't substitute for that.
 
 ## Walking-skeleton decisions
 
