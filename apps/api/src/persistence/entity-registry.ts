@@ -3,7 +3,12 @@ import { AuditEventOrmEntity } from "../modules/audit/infrastructure/persistence
 import { OutboxEventOrmEntity } from "../modules/outbox/infrastructure/persistence/outbox-event.orm-entity";
 import { OfficeUserOrmEntity } from "../modules/identity-access/infrastructure/persistence/office-user.orm-entity";
 import { OidcAuthorizationRequestOrmEntity } from "../modules/identity-access/infrastructure/persistence/oidc-authorization-request.orm-entity";
+import { PermissionOrmEntity } from "../modules/identity-access/infrastructure/persistence/permission.orm-entity";
+import { RoleOrmEntity } from "../modules/identity-access/infrastructure/persistence/role.orm-entity";
+import { RolePermissionOrmEntity } from "../modules/identity-access/infrastructure/persistence/role-permission.orm-entity";
 import { UserAccountOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-account.orm-entity";
+import { UserPermissionExceptionOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-permission-exception.orm-entity";
+import { UserRoleOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-role.orm-entity";
 import { UserSessionOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-session.orm-entity";
 import { PatientContactOrmEntity } from "../modules/patients/infrastructure/persistence/patient-contact.orm-entity";
 import { PatientNameOrmEntity } from "../modules/patients/infrastructure/persistence/patient-name.orm-entity";
@@ -22,6 +27,11 @@ export const APP_ENTITIES = [
   OfficeUserOrmEntity,
   UserSessionOrmEntity,
   OidcAuthorizationRequestOrmEntity,
+  RoleOrmEntity,
+  PermissionOrmEntity,
+  UserRoleOrmEntity,
+  RolePermissionOrmEntity,
+  UserPermissionExceptionOrmEntity,
   AuditEventOrmEntity,
   OutboxEventOrmEntity,
   PatientOrmEntity,

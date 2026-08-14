@@ -22,6 +22,19 @@ import { OfficeOrmEntity } from "../../src/modules/office-administration/infrast
 import { Office } from "../../src/modules/office-administration/domain/entities/office.entity";
 import { TypeOrmOfficeRepository } from "../../src/modules/office-administration/infrastructure/persistence/office.typeorm-repository";
 import { dataSourceOptions } from "../../src/persistence/data-source";
+import { PERMISSION_CODES } from "../../src/modules/identity-access/domain/value-objects/permission-code";
+import { Role } from "../../src/modules/identity-access/domain/entities/role.entity";
+import { UserPermissionException } from "../../src/modules/identity-access/domain/entities/user-permission-exception.entity";
+import { PermissionOrmEntity } from "../../src/modules/identity-access/infrastructure/persistence/permission.orm-entity";
+import { RoleOrmEntity } from "../../src/modules/identity-access/infrastructure/persistence/role.orm-entity";
+import { RolePermissionOrmEntity } from "../../src/modules/identity-access/infrastructure/persistence/role-permission.orm-entity";
+import { UserPermissionExceptionOrmEntity } from "../../src/modules/identity-access/infrastructure/persistence/user-permission-exception.orm-entity";
+import { UserRoleOrmEntity } from "../../src/modules/identity-access/infrastructure/persistence/user-role.orm-entity";
+import { TypeOrmPermissionRepository } from "../../src/modules/identity-access/infrastructure/persistence/permission.typeorm-repository";
+import { TypeOrmRoleRepository } from "../../src/modules/identity-access/infrastructure/persistence/role.typeorm-repository";
+import { TypeOrmRolePermissionRepository } from "../../src/modules/identity-access/infrastructure/persistence/role-permission.typeorm-repository";
+import { TypeOrmUserPermissionExceptionRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-permission-exception.typeorm-repository";
+import { TypeOrmUserRoleRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-role.typeorm-repository";
 
 describe("Identity and Access persistence (integration)", () => {
   let dataSource: DataSource | undefined;
@@ -32,6 +45,11 @@ describe("Identity and Access persistence (integration)", () => {
   let oidcRequestRepo: TypeOrmOidcAuthorizationRequestRepository;
   let auditEventRepo: TypeOrmAuditEventRepository;
   let unitOfWork: TypeOrmUnitOfWork;
+  let roleRepo: TypeOrmRoleRepository;
+  let permissionRepo: TypeOrmPermissionRepository;
+  let userRoleRepo: TypeOrmUserRoleRepository;
+  let rolePermissionRepo: TypeOrmRolePermissionRepository;
+  let userPermissionExceptionRepo: TypeOrmUserPermissionExceptionRepository;
 
   beforeAll(async () => {
     dataSource = new DataSource(dataSourceOptions);
@@ -46,12 +64,25 @@ describe("Identity and Access persistence (integration)", () => {
     );
     auditEventRepo = new TypeOrmAuditEventRepository(dataSource.getRepository(AuditEventOrmEntity));
     unitOfWork = new TypeOrmUnitOfWork(dataSource);
+    roleRepo = new TypeOrmRoleRepository(dataSource.getRepository(RoleOrmEntity));
+    permissionRepo = new TypeOrmPermissionRepository(dataSource.getRepository(PermissionOrmEntity));
+    userRoleRepo = new TypeOrmUserRoleRepository(dataSource.getRepository(UserRoleOrmEntity));
+    rolePermissionRepo = new TypeOrmRolePermissionRepository(
+      dataSource.getRepository(RolePermissionOrmEntity),
+    );
+    userPermissionExceptionRepo = new TypeOrmUserPermissionExceptionRepository(
+      dataSource.getRepository(UserPermissionExceptionOrmEntity),
+      dataSource.getRepository(PermissionOrmEntity),
+    );
   });
 
   afterAll(async () => {
     if (dataSource?.isInitialized) {
       await dataSource.query(
-        'TRUNCATE TABLE "user_session", "office_user", "user_account", "office", "audit_event" CASCADE',
+        // "permission" deliberately excluded — application-owned, seeded once
+        // by migration, never truncated between test runs (see that table's
+        // own comment).
+        'TRUNCATE TABLE "user_permission_exception", "role_permission", "user_role", "role", "user_session", "office_user", "user_account", "office", "audit_event" CASCADE',
       );
       await dataSource
         .getRepository(OidcAuthorizationRequestOrmEntity)
@@ -467,6 +498,294 @@ describe("Identity and Access persistence (integration)", () => {
       expect(await sessionRepo.findByHash(session.sessionHash)).toBeNull();
       const rows = await queryAuditEventRows(event.id);
       expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe("permission (seed data)", () => {
+    it("has exactly the codes PERMISSION_CODES declares — the migration's INSERT and the TS mirror must not drift", async () => {
+      const records = await permissionRepo.findAll();
+      const seededCodes = records.map((r) => r.code).sort();
+      const declaredCodes = [...PERMISSION_CODES].sort();
+      expect(seededCodes).toEqual(declaredCodes);
+    });
+
+    it("findByCode resolves a known code to its row", async () => {
+      const record = await permissionRepo.findByCode("patient.view");
+      expect(record?.code).toBe("patient.view");
+    });
+
+    it("findByCode returns null for an unknown code", async () => {
+      // Cast past the union type deliberately — proving the *runtime* miss
+      // behavior for a code that was never seeded, not something the type
+      // system would let through in real call sites.
+      const record = await permissionRepo.findByCode("not.a.real.code" as never);
+      expect(record).toBeNull();
+    });
+  });
+
+  describe("Role", () => {
+    async function seedOffice() {
+      const office = Office.create({
+        id: asUuid(randomUUID()),
+        code: `t-${randomUUID().slice(0, 6)}`,
+        timezone: "Asia/Tehran",
+      });
+      await officeRepo.create(office);
+      return office;
+    }
+
+    it("round-trips through create/findByOfficeIdAndCode", async () => {
+      const office = await seedOffice();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+
+      const found = await roleRepo.findByOfficeIdAndCode(office.id, "dentist");
+      expect(found?.id).toBe(role.id);
+      expect(found?.name).toBe("Dentist");
+    });
+
+    it("enforces the (office_id, code) unique constraint", async () => {
+      const office = await seedOffice();
+      const first = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      const second = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist 2",
+      });
+      await roleRepo.create(first, null);
+      await expect(roleRepo.create(second, null)).rejects.toThrow(/duplicate key value/i);
+    });
+
+    it("the same role code is fine in two different offices — the constraint is per-office", async () => {
+      const officeA = await seedOffice();
+      const officeB = await seedOffice();
+      await roleRepo.create(
+        Role.create({ id: asUuid(randomUUID()), officeId: officeA.id, code: "dentist", name: "Dentist" }),
+        null,
+      );
+      await expect(
+        roleRepo.create(
+          Role.create({ id: asUuid(randomUUID()), officeId: officeB.id, code: "dentist", name: "Dentist" }),
+          null,
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it("findByIds returns every requested role and nothing else", async () => {
+      const office = await seedOffice();
+      const dentist = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      const cashier = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "cashier",
+        name: "Cashier",
+      });
+      const unrelated = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "manager",
+        name: "Manager",
+      });
+      await roleRepo.create(dentist, null);
+      await roleRepo.create(cashier, null);
+      await roleRepo.create(unrelated, null);
+
+      const found = await roleRepo.findByIds([dentist.id, cashier.id]);
+      expect(found.map((r) => r.id).sort()).toEqual([dentist.id, cashier.id].sort());
+    });
+  });
+
+  describe("user_role / role_permission links", () => {
+    async function seedOfficeUser() {
+      const office = Office.create({
+        id: asUuid(randomUUID()),
+        code: `t-${randomUUID().slice(0, 6)}`,
+        timezone: "Asia/Tehran",
+      });
+      await officeRepo.create(office);
+      const account = UserAccount.create({
+        id: asUuid(randomUUID()),
+        externalSubject: `sub-${randomUUID()}`,
+        issuer: "https://kc.local",
+        displayName: "Test User",
+      });
+      await userAccountRepo.create(account);
+      const officeUser = OfficeUser.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        userId: account.id,
+      });
+      await officeUserRepo.create(officeUser, null);
+      return { office, officeUser };
+    }
+
+    it("grants a role to an office_user and finds it back by role id", async () => {
+      const { office, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      const roleIds = await userRoleRepo.findRoleIdsByOfficeUserId(officeUser.id);
+      expect(roleIds).toEqual([role.id]);
+    });
+
+    it("revoke deletes the link — a real delete, not a soft-delete (see the migration's own comment on why)", async () => {
+      const { office, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      await userRoleRepo.revoke(officeUser.id, role.id);
+
+      expect(await userRoleRepo.findRoleIdsByOfficeUserId(officeUser.id)).toEqual([]);
+    });
+
+    it("enforces the (office_user_id, role_id) unique constraint — granting the same role twice fails loudly", async () => {
+      const { office, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      await expect(userRoleRepo.grant(officeUser.id, role.id, null)).rejects.toThrow(/duplicate key value/i);
+    });
+
+    it("role_permission grants and reads back permission ids for a set of roles", async () => {
+      const { office } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+      const patientView = await permissionRepo.findByCode("patient.view");
+      const clinicalView = await permissionRepo.findByCode("clinical.view");
+      if (!patientView || !clinicalView) throw new Error("seed data missing in test setup");
+
+      await rolePermissionRepo.grant(role.id, patientView.id);
+      await rolePermissionRepo.grant(role.id, clinicalView.id);
+
+      const permissionIds = await rolePermissionRepo.findPermissionIdsByRoleIds([role.id]);
+      expect([...permissionIds].sort()).toEqual([patientView.id, clinicalView.id].sort());
+    });
+  });
+
+  describe("UserPermissionException", () => {
+    async function seedOfficeUser() {
+      const office = Office.create({
+        id: asUuid(randomUUID()),
+        code: `t-${randomUUID().slice(0, 6)}`,
+        timezone: "Asia/Tehran",
+      });
+      await officeRepo.create(office);
+      const account = UserAccount.create({
+        id: asUuid(randomUUID()),
+        externalSubject: `sub-${randomUUID()}`,
+        issuer: "https://kc.local",
+        displayName: "Test User",
+      });
+      await userAccountRepo.create(account);
+      const officeUser = OfficeUser.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        userId: account.id,
+      });
+      await officeUserRepo.create(officeUser, null);
+      return officeUser;
+    }
+
+    it("creates a grant exception and reads it back with its permission code resolved", async () => {
+      const officeUser = await seedOfficeUser();
+      const refund = await permissionRepo.findByCode("ledger.refund");
+      if (!refund) throw new Error("seed data missing in test setup");
+      const now = new Date();
+
+      const exception = UserPermissionException.create({
+        id: asUuid(randomUUID()),
+        officeUserId: officeUser.id,
+        permissionCode: "ledger.refund",
+        effect: "grant",
+        reason: "Covering for the manager during a two-week leave",
+        now,
+      });
+      await userPermissionExceptionRepo.create(exception, refund.id, null);
+
+      const found = await userPermissionExceptionRepo.findByOfficeUserId(officeUser.id);
+      expect(found).toHaveLength(1);
+      expect(found[0]?.permissionCode).toBe("ledger.refund");
+      expect(found[0]?.effect).toBe("grant");
+      expect(found[0]?.reason).toBe("Covering for the manager during a two-week leave");
+      expect(found[0]?.isActiveAt(now)).toBe(true);
+    });
+
+    it("resolves multiple exceptions across different permissions correctly, not just the first one found", async () => {
+      const officeUser = await seedOfficeUser();
+      const refund = await permissionRepo.findByCode("ledger.refund");
+      const discount = await permissionRepo.findByCode("ledger.discount");
+      if (!refund || !discount) throw new Error("seed data missing in test setup");
+      const now = new Date();
+
+      await userPermissionExceptionRepo.create(
+        UserPermissionException.create({
+          id: asUuid(randomUUID()),
+          officeUserId: officeUser.id,
+          permissionCode: "ledger.refund",
+          effect: "grant",
+          reason: "reason A",
+          now,
+        }),
+        refund.id,
+        null,
+      );
+      await userPermissionExceptionRepo.create(
+        UserPermissionException.create({
+          id: asUuid(randomUUID()),
+          officeUserId: officeUser.id,
+          permissionCode: "ledger.discount",
+          effect: "deny",
+          reason: "reason B",
+          now,
+        }),
+        discount.id,
+        null,
+      );
+
+      const found = await userPermissionExceptionRepo.findByOfficeUserId(officeUser.id);
+      const byCode = new Map(found.map((e) => [e.permissionCode, e]));
+      expect(byCode.get("ledger.refund")?.effect).toBe("grant");
+      expect(byCode.get("ledger.discount")?.effect).toBe("deny");
     });
   });
 });
