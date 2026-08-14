@@ -36,6 +36,7 @@ import { TypeOrmRolePermissionRepository } from "../../src/modules/identity-acce
 import { TypeOrmUserPermissionExceptionRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-permission-exception.typeorm-repository";
 import { TypeOrmUserRoleRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-role.typeorm-repository";
 import { ResolveEffectivePermissionsUseCase } from "../../src/modules/identity-access/application/use-cases/resolve-effective-permissions.use-case";
+import { SeedDefaultRolesUseCase } from "../../src/modules/identity-access/application/use-cases/seed-default-roles.use-case";
 
 describe("Identity and Access persistence (integration)", () => {
   let dataSource: DataSource | undefined;
@@ -901,6 +902,109 @@ describe("Identity and Access persistence (integration)", () => {
       await userRoleRepo.revoke(officeUser.id, role.id);
 
       expect(await useCase.hasPermission(account.id, office.id, "patient.view")).toBe(false);
+    });
+  });
+
+  describe("SeedDefaultRolesUseCase (the shared logic the migration and future office-creation both run)", () => {
+    // Asserts structural/semantic properties, not exact grant counts — the
+    // seed data's own comment is explicit that this is a reasoned starting
+    // point for DISC-003, meant to be correctable through real office use,
+    // not a locked spec. A test pinning every count would fight the next
+    // legitimate adjustment instead of catching a real bug.
+    //
+    // Each test seeds its own fresh office rather than depending on
+    // whatever the historical migration did to a specific pre-existing
+    // office — that dependency is exactly what made an earlier version of
+    // this suite pass against the shared dev database (where a "main"
+    // office already existed from manual bootstrapping) while failing
+    // against the isolated dentix_test database used by `test:int` (which
+    // starts with none). A real bug, caught by running the actual command
+    // this suite is supposed to be verified by, not just by eyeballing the
+    // dev database.
+    const ROLE_CODES = [
+      "dentist",
+      "dental_assistant",
+      "receptionist",
+      "cashier",
+      "office_manager",
+      "system_administrator",
+    ];
+
+    async function seedOfficeWithDefaultRoles() {
+      const office = Office.create({
+        id: asUuid(randomUUID()),
+        code: `t-${randomUUID().slice(0, 6)}`,
+        timezone: "Asia/Tehran",
+      });
+      await officeRepo.create(office);
+      const seedRoles = new SeedDefaultRolesUseCase(roleRepo, permissionRepo, rolePermissionRepo);
+      await seedRoles.execute({ officeId: office.id });
+      return office;
+    }
+
+    async function grantedCodesFor(office: Office, roleCode: string): Promise<Set<string>> {
+      const role = await roleRepo.findByOfficeIdAndCode(office.id, roleCode);
+      if (!role) throw new Error(`role '${roleCode}' not seeded`);
+      const permissionIds = await rolePermissionRepo.findPermissionIdsByRoleIds([role.id]);
+      const allPermissions = await permissionRepo.findAll();
+      const idToCode = new Map(allPermissions.map((p) => [p.id, p.code]));
+      return new Set(permissionIds.map((id) => idToCode.get(id)).filter((code): code is string => !!code));
+    }
+
+    it("seeds all six default roles for a freshly created office", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      for (const code of ROLE_CODES) {
+        expect(await roleRepo.findByOfficeIdAndCode(office.id, code)).not.toBeNull();
+      }
+    });
+
+    it("dentist gets full clinical authority, including signing — the core of the role", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "dentist");
+      expect(granted.has("clinical.note.sign")).toBe(true);
+      expect(granted.has("clinical.procedure.complete")).toBe(true);
+      expect(granted.has("treatment-plan.create")).toBe(true);
+    });
+
+    it("dental assistant can draft notes but not sign them — matches the permission doc's own table exactly", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "dental_assistant");
+      expect(granted.has("clinical.note.edit-draft")).toBe(true);
+      expect(granted.has("clinical.note.sign")).toBe(false);
+    });
+
+    it("receptionist posts payments by default — Ali's explicit separation-of-duty decision", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "receptionist");
+      expect(granted.has("ledger.post-payment")).toBe(true);
+    });
+
+    it("system administrator gets no clinical or patient access by default (rule 6)", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "system_administrator");
+      expect(granted.has("patient.view")).toBe(false);
+      expect(granted.has("clinical.view")).toBe(false);
+    });
+
+    it("system administrator is still a valid refund/discount/reversal approver — Ali's explicit decision", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "system_administrator");
+      expect(granted.has("ledger.refund")).toBe(true);
+      expect(granted.has("ledger.discount")).toBe(true);
+      expect(granted.has("ledger.reverse")).toBe(true);
+    });
+
+    it("cashier does not get user/permission administration — least privilege outside its stated scope", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      const granted = await grantedCodesFor(office, "cashier");
+      expect(granted.has("user.manage")).toBe(false);
+      expect(granted.has("permission.manage")).toBe(false);
+    });
+
+    it("office manager, not cashier, can reverse a ledger entry", async () => {
+      const office = await seedOfficeWithDefaultRoles();
+      expect((await grantedCodesFor(office, "office_manager")).has("ledger.reverse")).toBe(true);
+      expect((await grantedCodesFor(office, "cashier")).has("ledger.reverse")).toBe(false);
     });
   });
 });

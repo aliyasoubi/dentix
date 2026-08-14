@@ -15,3 +15,4 @@ export { AUTHORIZATION_PORT } from "./application/ports/authorization.port";
 export type { AuthorizationPort } from "./application/ports/authorization.port";
 export { PERMISSION_CODES } from "./domain/value-objects/permission-code";
 export type { PermissionCode } from "./domain/value-objects/permission-code";
+export { SeedDefaultRolesUseCase } from "./application/use-cases/seed-default-roles.use-case";

@@ -10,6 +10,7 @@ import { GetSessionUseCase } from "./application/use-cases/get-session.use-case"
 import { LogoutUseCase } from "./application/use-cases/logout.use-case";
 import { ResolveActiveSessionUseCase } from "./application/use-cases/resolve-active-session.use-case";
 import { ResolveEffectivePermissionsUseCase } from "./application/use-cases/resolve-effective-permissions.use-case";
+import { SeedDefaultRolesUseCase } from "./application/use-cases/seed-default-roles.use-case";
 import { StartLoginUseCase } from "./application/use-cases/start-login.use-case";
 import { AUTHORIZATION_PORT } from "./application/ports/authorization.port";
 import { OFFICE_USER_REPOSITORY } from "./domain/repositories/office-user.repository";
@@ -97,6 +98,7 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     { provide: USER_PERMISSION_EXCEPTION_REPOSITORY, useClass: TypeOrmUserPermissionExceptionRepository },
     { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
     ResolveEffectivePermissionsUseCase,
+    SeedDefaultRolesUseCase,
     // useExisting: the use case implements AuthorizationPort itself — one
     // singleton instance behind both tokens, same reasoning as the
     // SessionTokenPort/EncryptionPort bindings above.
@@ -128,6 +130,7 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     USER_PERMISSION_EXCEPTION_REPOSITORY,
     AUTHORIZATION_PORT,
     PermissionGuard,
+    SeedDefaultRolesUseCase,
     // SessionGuard/CsrfGuard used cross-module via @UseGuards() are
     // resolved by Nest through the CONSUMING controller's own module
     // (Injector.loadInjectable uses that module's injector, not the
