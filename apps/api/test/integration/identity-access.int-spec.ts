@@ -35,6 +35,7 @@ import { TypeOrmRoleRepository } from "../../src/modules/identity-access/infrast
 import { TypeOrmRolePermissionRepository } from "../../src/modules/identity-access/infrastructure/persistence/role-permission.typeorm-repository";
 import { TypeOrmUserPermissionExceptionRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-permission-exception.typeorm-repository";
 import { TypeOrmUserRoleRepository } from "../../src/modules/identity-access/infrastructure/persistence/user-role.typeorm-repository";
+import { ResolveEffectivePermissionsUseCase } from "../../src/modules/identity-access/application/use-cases/resolve-effective-permissions.use-case";
 
 describe("Identity and Access persistence (integration)", () => {
   let dataSource: DataSource | undefined;
@@ -786,6 +787,120 @@ describe("Identity and Access persistence (integration)", () => {
       const byCode = new Map(found.map((e) => [e.permissionCode, e]));
       expect(byCode.get("ledger.refund")?.effect).toBe("grant");
       expect(byCode.get("ledger.discount")?.effect).toBe("deny");
+    });
+  });
+
+  describe("ResolveEffectivePermissionsUseCase (against real Postgres, not mocked repositories)", () => {
+    async function seedOfficeUser() {
+      const office = Office.create({
+        id: asUuid(randomUUID()),
+        code: `t-${randomUUID().slice(0, 6)}`,
+        timezone: "Asia/Tehran",
+      });
+      await officeRepo.create(office);
+      const account = UserAccount.create({
+        id: asUuid(randomUUID()),
+        externalSubject: `sub-${randomUUID()}`,
+        issuer: "https://kc.local",
+        displayName: "Test User",
+      });
+      await userAccountRepo.create(account);
+      const officeUser = OfficeUser.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        userId: account.id,
+      });
+      await officeUserRepo.create(officeUser, null);
+      return { office, account, officeUser };
+    }
+
+    function buildUseCase(): ResolveEffectivePermissionsUseCase {
+      return new ResolveEffectivePermissionsUseCase(
+        officeUserRepo,
+        userRoleRepo,
+        rolePermissionRepo,
+        permissionRepo,
+        userPermissionExceptionRepo,
+      );
+    }
+
+    it("resolves a real role's real grants through the actual joins, not a mocked shortcut", async () => {
+      const { office, account, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "dentist",
+        name: "Dentist",
+      });
+      await roleRepo.create(role, null);
+      const patientView = await permissionRepo.findByCode("patient.view");
+      const clinicalNoteSign = await permissionRepo.findByCode("clinical.note.sign");
+      if (!patientView || !clinicalNoteSign) throw new Error("seed data missing in test setup");
+      await rolePermissionRepo.grant(role.id, patientView.id);
+      await rolePermissionRepo.grant(role.id, clinicalNoteSign.id);
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      const useCase = buildUseCase();
+      const effective = await useCase.execute({ userId: account.id, officeId: office.id });
+
+      expect(effective).toEqual(new Set(["patient.view", "clinical.note.sign"]));
+      expect(await useCase.hasPermission(account.id, office.id, "patient.view")).toBe(true);
+      expect(await useCase.hasPermission(account.id, office.id, "ledger.refund")).toBe(false);
+    });
+
+    it("a real deny exception withdraws a real role grant end to end", async () => {
+      const { office, account, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "cashier",
+        name: "Cashier",
+      });
+      await roleRepo.create(role, null);
+      const refund = await permissionRepo.findByCode("ledger.refund");
+      if (!refund) throw new Error("seed data missing in test setup");
+      await rolePermissionRepo.grant(role.id, refund.id);
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      const useCase = buildUseCase();
+      expect(await useCase.hasPermission(account.id, office.id, "ledger.refund")).toBe(true);
+
+      await userPermissionExceptionRepo.create(
+        UserPermissionException.create({
+          id: asUuid(randomUUID()),
+          officeUserId: officeUser.id,
+          permissionCode: "ledger.refund",
+          effect: "deny",
+          reason: "Under investigation",
+          now: new Date(),
+        }),
+        refund.id,
+        null,
+      );
+
+      expect(await useCase.hasPermission(account.id, office.id, "ledger.refund")).toBe(false);
+    });
+
+    it("revoking the role removes the grant, without needing to touch the exception at all", async () => {
+      const { office, account, officeUser } = await seedOfficeUser();
+      const role = Role.create({
+        id: asUuid(randomUUID()),
+        officeId: office.id,
+        code: "assistant",
+        name: "Assistant",
+      });
+      await roleRepo.create(role, null);
+      const patientView = await permissionRepo.findByCode("patient.view");
+      if (!patientView) throw new Error("seed data missing in test setup");
+      await rolePermissionRepo.grant(role.id, patientView.id);
+      await userRoleRepo.grant(officeUser.id, role.id, null);
+
+      const useCase = buildUseCase();
+      expect(await useCase.hasPermission(account.id, office.id, "patient.view")).toBe(true);
+
+      await userRoleRepo.revoke(officeUser.id, role.id);
+
+      expect(await useCase.hasPermission(account.id, office.id, "patient.view")).toBe(false);
     });
   });
 });

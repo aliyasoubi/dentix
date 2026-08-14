@@ -9,7 +9,9 @@ import { CompleteLoginUseCase } from "./application/use-cases/complete-login.use
 import { GetSessionUseCase } from "./application/use-cases/get-session.use-case";
 import { LogoutUseCase } from "./application/use-cases/logout.use-case";
 import { ResolveActiveSessionUseCase } from "./application/use-cases/resolve-active-session.use-case";
+import { ResolveEffectivePermissionsUseCase } from "./application/use-cases/resolve-effective-permissions.use-case";
 import { StartLoginUseCase } from "./application/use-cases/start-login.use-case";
+import { AUTHORIZATION_PORT } from "./application/ports/authorization.port";
 import { OFFICE_USER_REPOSITORY } from "./domain/repositories/office-user.repository";
 import { OIDC_AUTHORIZATION_REQUEST_REPOSITORY } from "./domain/repositories/oidc-authorization-request.repository";
 import { PERMISSION_REPOSITORY } from "./domain/repositories/permission.repository";
@@ -48,6 +50,7 @@ import { TypeOrmUserSessionRepository } from "./infrastructure/persistence/user-
 import { AuthController } from "./presentation/http/auth.controller";
 import { OfficeUsersController } from "./presentation/http/office-users.controller";
 import { CsrfGuard } from "./presentation/guards/csrf.guard";
+import { PermissionGuard } from "./presentation/guards/permission.guard";
 import { SessionGuard } from "./presentation/guards/session.guard";
 
 @Module({
@@ -93,6 +96,12 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     { provide: ROLE_PERMISSION_REPOSITORY, useClass: TypeOrmRolePermissionRepository },
     { provide: USER_PERMISSION_EXCEPTION_REPOSITORY, useClass: TypeOrmUserPermissionExceptionRepository },
     { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
+    ResolveEffectivePermissionsUseCase,
+    // useExisting: the use case implements AuthorizationPort itself — one
+    // singleton instance behind both tokens, same reasoning as the
+    // SessionTokenPort/EncryptionPort bindings above.
+    { provide: AUTHORIZATION_PORT, useExisting: ResolveEffectivePermissionsUseCase },
+    PermissionGuard,
     { provide: OIDC_CLIENT_PORT, useClass: OpenIdClientAdapter },
     { provide: KEYCLOAK_ADMIN_PORT, useClass: KeycloakAdminHttpAdapter },
     StartLoginUseCase,
@@ -117,6 +126,8 @@ import { SessionGuard } from "./presentation/guards/session.guard";
     USER_ROLE_REPOSITORY,
     ROLE_PERMISSION_REPOSITORY,
     USER_PERMISSION_EXCEPTION_REPOSITORY,
+    AUTHORIZATION_PORT,
+    PermissionGuard,
     // SessionGuard/CsrfGuard used cross-module via @UseGuards() are
     // resolved by Nest through the CONSUMING controller's own module
     // (Injector.loadInjectable uses that module's injector, not the

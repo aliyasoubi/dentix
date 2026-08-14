@@ -7,5 +7,11 @@
 export { IdentityAccessModule } from "./identity-access.module";
 export { SessionGuard } from "./presentation/guards/session.guard";
 export { CsrfGuard } from "./presentation/guards/csrf.guard";
+export { PermissionGuard } from "./presentation/guards/permission.guard";
 export { CurrentSession } from "./presentation/decorators/current-session.decorator";
+export { RequirePermission } from "./presentation/decorators/require-permission.decorator";
 export { UserSession } from "./domain/entities/user-session.entity";
+export { AUTHORIZATION_PORT } from "./application/ports/authorization.port";
+export type { AuthorizationPort } from "./application/ports/authorization.port";
+export { PERMISSION_CODES } from "./domain/value-objects/permission-code";
+export type { PermissionCode } from "./domain/value-objects/permission-code";
