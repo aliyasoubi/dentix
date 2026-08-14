@@ -20,6 +20,21 @@ operational, and privacy approvers are not yet named; DISC-006 stays open
 until they are. Concentrating every approver role in one person is the
 situation R-07 (`07-plans/risks.md`) already tracks, not a new risk.
 
+**DISC-003 progress (2026-08-14):** the default role/permission matrix was
+not missing — it has existed in full in `01-product/04-roles-and-permissions.md`
+since Release 0 discovery. What DISC-003 actually still needed was the
+separation-of-duty half, which had no content anywhere in the docs (`grep`
+for "separation of duty" found only this row). Drafted directly into that
+file, scoped narrowly to money-handling and access control per convention,
+not clinical scope-of-practice. Ali has decided two of the three open
+pieces: Reception posts payments by default, and refund/discount/reversal
+approval will use real rial thresholds rather than "always require
+approval" as the starting default — the actual figures are the one thing
+still outstanding, and are his to supply, not a number to invent here. This
+still needs a named operational and clinical approver (the same open half
+of DISC-006) before it can formally close, independent of the content being
+ready.
+
 ## Walking-skeleton decisions
 
 | ADR | Decision | Acceptance gate |

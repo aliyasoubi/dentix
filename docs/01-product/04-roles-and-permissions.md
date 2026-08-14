@@ -106,4 +106,40 @@ One person may hold multiple roles. A role grants a starting permission set; ind
 | Manage lab order          | Yes                     | Yes           | View          | No           | Yes          | No              |
 | Post payment              | View                    | No            | Configurable  | Yes          | Yes          | No              |
 | Refund payment            | No                      | No            | No            | Configurable | Yes          | No              |
+
+## Separation of duty
+
+DISC-003 asks for this alongside the matrix above, and it is a genuinely different kind of
+decision: the matrix says who *can* do something at all; separation of duty says which of those
+capabilities must not rest entirely on one person's judgment, no matter their role. It applies
+narrowly — money handling and access control, the two areas separation-of-duty controls
+conventionally exist for — not to clinical scope-of-practice (`Configurable` cells like "Edit
+perio draft" above are a delegation decision, not a fraud/error-control one, and stay out of this
+section on purpose).
+
+**One rule needs no office-specific input and is asserted here rather than left as a question:**
+nobody approves their own transaction. Whatever the refund/discount threshold ends up being, the
+person who initiated a payment, discount, or refund must not also be the one whose approval
+satisfies the office-manager-approval requirement on it, even if they hold the Manager role
+through the "one person may hold multiple roles" allowance above. A single-manager office does not
+get an exception to this rule — it gets a queue: the transaction waits for a second eligible
+approver rather than self-approving, the same way a disabled user retains history but cannot
+authenticate (rule 7) rather than the rule bending to fit a headcount of one.
+
+**Decided (2026-08-14, Ali):** Reception posts payments by default (`Post payment` / Reception =
+On), matching an office where the front desk also collects payment, not only the dedicated
+Cashier role.
+
+**Still needs an actual rial figure — this office's decision, not a default invented here:**
+
+| Threshold (`06-configuration-catalog.md`, Finance) | What it gates | Needs |
+|---|---|---|
+| `refund-approval-threshold` | Above this rial amount, `ledger.refund` requires Manager approval in addition to Cashier initiation (below it, Rule 4's "policy may require" resolves to *not* required) | A rial amount (Ali chose "set a real number" over "always require" — the figure itself is still open) |
+| `discount-approval-threshold` | Above this rial amount (or this percentage — pick one basis), `ledger.discount` requires Manager approval | An amount or percentage, and which basis |
+| `reversal-approval-threshold` | Whether `ledger.reverse` ever proceeds without Manager approval, given reversals are rarer and higher-risk than routine refunds | A figure, or explicit confirmation reversals always require approval regardless of amount |
+
+These land as Layer 2 office configuration (`06-configuration-catalog.md`, Finance row) with
+office-editable values, not migration-time constants — whatever figures get decided here are the
+*starting* defaults a fresh office boots with, changeable later by whoever holds
+`configuration.manage`, itself an audited action per Rule 8.
 | View audit log            | Limited patient history | No            | No            | No           | Yes          | Security events |
