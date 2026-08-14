@@ -23,7 +23,7 @@ Detailed evidence, bug write-ups, and proof narrative for every item below live 
 - [x] Rial/toman money input component: toman entry ×10 to canonical integer rial; unit label always rendered
 - [x] One generated PDF (e.g., a dummy receipt) with embedded Persian font, RTL text shaping verified (feeds ADR-009 print pipeline decision)
 - [x] OpenAPI generated from NestJS and consumed to type the Angular client; live Swagger UI at `/api/docs` (dev/staging only)
-- [ ] Deploy the skeleton to the target hosting environment once ADR-010 (hosting model) is decided — this validates the ops story early
+- [x] Deploy the skeleton to the target hosting environment once ADR-010 (hosting model) is decided — this validates the ops story early. ADR-010 decided 2026-08-14 (on-prem pattern, Ali's own machine); deployed via the production Compose stack over genuine TLS and proven interactively — real login, MFA enrollment, and a created patient in a real browser, not just health-check curls. See the log.
 
 ## Exit criteria
 

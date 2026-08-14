@@ -53,6 +53,18 @@ COPY apps/web/ apps/web/
 RUN npm run build --workspace @dentix/kernel \
   && npm run build --workspace apps/web \
   && npm run build --workspace apps/api
+# Angular's asset copy preserves the source file's permission bits verbatim
+# instead of resetting them like bundled/generated output gets — found in
+# production: apps/web/public/brand/*.svg were checked out on the build host
+# as 600 (a restrictive umask at some point in that file's history, not
+# anything git records — `git ls-files -s` shows the correct 100644), and
+# that 600 survived the copy straight into the image, where it's unreadable
+# by the unprivileged `node` user the runtime stage switches to (EACCES,
+# 500s on every /brand/* request). Every other file in dist/ is generated
+# output and was never at risk. Not host-checkout-dependent: this normalizes
+# the built tree's permissions inside the image regardless of what umask
+# produced them.
+RUN chmod -R a+rX apps/web/dist
 
 # Prune in place rather than doing a second `npm ci --omit=dev` in a parallel
 # stage. A cleanroom production install is arguably the purer expression of

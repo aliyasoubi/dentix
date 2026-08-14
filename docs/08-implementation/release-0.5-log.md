@@ -568,3 +568,77 @@ about which emails exist.
 - `office_user` rows can be created and audited, but nothing yet **removes** access or flips
   `is_office_admin`. Deactivation exists in the schema (`is_active`) and is honored at login; no
   endpoint drives it. Both belong with the real role work behind DISC-003.
+
+## ADR-010 decided and proven for real: this machine, over genuine TLS, with a browser that fought back
+
+The host decision had been sitting open since Release 0. Ali chose the on-prem pattern the ADR
+already documented as a first-class alternative to a domestic VPS — applied informally to his own
+development machine rather than purpose-built office hardware, explicitly to unblock Release 1
+rather than wait on a VPS purchase or an office-hardware survey that hasn't happened yet
+(DISC-001, still open). Recorded honestly in `adr-010-hosting-operations.md`, including where a
+developer laptop diverges from the "office mini-server" the pattern describes: not dedicated
+hardware, no UPS, `*.localhost` reachable only from this machine, uptime tied to this laptop's.
+DISC-006 (who accepts ADRs) is narrowly resolved the same way — Ali, as product owner, for the
+walking-skeleton ADRs specifically; the full clinical/operational/privacy approver roster stays
+open, not quietly folded into one person's authority.
+
+Asked, rather than assumed: where should the second-failure-domain backup copy live. Ali's answer
+was explicit — leave it a known gap for now rather than have one invented for him. The backup
+service already says so out loud on every run ("BACKUP_RCLONE_REMOTE not set — backup is
+local-only, NOT in a second failure domain yet"), so the gap can't go unnoticed by accident.
+
+**Brought the production Compose stack up on this machine for real** — not a rehearsal to redo
+later, the actual designated host now — and proved the pieces that were still open:
+
+- **Backup and restore, re-run against this exact host**, not inherited from the earlier
+  rehearsal: an on-demand backup, then a restore into `restore_drill` matching the live database
+  exactly (all migrations, identical row counts), dropped afterward as the scratch space it is.
+- **Registry-mirror resilience, actually tested rather than left unattempted.** First attempt used
+  `--network=none` on an unchanged build context and appeared to hang — turned out to be nothing:
+  Docker had cached the `npm ci` layer from the earlier successful build and never touched the
+  network at all, so the test was silently proving nothing. Re-run with `--no-cache` to force a
+  real network dependency: the build ran for 472 seconds working through the Dockerfile's own
+  retry/timeout tuning before failing with an unhelpful npm-internal error. Honest conclusion: the
+  tuning solves R-03's "slow" case, not "blocked" — no registry mirror exists, and closing this is
+  real infrastructure work (a pull-through cache), not a config tweak.
+- **The interactive path — login, MFA enrollment, patient creation — against a real browser**, the
+  one piece `ops/README.md` had correctly left for a human because the CA-trust step needs `sudo`.
+  Ali ran that one step himself. Everything after it stayed automated, and getting there took
+  fighting the browser tooling itself:
+  - The self-signed CA trusted system-wide, confirmed by `curl` needing no `--cacert` override
+    afterward — the actual proof the trust step worked, not just that the command exited zero.
+  - Synthetic mouse clicks stopped registering as real input partway through — `read_page` and
+    `navigate` kept working (they operate on the DOM/CDP layer directly), but clicks landed
+    without effect, confirmed by checking the network log for the POST that should have followed
+    a "successful" click and finding none. Recovered by using `javascript_tool` to inspect the
+    actual DOM rather than trusting the accessibility tree, which turned up the real reason
+    `document.querySelector('button[type="submit"]')` found nothing: Keycloak's TOTP-setup form
+    submits through `<input type="submit" id="saveTOTPBtn">`, not a `<button>`. Dispatching a real
+    click on the correct element (`document.getElementById('saveTOTPBtn').click()`) — the same
+    DOM click a mouse would produce, not a form hack bypassing anything — is what actually
+    completed the enrollment.
+  - A fresh Keycloak realm import means a fresh test identity: created via `kcadm.sh` inside the
+    Keycloak container (no host port published for its admin API) and linked to an `office_user`
+    with `bootstrap-dev-office-user.ts` pointed at the real host's Postgres port and issuer URL —
+    same script the dev stack has used all along, same reasoning (fictional test identity, never
+    real patient data, CLAUDE.md's own rule).
+  - End state, all in one browser session: password + forced TOTP enrollment on a realm that had
+    never enrolled anyone before (proving MFA is enforced here, not only on the well-worn dev
+    realm) → landed authenticated on `/patients` in Persian, RTL → registered a fictional patient
+    (نام: مریم رضایی) that appeared in the list with a real assigned `patient_number` → confirmed
+    still present, same id, after an unrelated image rebuild — not a fluke of one container's
+    lifetime.
+
+**A second real bug, found only because a real browser hit a real deployed image:** `/brand/*.svg`
+returned 500. `EACCES` in the API's own logs pointed straight at it — the checked-in brand SVGs
+were `600` on disk, unreadable by the unprivileged `node` user the runtime image runs as. Not a
+git problem (`git ls-files -s` shows the correct `100644` stored); some past `umask` wrote them
+restrictively on this machine, and Angular's asset copy preserves source permission bits verbatim
+while every other file in `dist/` is generated output that was never at risk. Fixed at the actual
+point of fragility rather than just the symptom: `apps/api/Dockerfile` now `chmod -R a+rX`s the
+built web tree after the build step, so the image is correct regardless of what produced the
+checkout that built it — not a fix that only holds on this machine.
+
+**ADR-010 stands at 3 of 4 proven now** — host, TLS deployment (mechanical and interactive), and
+backup/restore. Status stays Proposed: the registry-mirror gap is real, and accepting remains
+DISC-006's call regardless of proof count.

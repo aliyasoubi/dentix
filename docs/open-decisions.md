@@ -13,6 +13,13 @@ This file lists only unresolved decisions that block implementation or real-data
 | DISC-005 | Inventory migration sources and approve field mapping, rejection, deduplication, opening-balance, reconciliation, and cutover rules | Product + operational approvers | Real-data migration |
 | DISC-006 | Name product, clinical, operational, privacy, and technical approvers | Product owner | Release 0 exit |
 
+**Partially resolved (2026-08-14):** Ali is confirmed as product owner and the
+authority who accepts the walking-skeleton ADRs (ADR-006/007/009/010) —
+recorded here and in each ADR's own acceptance checklist. Clinical,
+operational, and privacy approvers are not yet named; DISC-006 stays open
+until they are. Concentrating every approver role in one person is the
+situation R-07 (`07-plans/risks.md`) already tracks, not a new risk.
+
 ## Walking-skeleton decisions
 
 | ADR | Decision | Acceptance gate |
