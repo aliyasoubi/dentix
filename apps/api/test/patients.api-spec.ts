@@ -23,6 +23,7 @@ import {
   SESSION_COOKIE_NAME,
   CSRF_COOKIE_NAME,
 } from "../src/modules/identity-access/presentation/http/cookies";
+import { PatientAddressOrmEntity } from "../src/modules/patients/infrastructure/persistence/patient-address.orm-entity";
 
 interface ErrorResponseBody {
   readonly code?: string;
@@ -55,6 +56,7 @@ describe("Patients (API contract)", () => {
   let sessions: UserSessionRepository;
   let sessionTokens: SessionTokenService;
   let officeUserOrmRepo: Repository<OfficeUserOrmEntity>;
+  let patientAddressOrmRepo: Repository<PatientAddressOrmEntity>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -71,6 +73,7 @@ describe("Patients (API contract)", () => {
     sessions = moduleFixture.get(USER_SESSION_REPOSITORY);
     sessionTokens = moduleFixture.get(SessionTokenService);
     officeUserOrmRepo = moduleFixture.get(getRepositoryToken(OfficeUserOrmEntity));
+    patientAddressOrmRepo = moduleFixture.get(getRepositoryToken(PatientAddressOrmEntity));
   });
 
   afterAll(async () => {
@@ -235,6 +238,45 @@ describe("Patients (API contract)", () => {
         .set("X-CSRF-Token", csrfToken)
         .send({ nativeName: "رضا احمدی", contactUnavailable: true });
       expect(response.status).toBe(201);
+    });
+
+    it("persists a structured address when at least one field is provided", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          nativeName: "رضا احمدی",
+          contactUnavailable: true,
+          province: "تهران",
+          city: "تهران",
+          district: "ونک",
+          addressLine1: "خیابان ولیعصر",
+          postalCode: "1234567890",
+        });
+      expect(response.status).toBe(201);
+      const createdId = (response.body as CreatePatientResponseBody).id;
+
+      const address = await patientAddressOrmRepo.findOneBy({ patientId: createdId });
+      expect(address?.province).toBe("تهران");
+      expect(address?.district).toBe("ونک");
+      expect(address?.postalCode).toBe("1234567890");
+      expect(address?.addressLine2).toBeNull();
+    });
+
+    // No address field at all must never create an empty row — the point of
+    // PatientAddress.isEmpty gating the use case's write.
+    it("creates no address row when no address field is provided", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true });
+      const createdId = (response.body as CreatePatientResponseBody).id;
+
+      expect(await patientAddressOrmRepo.findOneBy({ patientId: createdId })).toBeNull();
     });
 
     // Regression tests for a real gap: there was no request validation at

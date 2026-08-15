@@ -73,4 +73,39 @@ export class CreatePatientRequestDto {
   @IsOptional()
   @IsString()
   readonly nationalCode?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: province." })
+  @IsOptional()
+  @IsString()
+  readonly province?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: city." })
+  @IsOptional()
+  @IsString()
+  readonly city?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: district/locality." })
+  @IsOptional()
+  @IsString()
+  readonly district?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: street/address line 1." })
+  @IsOptional()
+  @IsString()
+  readonly addressLine1?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: street/address line 2." })
+  @IsOptional()
+  @IsString()
+  readonly addressLine2?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: postal code." })
+  @IsOptional()
+  @IsString()
+  readonly postalCode?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Address: free-form delivery notes." })
+  @IsOptional()
+  @IsString()
+  readonly deliveryNotes?: string | null;
 }

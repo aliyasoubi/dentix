@@ -11,10 +11,13 @@ import { TypeOrmUserAccountRepository } from "../../src/modules/identity-access/
 import { Office } from "../../src/modules/office-administration/domain/entities/office.entity";
 import { OfficeOrmEntity } from "../../src/modules/office-administration/infrastructure/persistence/office.orm-entity";
 import { TypeOrmOfficeRepository } from "../../src/modules/office-administration/infrastructure/persistence/office.typeorm-repository";
+import { PatientAddress } from "../../src/modules/patients/domain/entities/patient-address.entity";
 import { Patient } from "../../src/modules/patients/domain/entities/patient.entity";
 import { PatientContact } from "../../src/modules/patients/domain/entities/patient-contact.entity";
 import { PatientIdentifier } from "../../src/modules/patients/domain/entities/patient-identifier.entity";
 import { PatientName } from "../../src/modules/patients/domain/entities/patient-name.entity";
+import { PatientAddressOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-address.orm-entity";
+import { TypeOrmPatientAddressRepository } from "../../src/modules/patients/infrastructure/persistence/patient-address.typeorm-repository";
 import { PatientContactOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-contact.orm-entity";
 import { TypeOrmPatientContactRepository } from "../../src/modules/patients/infrastructure/persistence/patient-contact.typeorm-repository";
 import { PatientIdentifierOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-identifier.orm-entity";
@@ -39,6 +42,7 @@ describe("Patients persistence (integration)", () => {
   let patientNameRepo: TypeOrmPatientNameRepository;
   let patientContactRepo: TypeOrmPatientContactRepository;
   let patientIdentifierRepo: TypeOrmPatientIdentifierRepository;
+  let patientAddressRepo: TypeOrmPatientAddressRepository;
   let auditEventRepo: TypeOrmAuditEventRepository;
   let unitOfWork: TypeOrmUnitOfWork;
 
@@ -56,6 +60,9 @@ describe("Patients persistence (integration)", () => {
     patientIdentifierRepo = new TypeOrmPatientIdentifierRepository(
       dataSource.getRepository(PatientIdentifierOrmEntity),
     );
+    patientAddressRepo = new TypeOrmPatientAddressRepository(
+      dataSource.getRepository(PatientAddressOrmEntity),
+    );
     auditEventRepo = new TypeOrmAuditEventRepository(dataSource.getRepository(AuditEventOrmEntity));
     unitOfWork = new TypeOrmUnitOfWork(dataSource);
   });
@@ -63,7 +70,7 @@ describe("Patients persistence (integration)", () => {
   afterAll(async () => {
     if (dataSource?.isInitialized) {
       await dataSource.query(
-        'TRUNCATE TABLE "patient_identifier", "patient_contact", "patient_name", "patient", "patient_number_sequence", "audit_event", "user_account", "office" CASCADE',
+        'TRUNCATE TABLE "patient_address", "patient_identifier", "patient_contact", "patient_name", "patient", "patient_number_sequence", "audit_event", "user_account", "office" CASCADE',
       );
       await dataSource.destroy();
     }
@@ -194,6 +201,83 @@ describe("Patients persistence (integration)", () => {
       expect(rows[0]?.identifier_type).toBe("national_code");
       expect(rows[0]?.original_value).toBe("۱۲۳۴۵۶۷۸۹۱");
       expect(rows[0]?.normalized_value).toBe("1234567891");
+    });
+
+    it("persists an optional address with structured Iranian fields, trimmed", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patient = Patient.create({
+        id: asUuid(randomUUID()),
+        officeId,
+        patientNumber,
+        dateOfBirth: null,
+        sex: "unspecified",
+        contactUnavailable: true,
+        createdBy: actorUserId,
+        now,
+      });
+      await patientRepo.create(patient);
+
+      const address = PatientAddress.create({
+        id: asUuid(randomUUID()),
+        patientId: patient.id,
+        province: " تهران ",
+        city: "تهران",
+        district: "ونک",
+        addressLine1: "خیابان ولیعصر",
+        addressLine2: null,
+        postalCode: "1234567890",
+        deliveryNotes: null,
+        createdBy: actorUserId,
+        now,
+      });
+      await patientAddressRepo.create(address);
+
+      const rows: Array<{ province: string; city: string; postal_code: string; address_line2: null }> =
+        await dataSource!.query('SELECT * FROM "patient_address" WHERE "patient_id" = $1', [patient.id]);
+      expect(rows[0]?.province).toBe("تهران");
+      expect(rows[0]?.city).toBe("تهران");
+      expect(rows[0]?.postal_code).toBe("1234567890");
+      expect(rows[0]?.address_line2).toBeNull();
+    });
+
+    it("rejects a second address for the same patient", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patient = Patient.create({
+        id: asUuid(randomUUID()),
+        officeId,
+        patientNumber,
+        dateOfBirth: null,
+        sex: "unspecified",
+        contactUnavailable: true,
+        createdBy: actorUserId,
+        now,
+      });
+      await patientRepo.create(patient);
+
+      await patientAddressRepo.create(
+        PatientAddress.create({
+          id: asUuid(randomUUID()),
+          patientId: patient.id,
+          city: "تهران",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await expect(
+        patientAddressRepo.create(
+          PatientAddress.create({
+            id: asUuid(randomUUID()),
+            patientId: patient.id,
+            city: "شیراز",
+            createdBy: actorUserId,
+            now,
+          }),
+        ),
+      ).rejects.toThrow(/duplicate key value/i);
     });
 
     it("enforces (office_id, patient_number) uniqueness", async () => {

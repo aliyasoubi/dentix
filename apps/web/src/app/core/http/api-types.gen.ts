@@ -206,6 +206,20 @@ export interface components {
             dateOfBirth?: string | null;
             /** @description Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted. */
             nationalCode?: string | null;
+            /** @description Address: province. */
+            province?: string | null;
+            /** @description Address: city. */
+            city?: string | null;
+            /** @description Address: district/locality. */
+            district?: string | null;
+            /** @description Address: street/address line 1. */
+            addressLine1?: string | null;
+            /** @description Address: street/address line 2. */
+            addressLine2?: string | null;
+            /** @description Address: postal code. */
+            postalCode?: string | null;
+            /** @description Address: free-form delivery notes. */
+            deliveryNotes?: string | null;
         };
         CreatePatientResponseDto: {
             /** Format: uuid */

@@ -6,10 +6,13 @@ import { TypeOrmUnitOfWork } from "../../platform/typeorm-unit-of-work";
 import { UNIT_OF_WORK_PORT } from "../../platform/unit-of-work.port";
 import { CreatePatientUseCase } from "./application/use-cases/create-patient.use-case";
 import { SearchPatientsUseCase } from "./application/use-cases/search-patients.use-case";
+import { PATIENT_ADDRESS_REPOSITORY } from "./domain/repositories/patient-address.repository";
 import { PATIENT_CONTACT_REPOSITORY } from "./domain/repositories/patient-contact.repository";
 import { PATIENT_IDENTIFIER_REPOSITORY } from "./domain/repositories/patient-identifier.repository";
 import { PATIENT_NAME_REPOSITORY } from "./domain/repositories/patient-name.repository";
 import { PATIENT_REPOSITORY } from "./domain/repositories/patient.repository";
+import { PatientAddressOrmEntity } from "./infrastructure/persistence/patient-address.orm-entity";
+import { TypeOrmPatientAddressRepository } from "./infrastructure/persistence/patient-address.typeorm-repository";
 import { PatientContactOrmEntity } from "./infrastructure/persistence/patient-contact.orm-entity";
 import { TypeOrmPatientContactRepository } from "./infrastructure/persistence/patient-contact.typeorm-repository";
 import { PatientIdentifierOrmEntity } from "./infrastructure/persistence/patient-identifier.orm-entity";
@@ -27,6 +30,7 @@ import { PatientsController } from "./presentation/http/patients.controller";
       PatientNameOrmEntity,
       PatientContactOrmEntity,
       PatientIdentifierOrmEntity,
+      PatientAddressOrmEntity,
     ]),
     AuditModule,
     // For SessionGuard/CsrfGuard, injected directly by the controller
@@ -40,6 +44,7 @@ import { PatientsController } from "./presentation/http/patients.controller";
     { provide: PATIENT_NAME_REPOSITORY, useClass: TypeOrmPatientNameRepository },
     { provide: PATIENT_CONTACT_REPOSITORY, useClass: TypeOrmPatientContactRepository },
     { provide: PATIENT_IDENTIFIER_REPOSITORY, useClass: TypeOrmPatientIdentifierRepository },
+    { provide: PATIENT_ADDRESS_REPOSITORY, useClass: TypeOrmPatientAddressRepository },
     { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
     CreatePatientUseCase,
     SearchPatientsUseCase,

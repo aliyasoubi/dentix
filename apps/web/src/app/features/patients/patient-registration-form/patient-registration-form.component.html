@@ -70,6 +70,51 @@
         inputMode="numeric"
       />
     </div>
+
+    <div class="patients-form__row">
+      <app-ds-text-field
+        [label]="'patients.form.address.province.label' | translate"
+        [control]="form.controls.province"
+      />
+
+      <app-ds-text-field
+        [label]="'patients.form.address.city.label' | translate"
+        [control]="form.controls.city"
+      />
+    </div>
+
+    <div class="patients-form__row">
+      <app-ds-text-field
+        [label]="'patients.form.address.district.label' | translate"
+        [control]="form.controls.district"
+      />
+
+      <app-ds-text-field
+        [label]="'patients.form.address.postalCode.label' | translate"
+        [control]="form.controls.postalCode"
+        [latin]="true"
+        inputMode="numeric"
+      />
+    </div>
+
+    <div class="patients-form__row">
+      <app-ds-text-field
+        [label]="'patients.form.address.addressLine1.label' | translate"
+        [control]="form.controls.addressLine1"
+      />
+
+      <app-ds-text-field
+        [label]="'patients.form.address.addressLine2.label' | translate"
+        [control]="form.controls.addressLine2"
+      />
+    </div>
+
+    <div class="patients-form__row">
+      <app-ds-text-field
+        [label]="'patients.form.address.deliveryNotes.label' | translate"
+        [control]="form.controls.deliveryNotes"
+      />
+    </div>
   </app-ds-disclosure>
 
   @if (errorMessage(); as message) {

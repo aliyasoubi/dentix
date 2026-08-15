@@ -79,6 +79,13 @@ export class PatientRegistrationFormComponent {
       contactUnavailable: [false],
       sex: ["unspecified" as "male" | "female" | "unspecified"],
       nationalCode: ["", [iranianNationalCode]],
+      province: [""],
+      city: [""],
+      district: [""],
+      addressLine1: [""],
+      addressLine2: [""],
+      postalCode: [""],
+      deliveryNotes: [""],
     },
     { validators: [contactRequired] },
   );
@@ -126,6 +133,13 @@ export class PatientRegistrationFormComponent {
           ? this.dateAdapter.toIso8601(value.dateOfBirth)
           : null,
       nationalCode: value.nationalCode || null,
+      province: value.province || null,
+      city: value.city || null,
+      district: value.district || null,
+      addressLine1: value.addressLine1 || null,
+      addressLine2: value.addressLine2 || null,
+      postalCode: value.postalCode || null,
+      deliveryNotes: value.deliveryNotes || null,
     });
   }
 
@@ -144,6 +158,13 @@ export class PatientRegistrationFormComponent {
       contactUnavailable: false,
       sex: "unspecified",
       nationalCode: "",
+      province: "",
+      city: "",
+      district: "",
+      addressLine1: "",
+      addressLine2: "",
+      postalCode: "",
+      deliveryNotes: "",
     });
   }
 }

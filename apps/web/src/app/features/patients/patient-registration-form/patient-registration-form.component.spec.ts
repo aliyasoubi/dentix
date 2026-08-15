@@ -50,6 +50,13 @@ describe("PatientRegistrationFormComponent", () => {
       contactUnavailable: false,
       sex: "unspecified",
       nationalCode: "",
+      province: "",
+      city: "",
+      district: "",
+      addressLine1: "",
+      addressLine2: "",
+      postalCode: "",
+      deliveryNotes: "",
       ...overrides,
     });
   }
@@ -71,6 +78,13 @@ describe("PatientRegistrationFormComponent", () => {
         sex: "unspecified",
         dateOfBirth: null,
         nationalCode: null,
+        province: null,
+        city: null,
+        district: null,
+        addressLine1: null,
+        addressLine2: null,
+        postalCode: null,
+        deliveryNotes: null,
       },
     ]);
   });
@@ -79,6 +93,15 @@ describe("PatientRegistrationFormComponent", () => {
     fill({ nationalCode: "1234567891" });
     submit();
     expect(emitted[0]?.nationalCode).toBe("1234567891");
+  });
+
+  it("emits address fields exactly as entered, mapping empty ones to null", () => {
+    fill({ province: "تهران", city: "تهران", postalCode: "1234567890" });
+    submit();
+    expect(emitted[0]?.province).toBe("تهران");
+    expect(emitted[0]?.city).toBe("تهران");
+    expect(emitted[0]?.postalCode).toBe("1234567890");
+    expect(emitted[0]?.district).toBeNull();
   });
 
   it("converts a picked Jalali date of birth to the canonical Gregorian ISO string", () => {
@@ -148,6 +171,13 @@ describe("PatientRegistrationFormComponent", () => {
         contactUnavailable: false,
         sex: "unspecified",
         nationalCode: "",
+        province: "",
+        city: "",
+        district: "",
+        addressLine1: "",
+        addressLine2: "",
+        postalCode: "",
+        deliveryNotes: "",
       });
     });
 

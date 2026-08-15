@@ -68,6 +68,13 @@ export class PatientsController {
       sex: body.sex,
       dateOfBirth: body.dateOfBirth,
       nationalCode: body.nationalCode,
+      province: body.province,
+      city: body.city,
+      district: body.district,
+      addressLine1: body.addressLine1,
+      addressLine2: body.addressLine2,
+      postalCode: body.postalCode,
+      deliveryNotes: body.deliveryNotes,
     });
     if (!result.ok) {
       throw new BadRequestException(result.code);

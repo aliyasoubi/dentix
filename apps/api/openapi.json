@@ -479,6 +479,41 @@
             "type": "string",
             "nullable": true,
             "description": "Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted."
+          },
+          "province": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: province."
+          },
+          "city": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: city."
+          },
+          "district": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: district/locality."
+          },
+          "addressLine1": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: street/address line 1."
+          },
+          "addressLine2": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: street/address line 2."
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: postal code."
+          },
+          "deliveryNotes": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: free-form delivery notes."
           }
         },
         "required": [

@@ -10,6 +10,7 @@ import { UserAccountOrmEntity } from "../modules/identity-access/infrastructure/
 import { UserPermissionExceptionOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-permission-exception.orm-entity";
 import { UserRoleOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-role.orm-entity";
 import { UserSessionOrmEntity } from "../modules/identity-access/infrastructure/persistence/user-session.orm-entity";
+import { PatientAddressOrmEntity } from "../modules/patients/infrastructure/persistence/patient-address.orm-entity";
 import { PatientContactOrmEntity } from "../modules/patients/infrastructure/persistence/patient-contact.orm-entity";
 import { PatientIdentifierOrmEntity } from "../modules/patients/infrastructure/persistence/patient-identifier.orm-entity";
 import { PatientNameOrmEntity } from "../modules/patients/infrastructure/persistence/patient-name.orm-entity";
@@ -39,4 +40,5 @@ export const APP_ENTITIES = [
   PatientNameOrmEntity,
   PatientContactOrmEntity,
   PatientIdentifierOrmEntity,
+  PatientAddressOrmEntity,
 ] as const;
