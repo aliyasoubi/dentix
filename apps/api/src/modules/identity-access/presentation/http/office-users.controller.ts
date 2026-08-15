@@ -10,7 +10,9 @@ import {
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AddOfficeUserUseCase } from "../../application/use-cases/add-office-user.use-case";
 import { CurrentSession } from "../decorators/current-session.decorator";
+import { RequirePermission } from "../decorators/require-permission.decorator";
 import { CsrfGuard } from "../guards/csrf.guard";
+import { PermissionGuard } from "../guards/permission.guard";
 import { SessionGuard } from "../guards/session.guard";
 import { UserSession } from "../../domain/entities/user-session.entity";
 import { HttpErrorFilter } from "../../../../platform/http-error.filter";
@@ -27,12 +29,16 @@ import { AddOfficeUserResponseDto } from "./dto/add-office-user-response.dto";
 @ApiTags("office-users")
 @ApiCookieAuth()
 @Controller("office-users")
-@UseGuards(SessionGuard, CsrfGuard)
+@UseGuards(SessionGuard, CsrfGuard, PermissionGuard)
 @UseFilters(HttpErrorFilter)
 export class OfficeUsersController {
   constructor(private readonly addOfficeUser: AddOfficeUserUseCase) {}
 
+  // Endpoint-level check on top of the use case's own fresh lookup —
+  // CLAUDE.md invariant 7 asks for both, and the use case's internal check
+  // stays because it also orders FORBIDDEN ahead of the recent-auth gate.
   @Post()
+  @RequirePermission("user.manage")
   @ApiOperation({ summary: "Link an existing identity-provider account to this office" })
   @ApiBody({ type: AddOfficeUserRequestDto })
   @ApiResponse({ status: 201, type: AddOfficeUserResponseDto })

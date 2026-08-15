@@ -421,6 +421,15 @@ export interface operations {
                     "application/json": components["schemas"]["PatientSearchResultDto"][];
                 };
             };
+            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.view. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
         };
     };
     PatientsController_create: {
@@ -446,6 +455,15 @@ export interface operations {
             };
             /** @description Validation failure, e.g. NATIVE_NAME_REQUIRED */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.create. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

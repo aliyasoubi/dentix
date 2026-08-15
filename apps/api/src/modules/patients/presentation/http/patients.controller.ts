@@ -19,7 +19,14 @@ import {
 } from "@nestjs/swagger";
 import { CreatePatientUseCase } from "../../application/use-cases/create-patient.use-case";
 import { SearchPatientsUseCase } from "../../application/use-cases/search-patients.use-case";
-import { CurrentSession, CsrfGuard, SessionGuard, UserSession } from "../../../identity-access/public-api";
+import {
+  CurrentSession,
+  CsrfGuard,
+  PermissionGuard,
+  RequirePermission,
+  SessionGuard,
+  UserSession,
+} from "../../../identity-access/public-api";
 import { HttpErrorFilter } from "../../../../platform/http-error.filter";
 import { ErrorResponseDto } from "../../../../platform/dto/error-response.dto";
 import { CreatePatientRequestDto } from "./dto/create-patient-request.dto";
@@ -32,11 +39,19 @@ import { PatientSearchResultDto } from "./dto/patient-search-result.dto";
  * office_id always comes from the session, never a client-supplied
  * value (04-data-model.md: "office_id is derived from the authenticated
  * session, never accepted as an unrestricted client value").
+ *
+ * Guard order matters: SessionGuard populates `request.currentSession`,
+ * which PermissionGuard then reads (see that guard's own comment). Until
+ * PermissionGuard was applied here these routes were authenticated but
+ * NOT authorized — any active office member could read or create patient
+ * records regardless of role, which CLAUDE.md invariant 7 ("endpoint AND
+ * object-level checks on every mutation") forbids. The permission codes
+ * had existed since the RBAC build; nothing was enforcing them.
  */
 @ApiTags("patients")
 @ApiCookieAuth()
 @Controller("patients")
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, PermissionGuard)
 @UseFilters(HttpErrorFilter)
 export class PatientsController {
   constructor(
@@ -46,7 +61,13 @@ export class PatientsController {
 
   @Post()
   @UseGuards(CsrfGuard)
+  @RequirePermission("patient.create")
   @ApiOperation({ summary: "Create a patient" })
+  @ApiResponse({
+    status: 403,
+    type: ErrorResponseDto,
+    description: "MISSING_PERMISSION — the caller's roles do not grant patient.create.",
+  })
   @ApiBody({ type: CreatePatientRequestDto })
   @ApiResponse({ status: 201, type: CreatePatientResponseDto })
   @ApiResponse({
@@ -83,7 +104,13 @@ export class PatientsController {
   }
 
   @Get()
+  @RequirePermission("patient.view")
   @ApiOperation({ summary: "Search patients by name or phone, or list most recent when query is empty" })
+  @ApiResponse({
+    status: 403,
+    type: ErrorResponseDto,
+    description: "MISSING_PERMISSION — the caller's roles do not grant patient.view.",
+  })
   @ApiQuery({
     name: "query",
     required: false,

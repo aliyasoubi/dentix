@@ -213,13 +213,18 @@ describe("Office users (API contract)", () => {
       expect(response.status).toBe(403);
     });
 
-    it("returns 403 FORBIDDEN for an authenticated non-admin, without querying the provider", async () => {
+    // MISSING_PERMISSION, not the use case's own FORBIDDEN: PermissionGuard
+    // now rejects at the endpoint boundary before the handler runs. The use
+    // case's internal check still exists and still returns FORBIDDEN — it is
+    // the object-level half of CLAUDE.md invariant 7 and the guard is the
+    // endpoint half, so a caller only ever sees whichever rejects first.
+    it("returns 403 MISSING_PERMISSION for an authenticated non-admin, without querying the provider", async () => {
       const credentials = await seedSession({ grantUserManage: false });
 
       const response = await post(credentials, { email: "new.person@example.com" });
 
       expect(response.status).toBe(403);
-      expect((response.body as ErrorResponseBody).code).toBe("FORBIDDEN");
+      expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
       expect(lookupCalls).toEqual([]);
     });
   });

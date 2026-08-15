@@ -24,6 +24,9 @@ import {
   CSRF_COOKIE_NAME,
 } from "../src/modules/identity-access/presentation/http/cookies";
 import { PatientAddressOrmEntity } from "../src/modules/patients/infrastructure/persistence/patient-address.orm-entity";
+import { RoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/role.orm-entity";
+import { UserRoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/user-role.orm-entity";
+import { SeedDefaultRolesUseCase } from "../src/modules/identity-access/public-api";
 
 interface ErrorResponseBody {
   readonly code?: string;
@@ -57,6 +60,9 @@ describe("Patients (API contract)", () => {
   let sessionTokens: SessionTokenService;
   let officeUserOrmRepo: Repository<OfficeUserOrmEntity>;
   let patientAddressOrmRepo: Repository<PatientAddressOrmEntity>;
+  let roleOrmRepo: Repository<RoleOrmEntity>;
+  let userRoleOrmRepo: Repository<UserRoleOrmEntity>;
+  let seedDefaultRoles: SeedDefaultRolesUseCase;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -74,13 +80,24 @@ describe("Patients (API contract)", () => {
     sessionTokens = moduleFixture.get(SessionTokenService);
     officeUserOrmRepo = moduleFixture.get(getRepositoryToken(OfficeUserOrmEntity));
     patientAddressOrmRepo = moduleFixture.get(getRepositoryToken(PatientAddressOrmEntity));
+    roleOrmRepo = moduleFixture.get(getRepositoryToken(RoleOrmEntity));
+    userRoleOrmRepo = moduleFixture.get(getRepositoryToken(UserRoleOrmEntity));
+    seedDefaultRoles = moduleFixture.get(SeedDefaultRolesUseCase);
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  async function seedActiveSession(): Promise<{
+  /**
+   * `roleCode` defaults to office_manager (patient.view + patient.create).
+   * Pass a different code — or null for no role at all — to exercise the
+   * authorization boundary. This used to grant nothing and every test still
+   * expected 201/200, which is exactly how the missing PermissionGuard on
+   * PatientsController went unnoticed: the suite encoded the bypass as
+   * expected behavior.
+   */
+  async function seedActiveSession(roleCode: string | null = "office_manager"): Promise<{
     sessionToken: string;
     csrfToken: string;
     officeId: Uuid;
@@ -100,8 +117,9 @@ describe("Patients (API contract)", () => {
     });
     await userAccounts.create(account);
 
+    const officeUserId = randomUUID();
     await officeUserOrmRepo.insert({
-      id: randomUUID(),
+      id: officeUserId,
       officeId: office.id,
       userId: account.id,
       permissionVersion: 1,
@@ -113,6 +131,18 @@ describe("Patients (API contract)", () => {
       archivedAt: null,
       archivedBy: null,
     });
+
+    if (roleCode) {
+      await seedDefaultRoles.execute({ officeId: office.id });
+      const role = await roleOrmRepo.findOneByOrFail({ officeId: office.id, code: roleCode });
+      await userRoleOrmRepo.insert({
+        id: randomUUID(),
+        officeUserId,
+        roleId: role.id,
+        createdAt: new Date(),
+        createdBy: null,
+      });
+    }
 
     const sessionToken = sessionTokens.generateOpaqueToken();
     const csrfToken = sessionTokens.generateOpaqueToken();
@@ -148,6 +178,50 @@ describe("Patients (API contract)", () => {
         .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`)
         .send({ nativeName: "رضا احمدی", phone: "09123456789" });
       expect(response.status).toBe(403);
+    });
+
+    // Authentication is not authorization. These are the checks whose
+    // absence let an authenticated-but-roleless member create patients.
+    describe("authorization", () => {
+      it("returns 403 MISSING_PERMISSION for an active member holding no role at all", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession(null);
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true });
+        expect(response.status).toBe(403);
+        expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
+      });
+
+      // cashier carries patient.view but deliberately not patient.create
+      // (01-product/04-roles-and-permissions.md) — proves the guard checks
+      // the specific code, not merely "has some role".
+      it("returns 403 for a cashier creating a patient, while still allowing them to search", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession("cashier");
+
+        const create = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true });
+        expect(create.status).toBe(403);
+        expect((create.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
+
+        const search = await request(app.getHttpServer())
+          .get("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+        expect(search.status).toBe(200);
+      });
+
+      it("returns 403 MISSING_PERMISSION when a roleless member searches patients", async () => {
+        const { sessionToken } = await seedActiveSession(null);
+        const response = await request(app.getHttpServer())
+          .get("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+        expect(response.status).toBe(403);
+        expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
+      });
     });
 
     it("returns 400 NATIVE_NAME_REQUIRED when the native name is blank", async () => {

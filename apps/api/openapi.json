@@ -214,6 +214,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "MISSING_PERMISSION — the caller's roles do not grant patient.create.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -249,6 +259,16 @@
                   "items": {
                     "$ref": "#/components/schemas/PatientSearchResultDto"
                   }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "MISSING_PERMISSION — the caller's roles do not grant patient.view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             }
