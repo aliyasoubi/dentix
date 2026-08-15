@@ -51,7 +51,7 @@ export class OfficeUsersController {
   @ApiResponse({
     status: 400,
     type: ErrorResponseDto,
-    description: "e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED",
+    description: "e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED, ROLE_NOT_FOUND",
   })
   async create(
     @CurrentSession() session: UserSession,
@@ -61,6 +61,7 @@ export class OfficeUsersController {
       officeId: session.officeId,
       actorUserId: session.userId,
       email: body.email,
+      roleCode: body.roleCode,
       authenticatedAt: session.authenticatedAt,
     });
     if (!result.ok) {

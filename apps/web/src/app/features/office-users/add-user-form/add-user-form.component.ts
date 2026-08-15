@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, inject, input, output } from "@angu
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
 import { DsFieldErrorKeys } from "../../../design-system/foundation/field/ds-field-errors";
+import {
+  DsSelectFieldComponent,
+  DsSelectOption,
+} from "../../../design-system/foundation/field/ds-select-field.component";
 import { DsTextFieldComponent } from "../../../design-system/foundation/field/ds-text-field.component";
 import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
@@ -24,6 +28,7 @@ import { AddOfficeUserRequest } from "../office-users-api.service";
   imports: [
     ReactiveFormsModule,
     DsTextFieldComponent,
+    DsSelectFieldComponent,
     DsAlertComponent,
     DsSubmitButtonComponent,
     TranslatePipe,
@@ -43,7 +48,25 @@ export class AddUserFormComponent {
 
   protected readonly form = this.formBuilder.nonNullable.group({
     email: ["", [Validators.required, Validators.email]],
+    // No blank default: a membership with no role has zero permissions, so
+    // the backend requires a role code. Defaulting to the least-privileged
+    // of the six rather than pre-selecting something powerful.
+    roleCode: ["cashier" as AddOfficeUserRequest["roleCode"], [Validators.required]],
   });
+
+  /**
+   * The six fixed roles (01-product/04-roles-and-permissions.md). Ordered
+   * least- to most-privileged so the destructive choice isn't the nearest
+   * one. Labels are translation keys — DsSelectFieldComponent resolves them.
+   */
+  protected readonly ROLE_OPTIONS: readonly DsSelectOption[] = [
+    { value: "cashier", label: "officeUsers.role.cashier" },
+    { value: "receptionist", label: "officeUsers.role.receptionist" },
+    { value: "dental_assistant", label: "officeUsers.role.dental_assistant" },
+    { value: "dentist", label: "officeUsers.role.dentist" },
+    { value: "office_manager", label: "officeUsers.role.office_manager" },
+    { value: "system_administrator", label: "officeUsers.role.system_administrator" },
+  ];
 
   /**
    * Declaration order is the display priority: an empty field should say it
@@ -62,11 +85,12 @@ export class AddUserFormComponent {
     // No .trim() here: Validators.email already rejects a value with
     // leading/trailing whitespace (verified — form.invalid is true for one),
     // so by the time this line runs the value can't contain any to trim.
-    this.submitted.emit({ email: this.form.getRawValue().email });
+    const value = this.form.getRawValue();
+    this.submitted.emit({ email: value.email, roleCode: value.roleCode });
   }
 
   /** Public, parent-driven — same reasoning as PatientRegistrationFormComponent.reset(): only the parent knows the add actually succeeded. */
   reset(): void {
-    this.form.reset({ email: "" });
+    this.form.reset({ email: "", roleCode: "cashier" });
   }
 }

@@ -4,7 +4,16 @@
 
   "officeUsers.form.title": "افزودن کاربر جدید",
   "officeUsers.form.email.label": "ایمیل کاربر",
+  "officeUsers.form.roleCode.label": "نقش کاربر",
   "officeUsers.form.submit": "افزودن کاربر",
+
+  "officeUsers.role.dentist": "دندان‌پزشک",
+  "officeUsers.role.dental_assistant": "دستیار دندان‌پزشک",
+  "officeUsers.role.receptionist": "پذیرش",
+  "officeUsers.role.cashier": "صندوق",
+  "officeUsers.role.office_manager": "مدیر مطب",
+  "officeUsers.role.system_administrator": "مدیر سامانه",
+
   "officeUsers.form.success": "کاربر «{{email}}» با موفقیت به مطب افزوده شد.",
   "officeUsers.form.reauthenticate": "ورود دوباره و ادامه",
 
@@ -15,5 +24,6 @@
   "officeUsers.form.error.NOT_FOUND_IN_PROVIDER": "حسابی با این ایمیل یافت نشد. ابتدا باید حساب کاربری در سامانه احراز هویت ایجاد شود.",
   "officeUsers.form.error.PROVIDER_ACCOUNT_DISABLED": "حساب کاربری یافت‌شده غیرفعال است.",
   "officeUsers.form.error.ALREADY_LINKED": "این کاربر پیش‌تر به مطب افزوده شده است.",
+  "officeUsers.form.error.ROLE_NOT_FOUND": "نقش انتخاب‌شده برای این مطب تعریف نشده است.",
   "officeUsers.form.error.VALIDATION_FAILED": "اطلاعات واردشده معتبر نیست. لطفاً مقادیر فرم را بررسی کنید."
 }

@@ -7,8 +7,13 @@ import { OfficeUser } from "../../domain/entities/office-user.entity";
 import { UserAccount } from "../../domain/entities/user-account.entity";
 import { OFFICE_USER_REPOSITORY } from "../../domain/repositories/office-user.repository";
 import type { OfficeUserRepository } from "../../domain/repositories/office-user.repository";
+import { ROLE_REPOSITORY } from "../../domain/repositories/role.repository";
+import type { RoleRepository } from "../../domain/repositories/role.repository";
+import { USER_ROLE_REPOSITORY } from "../../domain/repositories/user-role.repository";
+import type { UserRoleRepository } from "../../domain/repositories/user-role.repository";
 import { USER_ACCOUNT_REPOSITORY } from "../../domain/repositories/user-account.repository";
 import type { UserAccountRepository } from "../../domain/repositories/user-account.repository";
+import type { DefaultRoleCode } from "../../domain/value-objects/default-role-definitions";
 import { isWithinRecentAuthenticationWindow } from "../../domain/value-objects/session-policy";
 import { AUTHORIZATION_PORT } from "../ports/authorization.port";
 import type { AuthorizationPort } from "../ports/authorization.port";
@@ -23,12 +28,20 @@ export type AddOfficeUserErrorCode =
   | "INVALID_EMAIL"
   | "NOT_FOUND_IN_PROVIDER"
   | "PROVIDER_ACCOUNT_DISABLED"
-  | "ALREADY_LINKED";
+  | "ALREADY_LINKED"
+  | "ROLE_NOT_FOUND";
 
 export interface AddOfficeUserCommand {
   readonly officeId: Uuid;
   readonly actorUserId: Uuid;
   readonly email: string;
+  /**
+   * Required, not optional: a membership with no role resolves to zero
+   * effective permissions, so an account created without one is unusable
+   * the moment PermissionGuard is enforced. One of the six fixed codes —
+   * custom roles are not a thing yet.
+   */
+  readonly roleCode: DefaultRoleCode;
   /** The acting session's `authenticatedAt` — see the recent-authentication gate in execute(). */
   readonly authenticatedAt: Date;
 }
@@ -50,8 +63,16 @@ function requireEnv(name: string): string {
 /**
  * The minimal admin-facing counterpart to the dev bootstrap script
  * (apps/api/scripts/bootstrap-dev-office-user.ts) — same shape (find or
- * create a user_account, link an office_user), now a real use case an
- * authenticated admin can call instead of a script run by hand.
+ * create a user_account, link an office_user, grant a role), now a real
+ * use case an authenticated admin can call instead of a script run by
+ * hand.
+ *
+ * The role grant is not optional. This use case originally created a
+ * membership and nothing else, which was invisible only because patient
+ * routes weren't checking permissions at all; once PermissionGuard was
+ * applied, every account it had created resolved to zero permissions.
+ * Membership and role are now written in one transaction so that state
+ * cannot be produced again.
  *
  * Deliberately does NOT create a Keycloak account or set a credential.
  * 09-authentication-session-architecture.md, "Recovery and administration":
@@ -73,6 +94,8 @@ export class AddOfficeUserUseCase {
   constructor(
     @Inject(OFFICE_USER_REPOSITORY) private readonly officeUsers: OfficeUserRepository,
     @Inject(USER_ACCOUNT_REPOSITORY) private readonly userAccounts: UserAccountRepository,
+    @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
+    @Inject(USER_ROLE_REPOSITORY) private readonly userRoles: UserRoleRepository,
     @Inject(AUTHORIZATION_PORT) private readonly authorization: AuthorizationPort,
     @Inject(KEYCLOAK_ADMIN_PORT) private readonly keycloakAdmin: KeycloakAdminPort,
     @Inject(AUDIT_EVENT_REPOSITORY) private readonly auditEvents: AuditEventRepository,
@@ -142,6 +165,17 @@ export class AddOfficeUserUseCase {
       }
     }
 
+    // Resolved before the transaction for the same reason as the checks
+    // above: an office whose default roles were never seeded should fail
+    // cleanly rather than create a user_account and then discover there is
+    // no role to grant it. The DTO's @IsIn already rejects codes outside
+    // the six; reaching ROLE_NOT_FOUND means the code is valid but this
+    // office has no such row.
+    const role = await this.roles.findByOfficeIdAndCode(command.officeId, command.roleCode);
+    if (!role) {
+      return fail("ROLE_NOT_FOUND");
+    }
+
     const now = new Date();
     const success = await this.unitOfWork.runInTransaction(async (tx) => {
       const account =
@@ -164,6 +198,11 @@ export class AddOfficeUserUseCase {
       });
       await this.officeUsers.create(officeUser, command.actorUserId, tx);
 
+      // Same transaction as the membership itself: a committed office_user
+      // with no user_role is precisely the unusable, zero-permission
+      // account this use case used to produce.
+      await this.userRoles.grant(officeUserId, role.id, command.actorUserId, tx);
+
       await this.auditEvents.create(
         AuditEvent.create({
           id: asUuid(randomUUID()),
@@ -172,7 +211,10 @@ export class AddOfficeUserUseCase {
           action: "office_user_added",
           entityType: "office_user",
           entityId: officeUserId,
-          detail: null,
+          // Which role someone was granted is the substantive half of this
+          // action — "user X was added" without it doesn't say what they can
+          // now do. Role codes are locale-neutral identifiers, no PHI.
+          detail: `role=${command.roleCode}`,
           now,
         }),
         tx,

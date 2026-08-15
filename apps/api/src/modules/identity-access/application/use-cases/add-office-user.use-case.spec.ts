@@ -3,6 +3,7 @@ import { asUuid, TransactionContext, Uuid } from "@dentix/kernel";
 import { AddOfficeUserCommand, AddOfficeUserUseCase } from "./add-office-user.use-case";
 import { AuditEvent } from "../../../audit/domain/entities/audit-event.entity";
 import { OfficeUser } from "../../domain/entities/office-user.entity";
+import { Role } from "../../domain/entities/role.entity";
 import { UserAccount } from "../../domain/entities/user-account.entity";
 import type { PermissionCode } from "../../domain/value-objects/permission-code";
 import type { KeycloakAdminUser } from "../ports/keycloak-admin.port";
@@ -11,6 +12,7 @@ import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 describe("AddOfficeUserUseCase", () => {
   const officeId = asUuid(randomUUID());
   const actorUserId = asUuid(randomUUID());
+  const roleId = asUuid(randomUUID());
   const issuer = "https://kc.local/realms/test";
   const originalEnv = process.env["OIDC_ISSUER_URL"];
 
@@ -28,7 +30,7 @@ describe("AddOfficeUserUseCase", () => {
    * below pass an explicitly stale value instead.
    */
   function command(email: string, authenticatedAt: Date = new Date()): AddOfficeUserCommand {
-    return { officeId, actorUserId, email, authenticatedAt };
+    return { officeId, actorUserId, email, roleCode: "receptionist", authenticatedAt };
   }
 
   function buildUseCase(options: {
@@ -36,6 +38,8 @@ describe("AddOfficeUserUseCase", () => {
     providerUser?: KeycloakAdminUser | null;
     existingAccount?: UserAccount | null;
     existingMembership?: OfficeUser | null;
+    /** null simulates an office whose default roles were never seeded. */
+    role?: Role | null;
   }): {
     useCase: AddOfficeUserUseCase;
     officeUsers: {
@@ -50,6 +54,7 @@ describe("AddOfficeUserUseCase", () => {
     authorization: { hasPermission: jest.Mock<Promise<boolean>, [Uuid, Uuid, PermissionCode]> };
     keycloakAdmin: { findUserByEmail: jest.Mock<Promise<KeycloakAdminUser | null>, [string]> };
     auditEvents: { create: jest.Mock<Promise<void>, [AuditEvent, TransactionContext?]> };
+    userRoles: { grant: jest.Mock<Promise<void>, [Uuid, Uuid, Uuid | null, TransactionContext?]> };
   } {
     const officeUsers = {
       findByUserId: jest
@@ -81,16 +86,38 @@ describe("AddOfficeUserUseCase", () => {
       runInTransaction: jest.fn(async (work) => work({ _brand: "TransactionContext" } as never)),
     };
 
+    const seededRole =
+      options.role === undefined
+        ? Role.create({
+            id: roleId,
+            officeId,
+            code: "receptionist",
+            name: "Receptionist",
+          })
+        : options.role;
+    const roles = {
+      findByOfficeIdAndCode: jest.fn<Promise<Role | null>, [Uuid, string]>().mockResolvedValue(seededRole),
+      findByIds: jest.fn(),
+      create: jest.fn(),
+    };
+    const userRoles = {
+      grant: jest.fn<Promise<void>, [Uuid, Uuid, Uuid | null, TransactionContext?]>(),
+      revoke: jest.fn(),
+      findRoleIdsByOfficeUserId: jest.fn(),
+    };
+
     const useCase = new AddOfficeUserUseCase(
       officeUsers,
       userAccounts,
+      roles,
+      userRoles,
       authorization,
       keycloakAdmin,
       auditEvents,
       unitOfWork,
     );
 
-    return { useCase, officeUsers, userAccounts, authorization, keycloakAdmin, auditEvents };
+    return { useCase, officeUsers, userAccounts, authorization, keycloakAdmin, auditEvents, userRoles };
   }
 
   it("rejects an actor without user.manage permission, without ever calling the provider", async () => {
@@ -200,8 +227,8 @@ describe("AddOfficeUserUseCase", () => {
     expect(userAccounts.create).not.toHaveBeenCalled();
   });
 
-  it("creates a new user_account and links it, with an audit event", async () => {
-    const { useCase, officeUsers, userAccounts, auditEvents } = buildUseCase({});
+  it("creates a new user_account and links it, with a role grant and an audit event", async () => {
+    const { useCase, officeUsers, userAccounts, auditEvents, userRoles } = buildUseCase({});
 
     const result = await useCase.execute(command("new.person@example.com"));
 
@@ -217,10 +244,45 @@ describe("AddOfficeUserUseCase", () => {
     expect(createdMembership.userId).toBe(createdAccount.id);
     expect(createdBy).toBe(actorUserId);
 
+    // The whole point of the change: a membership is never committed
+    // without a role, because one with no role has zero permissions.
+    expect(userRoles.grant).toHaveBeenCalledTimes(1);
+    expect(userRoles.grant.mock.calls[0][0]).toBe(createdMembership.id);
+    expect(userRoles.grant.mock.calls[0][1]).toBe(roleId);
+
     expect(auditEvents.create).toHaveBeenCalledTimes(1);
     const auditEvent = auditEvents.create.mock.calls[0][0];
     expect(auditEvent.action).toBe("office_user_added");
     expect(auditEvent.actorUserId).toBe(actorUserId);
+    // "user X was added" without the role doesn't record what they can do.
+    expect(auditEvent.detail).toBe("role=receptionist");
+  });
+
+  describe("role grant", () => {
+    it("reports ROLE_NOT_FOUND, and writes nothing, when the office has no such role seeded", async () => {
+      const { useCase, officeUsers, userAccounts, userRoles } = buildUseCase({ role: null });
+
+      const result = await useCase.execute(command("new.person@example.com"));
+
+      expect(!result.ok && result.code).toBe("ROLE_NOT_FOUND");
+      expect(userAccounts.create).not.toHaveBeenCalled();
+      expect(officeUsers.create).not.toHaveBeenCalled();
+      expect(userRoles.grant).not.toHaveBeenCalled();
+    });
+
+    // Membership and grant must share one transaction — a committed
+    // office_user with no user_role is the exact unusable state this
+    // use case used to produce.
+    it("writes the membership and the role grant in the same transaction context", async () => {
+      const { useCase, officeUsers, userRoles } = buildUseCase({});
+
+      await useCase.execute(command("new.person@example.com"));
+
+      const membershipTx = officeUsers.create.mock.calls[0][2];
+      const grantTx = userRoles.grant.mock.calls[0][3];
+      expect(membershipTx).toBeDefined();
+      expect(grantTx).toBe(membershipTx);
+    });
   });
 
   it("reuses an existing user_account for the identity rather than creating a second one", async () => {

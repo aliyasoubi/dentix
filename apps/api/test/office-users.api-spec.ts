@@ -179,6 +179,11 @@ describe("Office users (API contract)", () => {
     return { sessionToken, csrfToken, officeId: office.id, userId: account.id };
   }
 
+  /**
+   * Defaults `roleCode` so tests about CSRF, the recent-auth gate, and
+   * provider outcomes stay about those things. Pass an explicit roleCode
+   * (or omit it via a body that sets it undefined) to test the field itself.
+   */
   function post(
     credentials: { sessionToken: string; csrfToken: string },
     body: Record<string, unknown>,
@@ -190,7 +195,7 @@ describe("Office users (API contract)", () => {
         `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
       )
       .set("X-CSRF-Token", credentials.csrfToken)
-      .send(body);
+      .send({ roleCode: "receptionist", ...body });
   }
 
   describe("authorization", () => {
@@ -322,27 +327,71 @@ describe("Office users (API contract)", () => {
       expect(created.officeId).toBe(credentials.officeId);
       expect(created.createdBy).toBe(credentials.userId);
       expect(created.isActive).toBe(true);
-      // No role is granted through this endpoint — the new member starts
-      // with zero permissions until someone with role-management access
-      // grants one.
-      expect(await userRoleOrmRepo.countBy({ officeUserId: created.id })).toBe(0);
+      // This assertion used to read `.toBe(0)` with a comment explaining
+      // that no role is granted here — it was encoding the unusable-account
+      // bug as intended behavior. A membership with no role has zero
+      // effective permissions, so exactly one grant must land with it.
+      expect(await userRoleOrmRepo.countBy({ officeUserId: created.id })).toBe(1);
+    });
+
+    it("grants the requested role, not a fixed or default one", async () => {
+      const credentials = await seedSession();
+
+      const response = await post(credentials, {
+        email: "new.person@example.com",
+        roleCode: "cashier",
+      });
+
+      expect(response.status).toBe(201);
+      const officeUserId = (response.body as AddOfficeUserResponseBody).officeUserId;
+      const grants = await userRoleOrmRepo.findBy({ officeUserId });
+      expect(grants).toHaveLength(1);
+      const role = await roleOrmRepo.findOneByOrFail({ id: grants[0]!.roleId });
+      expect(role.code).toBe("cashier");
+      expect(role.officeId).toBe(credentials.officeId);
     });
 
     // Stronger than silently dropping them: forbidNonWhitelisted rejects the
-    // request outright, so an attempt to write into another office or
-    // self-grant a role fails loudly instead of appearing to succeed.
-    it("rejects a request that tries to smuggle in officeId or role", async () => {
+    // request outright, so an attempt to write into another office fails
+    // loudly instead of appearing to succeed.
+    it("rejects a request that tries to smuggle in officeId", async () => {
       const credentials = await seedSession();
 
       const response = await post(credentials, {
         email: "new.person@example.com",
         officeId: randomUUID(),
-        role: OFFICE_MANAGER_ROLE_CODE,
       });
 
       expect(response.status).toBe(400);
       expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       expect(await officeUserOrmRepo.countBy({ officeId: credentials.officeId })).toBe(1);
+    });
+  });
+
+  describe("roleCode", () => {
+    it("returns 400 VALIDATION_FAILED when roleCode is omitted entirely", async () => {
+      const credentials = await seedSession();
+
+      const response = await post(credentials, {
+        email: "new.person@example.com",
+        roleCode: undefined,
+      });
+
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      expect(lookupCalls).toEqual([]);
+    });
+
+    it("rejects a role code outside the six fixed roles rather than inventing one", async () => {
+      const credentials = await seedSession();
+
+      const response = await post(credentials, {
+        email: "new.person@example.com",
+        roleCode: "superuser",
+      });
+
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
     });
   });
 });

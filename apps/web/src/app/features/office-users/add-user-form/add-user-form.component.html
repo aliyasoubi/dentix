@@ -8,6 +8,15 @@
     type="email"
   />
 
+  <!-- Required, not optional: the backend rejects a request without one,
+       because a membership with no role can do nothing at all. -->
+  <app-ds-select-field
+    [label]="'officeUsers.form.roleCode.label' | translate"
+    [control]="form.controls.roleCode"
+    [options]="ROLE_OPTIONS"
+    [required]="true"
+  />
+
   @if (errorMessage(); as message) {
     <app-ds-alert variant="danger">{{ message }}</app-ds-alert>
   }

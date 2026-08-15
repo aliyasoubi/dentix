@@ -183,6 +183,11 @@ export interface components {
         AddOfficeUserRequestDto: {
             /** @description Must match an existing, enabled account in the identity provider. */
             email: string;
+            /**
+             * @description One of the six fixed roles. Custom roles are not supported.
+             * @enum {string}
+             */
+            roleCode: "dentist" | "dental_assistant" | "receptionist" | "cashier" | "office_manager" | "system_administrator";
         };
         AddOfficeUserResponseDto: {
             /** Format: uuid */
@@ -381,7 +386,7 @@ export interface operations {
                     "application/json": components["schemas"]["AddOfficeUserResponseDto"];
                 };
             };
-            /** @description e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED */
+            /** @description e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED, ROLE_NOT_FOUND */
             400: {
                 headers: {
                     [name: string]: unknown;

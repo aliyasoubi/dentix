@@ -1,7 +1,26 @@
 import { PermissionCode } from "./permission-code";
 
+/**
+ * The six fixed role codes. Exported separately from the definitions below
+ * so callers that only need to *validate* a code (AddOfficeUserRequestDto's
+ * @IsIn, AddOfficeUserUseCase) don't pull in the whole permission matrix,
+ * and so `DefaultRoleCode` can be a real union rather than `string`.
+ * Custom/editable roles are deliberately not a thing yet — the `role` table
+ * allows them, nothing creates them.
+ */
+export const DEFAULT_ROLE_CODES = [
+  "dentist",
+  "dental_assistant",
+  "receptionist",
+  "cashier",
+  "office_manager",
+  "system_administrator",
+] as const;
+
+export type DefaultRoleCode = (typeof DEFAULT_ROLE_CODES)[number];
+
 export interface DefaultRoleDefinition {
-  readonly code: string;
+  readonly code: DefaultRoleCode;
   readonly name: string;
   readonly permissions: readonly PermissionCode[];
 }

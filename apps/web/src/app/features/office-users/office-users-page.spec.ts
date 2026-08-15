@@ -50,17 +50,17 @@ describe("OfficeUsersPage", () => {
   }
 
   it("posts what the form emitted, verbatim", () => {
-    form().submitted.emit({ email: "reza@example.com" });
+    form().submitted.emit({ email: "reza@example.com", roleCode: "cashier" });
 
     const req = httpMock.expectOne("/api/v1/office-users");
     expect(req.request.method).toBe("POST");
-    expect(req.request.body).toEqual({ email: "reza@example.com" });
+    expect(req.request.body).toEqual({ email: "reza@example.com", roleCode: "cashier" });
     req.flush({ officeUserId: "11111111-1111-1111-1111-111111111111" });
   });
 
   it("confirms success with the submitted email and clears the form", async () => {
     const resetSpy = vi.spyOn(form(), "reset");
-    form().submitted.emit({ email: "reza@example.com" });
+    form().submitted.emit({ email: "reza@example.com", roleCode: "cashier" });
 
     httpMock
       .expectOne("/api/v1/office-users")
@@ -75,7 +75,7 @@ describe("OfficeUsersPage", () => {
 
   it("shows the translated message for a backend error code, and does not clear the form", async () => {
     const resetSpy = vi.spyOn(form(), "reset");
-    form().submitted.emit({ email: "nobody@example.com" });
+    form().submitted.emit({ email: "nobody@example.com", roleCode: "cashier" });
 
     httpMock
       .expectOne("/api/v1/office-users")
@@ -90,7 +90,7 @@ describe("OfficeUsersPage", () => {
 
   describe("RECENT_AUTHENTICATION_REQUIRED", () => {
     async function submitAndGetStale(): Promise<void> {
-      form().submitted.emit({ email: "reza@example.com" });
+      form().submitted.emit({ email: "reza@example.com", roleCode: "cashier" });
       httpMock
         .expectOne("/api/v1/office-users")
         .flush({ code: "RECENT_AUTHENTICATION_REQUIRED" }, { status: 403, statusText: "Forbidden" });
@@ -126,7 +126,7 @@ describe("OfficeUsersPage", () => {
       await submitAndGetStale();
       expect(fixture.componentInstance["needsReauthentication"]()).toBe(true);
 
-      form().submitted.emit({ email: "reza@example.com" });
+      form().submitted.emit({ email: "reza@example.com", roleCode: "cashier" });
       httpMock
         .expectOne("/api/v1/office-users")
         .flush({ officeUserId: "11111111-1111-1111-1111-111111111111" });
@@ -136,7 +136,7 @@ describe("OfficeUsersPage", () => {
     });
 
     it("does not offer re-authentication for unrelated failures", async () => {
-      form().submitted.emit({ email: "nobody@example.com" });
+      form().submitted.emit({ email: "nobody@example.com", roleCode: "cashier" });
       httpMock
         .expectOne("/api/v1/office-users")
         .flush({ code: "NOT_FOUND_IN_PROVIDER" }, { status: 400, statusText: "Bad Request" });
@@ -147,7 +147,7 @@ describe("OfficeUsersPage", () => {
   });
 
   it("falls back to the generic message for a code this page has no copy for", async () => {
-    form().submitted.emit({ email: "reza@example.com" });
+    form().submitted.emit({ email: "reza@example.com", roleCode: "cashier" });
 
     httpMock
       .expectOne("/api/v1/office-users")

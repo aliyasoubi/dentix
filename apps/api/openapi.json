@@ -149,7 +149,7 @@
             }
           },
           "400": {
-            "description": "e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED",
+            "description": "e.g. NOT_FOUND_IN_PROVIDER, ALREADY_LINKED, PROVIDER_ACCOUNT_DISABLED, ROLE_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": {
@@ -442,10 +442,23 @@
           "email": {
             "type": "string",
             "description": "Must match an existing, enabled account in the identity provider."
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "dentist",
+              "dental_assistant",
+              "receptionist",
+              "cashier",
+              "office_manager",
+              "system_administrator"
+            ],
+            "description": "One of the six fixed roles. Custom roles are not supported."
           }
         },
         "required": [
-          "email"
+          "email",
+          "roleCode"
         ]
       },
       "AddOfficeUserResponseDto": {
