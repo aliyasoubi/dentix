@@ -14,7 +14,12 @@ import { DsDisclosureComponent } from "../../../design-system/product/disclosure
 import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { CreatePatientRequest } from "../patients-api.service";
-import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form.validators";
+import {
+  contactRequired,
+  iranianMobile,
+  iranianNationalCode,
+  requiredNonBlank,
+} from "./patient-form.validators";
 
 /**
  * Patient registration form.
@@ -73,6 +78,7 @@ export class PatientRegistrationFormComponent {
       dateOfBirth: this.formBuilder.control<Date | null>(null),
       contactUnavailable: [false],
       sex: ["unspecified" as "male" | "female" | "unspecified"],
+      nationalCode: ["", [iranianNationalCode]],
     },
     { validators: [contactRequired] },
   );
@@ -87,6 +93,10 @@ export class PatientRegistrationFormComponent {
 
   protected readonly PHONE_ERRORS: DsFieldErrorKeys = {
     iranianMobile: "patients.form.error.INVALID_PHONE",
+  };
+
+  protected readonly NATIONAL_CODE_ERRORS: DsFieldErrorKeys = {
+    iranianNationalCode: "patients.form.error.INVALID_NATIONAL_CODE",
   };
 
   protected readonly SEX_OPTIONS: readonly DsSelectOption[] = [
@@ -115,6 +125,7 @@ export class PatientRegistrationFormComponent {
         value.dateOfBirth && this.dateAdapter.isValid(value.dateOfBirth)
           ? this.dateAdapter.toIso8601(value.dateOfBirth)
           : null,
+      nationalCode: value.nationalCode || null,
     });
   }
 
@@ -132,6 +143,7 @@ export class PatientRegistrationFormComponent {
       dateOfBirth: null,
       contactUnavailable: false,
       sex: "unspecified",
+      nationalCode: "",
     });
   }
 }

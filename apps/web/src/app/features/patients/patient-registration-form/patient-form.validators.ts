@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors } from "@angular/forms";
-import { canonicalizeIranianMobile } from "@dentix/kernel";
+import { canonicalizeIranianMobile, canonicalizeIranianNationalCode } from "@dentix/kernel";
 
 /**
  * Patient-form validation rules, kept as free functions rather than methods on
@@ -28,6 +28,20 @@ export function iranianMobile(control: AbstractControl<string>): ValidationError
     return null;
   }
   return canonicalizeIranianMobile(value) === null ? { iranianMobile: true } : null;
+}
+
+/**
+ * Same reasoning as iranianMobile above: calls the backend's own
+ * canonicalizeIranianNationalCode rather than a re-implemented checksum, so
+ * client and server can't drift apart on what counts as valid. The national
+ * code is always optional — empty is valid here too.
+ */
+export function iranianNationalCode(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value.trim();
+  if (value.length === 0) {
+    return null;
+  }
+  return canonicalizeIranianNationalCode(value) === null ? { iranianNationalCode: true } : null;
 }
 
 /**

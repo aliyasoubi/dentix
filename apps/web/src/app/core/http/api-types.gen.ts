@@ -204,6 +204,8 @@ export interface components {
              * @description Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary (ADR-008/012).
              */
             dateOfBirth?: string | null;
+            /** @description Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted. */
+            nationalCode?: string | null;
         };
         CreatePatientResponseDto: {
             /** Format: uuid */

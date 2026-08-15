@@ -67,6 +67,7 @@ export class PatientsController {
       contactUnavailable: body.contactUnavailable,
       sex: body.sex,
       dateOfBirth: body.dateOfBirth,
+      nationalCode: body.nationalCode,
     });
     if (!result.ok) {
       throw new BadRequestException(result.code);

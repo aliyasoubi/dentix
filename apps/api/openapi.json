@@ -474,6 +474,11 @@
             "description": "Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary (ADR-008/012).",
             "format": "date",
             "nullable": true
+          },
+          "nationalCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted."
           }
         },
         "required": [

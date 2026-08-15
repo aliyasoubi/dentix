@@ -49,6 +49,7 @@ describe("PatientRegistrationFormComponent", () => {
       dateOfBirth: null,
       contactUnavailable: false,
       sex: "unspecified",
+      nationalCode: "",
       ...overrides,
     });
   }
@@ -69,8 +70,15 @@ describe("PatientRegistrationFormComponent", () => {
         contactUnavailable: false,
         sex: "unspecified",
         dateOfBirth: null,
+        nationalCode: null,
       },
     ]);
+  });
+
+  it("emits a well-formed national code, mapping an empty one to null", () => {
+    fill({ nationalCode: "1234567891" });
+    submit();
+    expect(emitted[0]?.nationalCode).toBe("1234567891");
   });
 
   it("converts a picked Jalali date of birth to the canonical Gregorian ISO string", () => {
@@ -99,6 +107,13 @@ describe("PatientRegistrationFormComponent", () => {
     it("neither a phone nor the no-contact flag", () => {
       fill({ phone: "", contactUnavailable: false });
       expect(form().hasError("contactRequired")).toBe(true);
+      submit();
+      expect(emitted).toEqual([]);
+    });
+
+    it("checksum-invalid national code — caught here rather than round-tripping to the server", () => {
+      fill({ nationalCode: "1234567890" });
+      expect(form().controls.nationalCode.hasError("iranianNationalCode")).toBe(true);
       submit();
       expect(emitted).toEqual([]);
     });
@@ -132,6 +147,7 @@ describe("PatientRegistrationFormComponent", () => {
         dateOfBirth: null,
         contactUnavailable: false,
         sex: "unspecified",
+        nationalCode: "",
       });
     });
 

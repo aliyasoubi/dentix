@@ -1,13 +1,24 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { asUuid, canonicalizeIranianMobile, fail, ok, Result, Uuid } from "@dentix/kernel";
+import {
+  asUuid,
+  canonicalizeIranianMobile,
+  canonicalizeIranianNationalCode,
+  fail,
+  ok,
+  Result,
+  Uuid,
+} from "@dentix/kernel";
 import { randomUUID } from "crypto";
 import { AuditEvent, AUDIT_EVENT_REPOSITORY } from "../../../audit/public-api";
 import type { AuditEventRepository } from "../../../audit/public-api";
 import { Patient, PatientSex } from "../../domain/entities/patient.entity";
 import { PatientContact } from "../../domain/entities/patient-contact.entity";
+import { PatientIdentifier } from "../../domain/entities/patient-identifier.entity";
 import { PatientName } from "../../domain/entities/patient-name.entity";
 import { PATIENT_CONTACT_REPOSITORY } from "../../domain/repositories/patient-contact.repository";
 import type { PatientContactRepository } from "../../domain/repositories/patient-contact.repository";
+import { PATIENT_IDENTIFIER_REPOSITORY } from "../../domain/repositories/patient-identifier.repository";
+import type { PatientIdentifierRepository } from "../../domain/repositories/patient-identifier.repository";
 import { PATIENT_NAME_REPOSITORY } from "../../domain/repositories/patient-name.repository";
 import type { PatientNameRepository } from "../../domain/repositories/patient-name.repository";
 import { PATIENT_REPOSITORY } from "../../domain/repositories/patient.repository";
@@ -16,7 +27,11 @@ import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
 import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
 export type CreatePatientErrorCode =
-  "NATIVE_NAME_REQUIRED" | "INVALID_PHONE" | "CONTACT_REQUIRED" | "INVALID_DATE_OF_BIRTH";
+  | "NATIVE_NAME_REQUIRED"
+  | "INVALID_PHONE"
+  | "CONTACT_REQUIRED"
+  | "INVALID_DATE_OF_BIRTH"
+  | "INVALID_NATIONAL_CODE";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;
@@ -29,6 +44,8 @@ export interface CreatePatientCommand {
   readonly sex?: PatientSex;
   /** Canonical Gregorian ISO date string ("YYYY-MM-DD") — "where known" (01-patient-management.md), the Jalali picker converts to this at the UI boundary (ADR-008, ADR-012). */
   readonly dateOfBirth?: string | null;
+  /** Optional (01-patient-management.md: "only when legally and operationally justified"); checksum-validated when provided, never required. */
+  readonly nationalCode?: string | null;
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -60,9 +77,10 @@ export interface CreatePatientSuccess {
 }
 
 /**
- * S4's spine use case (02-slices-release-0.5.md). Every write — patient,
- * its name(s), its contact, and the audit record — lands in one
- * transaction (03-module-boundaries.md), same pattern as
+ * S4's spine use case (02-slices-release-0.5.md), now carrying R1's first
+ * patient-registry addition (national code). Every write — patient, its
+ * name(s), its contact, its identifier, and the audit record — lands in
+ * one transaction (03-module-boundaries.md), same pattern as
  * CompleteLoginUseCase: nothing here should be able to half-succeed.
  */
 @Injectable()
@@ -71,6 +89,7 @@ export class CreatePatientUseCase {
     @Inject(PATIENT_REPOSITORY) private readonly patients: PatientRepository,
     @Inject(PATIENT_NAME_REPOSITORY) private readonly patientNames: PatientNameRepository,
     @Inject(PATIENT_CONTACT_REPOSITORY) private readonly patientContacts: PatientContactRepository,
+    @Inject(PATIENT_IDENTIFIER_REPOSITORY) private readonly patientIdentifiers: PatientIdentifierRepository,
     @Inject(AUDIT_EVENT_REPOSITORY) private readonly auditEvents: AuditEventRepository,
     @Inject(UNIT_OF_WORK_PORT) private readonly unitOfWork: UnitOfWorkPort,
   ) {}
@@ -99,6 +118,11 @@ export class CreatePatientUseCase {
       if (!dateOfBirth) {
         return fail("INVALID_DATE_OF_BIRTH");
       }
+    }
+
+    const nationalCode = command.nationalCode?.trim() || null;
+    if (nationalCode && !canonicalizeIranianNationalCode(nationalCode)) {
+      return fail("INVALID_NATIONAL_CODE");
     }
 
     const now = new Date();
@@ -150,6 +174,19 @@ export class CreatePatientUseCase {
             id: asUuid(randomUUID()),
             patientId,
             rawMobileNumber: phone,
+            createdBy: command.actorUserId,
+            now,
+          }),
+          tx,
+        );
+      }
+
+      if (nationalCode) {
+        await this.patientIdentifiers.create(
+          PatientIdentifier.create({
+            id: asUuid(randomUUID()),
+            patientId,
+            rawNationalCode: nationalCode,
             createdBy: command.actorUserId,
             now,
           }),

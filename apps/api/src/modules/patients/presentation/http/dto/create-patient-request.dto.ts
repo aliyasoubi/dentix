@@ -13,11 +13,12 @@ const PATIENT_SEX_VALUES: readonly PatientSex[] = ["male", "female", "unspecifie
  * `contactUnavailable: "no"`), which previously reached the use case and
  * either crashed with a 500 or silently bypassed a business rule. What they
  * intentionally do NOT do is re-implement domain rules: a blank name, an
- * unrecognizable Iranian mobile, a missing contact method, and a malformed
- * date all stay the use case's job, so those keep returning their own stable
- * domain codes (NATIVE_NAME_REQUIRED, INVALID_PHONE, CONTACT_REQUIRED,
- * INVALID_DATE_OF_BIRTH) rather than collapsing into one generic
- * validation error. One rule, one owner.
+ * unrecognizable Iranian mobile, a missing contact method, a malformed
+ * date, and a checksum-invalid national code all stay the use case's job,
+ * so those keep returning their own stable domain codes
+ * (NATIVE_NAME_REQUIRED, INVALID_PHONE, CONTACT_REQUIRED,
+ * INVALID_DATE_OF_BIRTH, INVALID_NATIONAL_CODE) rather than collapsing
+ * into one generic validation error. One rule, one owner.
  */
 export class CreatePatientRequestDto {
   @ApiProperty({ description: "Patient's name as entered, typically Persian." })
@@ -62,4 +63,14 @@ export class CreatePatientRequestDto {
   @IsOptional()
   @IsString()
   readonly dateOfBirth?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      "Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted.",
+  })
+  @IsOptional()
+  @IsString()
+  readonly nationalCode?: string | null;
 }

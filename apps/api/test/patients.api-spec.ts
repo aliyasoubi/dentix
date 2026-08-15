@@ -204,6 +204,39 @@ describe("Patients (API contract)", () => {
       expect(response.status).toBe(201);
     });
 
+    it("accepts a well-formed national code, optional and checksum-validated", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: "1234567891" });
+      expect(response.status).toBe(201);
+    });
+
+    it("returns 400 INVALID_NATIONAL_CODE for a national code with a bad check digit", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: "1234567890" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_NATIONAL_CODE");
+    });
+
+    // A missing national code must never block registration — it's the one
+    // optional field 01-patient-management.md is explicit about.
+    it("does not require a national code to create a patient", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true });
+      expect(response.status).toBe(201);
+    });
+
     // Regression tests for a real gap: there was no request validation at
     // all, so each of these previously reached the use case — the first two
     // crashed with a 500 (`.trim()` / DB check constraint), and the third
@@ -250,6 +283,17 @@ describe("Patients (API contract)", () => {
           .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
           .set("X-CSRF-Token", csrfToken)
           .send({ nativeName: "رضا احمدی", contactUnavailable: true, isAdmin: true });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects a non-string nationalCode with 400 VALIDATION_FAILED instead of crashing", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: 1234567891 });
         expect(response.status).toBe(400);
         expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       });

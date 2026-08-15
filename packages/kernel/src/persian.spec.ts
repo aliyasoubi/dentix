@@ -1,5 +1,6 @@
 import {
   canonicalizeIranianMobile,
+  canonicalizeIranianNationalCode,
   normalizeDigits,
   normalizeForSearch,
   normalizePersianText,
@@ -110,5 +111,46 @@ describe("canonicalizeIranianMobile", () => {
   it("returns null for empty or garbage input", () => {
     expect(canonicalizeIranianMobile("")).toBeNull();
     expect(canonicalizeIranianMobile("hello")).toBeNull();
+  });
+});
+
+describe("canonicalizeIranianNationalCode", () => {
+  it("accepts a valid 10-digit national code and returns it unchanged", () => {
+    expect(canonicalizeIranianNationalCode("1234567891")).toBe("1234567891");
+  });
+
+  it("pads a shorter code with leading zeros the way many people type it", () => {
+    // "0012345679" is a valid checksum; typed without its two leading zeros.
+    expect(canonicalizeIranianNationalCode("12345679")).toBe("0012345679");
+  });
+
+  it("accepts Persian digits", () => {
+    expect(canonicalizeIranianNationalCode("۱۲۳۴۵۶۷۸۹۱")).toBe("1234567891");
+  });
+
+  it("accepts Arabic-Indic digits", () => {
+    expect(canonicalizeIranianNationalCode("١٢٣٤٥٦٧٨٩١")).toBe("1234567891");
+  });
+
+  it("ignores dashes commonly used when displaying a national code", () => {
+    expect(canonicalizeIranianNationalCode("123-456789-1")).toBe("1234567891");
+  });
+
+  it("rejects a code with an incorrect check digit", () => {
+    expect(canonicalizeIranianNationalCode("1234567890")).toBeNull();
+  });
+
+  it("rejects reserved all-identical-digit codes even though the checksum arithmetic would pass", () => {
+    expect(canonicalizeIranianNationalCode("1111111111")).toBeNull();
+    expect(canonicalizeIranianNationalCode("0000000000")).toBeNull();
+  });
+
+  it("rejects input longer than 10 digits", () => {
+    expect(canonicalizeIranianNationalCode("123456789123")).toBeNull();
+  });
+
+  it("returns null for empty or garbage input", () => {
+    expect(canonicalizeIranianNationalCode("")).toBeNull();
+    expect(canonicalizeIranianNationalCode("hello")).toBeNull();
   });
 });

@@ -35,10 +35,12 @@
     </app-ds-alert>
   }
 
-  <!-- No [expanded] binding: it defaults to closed, and none of the fields
-       inside can carry a validation error while collapsed (latinName and
-       dateOfBirth have no validators; sex always has a default) — so there
-       is nothing here that would need to force itself open. -->
+  <!-- No [expanded] binding: DsDisclosureComponent deliberately offers none
+       (a caller wanting one is a signal the field belongs above the fold
+       instead). nationalCode is the one field in here with a validator; its
+       error is only visible while the panel is open, same as any other
+       field a user would have to expand the panel to reach in the first
+       place. -->
   <app-ds-disclosure [title]="'patients.form.moreDetails' | translate">
     <div class="patients-form__row">
       <app-ds-text-field
@@ -58,6 +60,14 @@
       <app-ds-date-field
         [label]="'patients.form.dateOfBirth.label' | translate"
         [control]="form.controls.dateOfBirth"
+      />
+
+      <app-ds-text-field
+        [label]="'patients.form.nationalCode.label' | translate"
+        [control]="form.controls.nationalCode"
+        [errors]="NATIONAL_CODE_ERRORS"
+        [latin]="true"
+        inputMode="numeric"
       />
     </div>
   </app-ds-disclosure>

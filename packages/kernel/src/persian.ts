@@ -97,3 +97,46 @@ export function canonicalizeIranianMobile(rawInput: string): string | null {
 
   return local && IRANIAN_MOBILE_LOCAL.test(local) ? `+98${local}` : null;
 }
+
+const NATIONAL_CODE_LENGTH = 10;
+
+/**
+ * The کد ملی check-digit algorithm: weight the first 9 digits by
+ * (10 - position), sum, take mod 11 — the 10th digit must equal that
+ * remainder when it's below 2, or (11 - remainder) otherwise. Codes with
+ * all identical digits (e.g. "0000000000", "1111111111") satisfy this
+ * arithmetic but are reserved/never-issued values, so they're rejected
+ * separately rather than trusted to the checksum alone.
+ */
+function hasValidNationalCodeChecksum(digits: string): boolean {
+  if (new Set(digits).size === 1) {
+    return false;
+  }
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += Number(digits[i]) * (10 - i);
+  }
+  const remainder = sum % 11;
+  const checkDigit = Number(digits[9]);
+  return remainder < 2 ? checkDigit === remainder : checkDigit === 11 - remainder;
+}
+
+/**
+ * Accepts an Iranian national code (کد ملی) in Persian, Arabic-Indic, or
+ * Latin digits, with common spacing/dashes, and with or without the
+ * conventional leading zeros many people omit when typing it. Returns the
+ * canonical zero-padded 10-digit form for storage/search, or null if the
+ * input isn't a recognizable, checksum-valid national code.
+ * 01-patient-management.md: "When enabled by office policy, formatting
+ * and checksum validation SHOULD be available" — this is that validation;
+ * whether to collect the field at all stays an office choice made by
+ * simply leaving it blank, not a config flag this function reads.
+ */
+export function canonicalizeIranianNationalCode(rawInput: string): string | null {
+  const digitsOnly = normalizeDigits(rawInput).replace(/\D/g, "");
+  if (digitsOnly.length === 0 || digitsOnly.length > NATIONAL_CODE_LENGTH) {
+    return null;
+  }
+  const padded = digitsOnly.padStart(NATIONAL_CODE_LENGTH, "0");
+  return hasValidNationalCodeChecksum(padded) ? padded : null;
+}

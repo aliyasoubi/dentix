@@ -1,5 +1,10 @@
 import { FormControl, FormGroup } from "@angular/forms";
-import { contactRequired, iranianMobile, requiredNonBlank } from "./patient-form.validators";
+import {
+  contactRequired,
+  iranianMobile,
+  iranianNationalCode,
+  requiredNonBlank,
+} from "./patient-form.validators";
 
 describe("patient form validators", () => {
   describe("requiredNonBlank", () => {
@@ -37,6 +42,26 @@ describe("patient form validators", () => {
     it("treats empty as valid, leaving required-ness to the group rule", () => {
       expect(iranianMobile(new FormControl("", { nonNullable: true }))).toBeNull();
       expect(iranianMobile(new FormControl("   ", { nonNullable: true }))).toBeNull();
+    });
+  });
+
+  describe("iranianNationalCode", () => {
+    it.each(["1234567891", "۱۲۳۴۵۶۷۸۹۱", " 123-456789-1 "])(
+      "accepts %j — a form the backend canonicalizes",
+      (value) => {
+        expect(iranianNationalCode(new FormControl(value, { nonNullable: true }))).toBeNull();
+      },
+    );
+
+    it.each(["1234567890", "1111111111", "not-a-code"])("rejects %j", (value) => {
+      expect(iranianNationalCode(new FormControl(value, { nonNullable: true }))).toEqual({
+        iranianNationalCode: true,
+      });
+    });
+
+    it("treats empty as valid — the national code is always optional", () => {
+      expect(iranianNationalCode(new FormControl("", { nonNullable: true }))).toBeNull();
+      expect(iranianNationalCode(new FormControl("   ", { nonNullable: true }))).toBeNull();
     });
   });
 

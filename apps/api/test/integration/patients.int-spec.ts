@@ -13,9 +13,12 @@ import { OfficeOrmEntity } from "../../src/modules/office-administration/infrast
 import { TypeOrmOfficeRepository } from "../../src/modules/office-administration/infrastructure/persistence/office.typeorm-repository";
 import { Patient } from "../../src/modules/patients/domain/entities/patient.entity";
 import { PatientContact } from "../../src/modules/patients/domain/entities/patient-contact.entity";
+import { PatientIdentifier } from "../../src/modules/patients/domain/entities/patient-identifier.entity";
 import { PatientName } from "../../src/modules/patients/domain/entities/patient-name.entity";
 import { PatientContactOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-contact.orm-entity";
 import { TypeOrmPatientContactRepository } from "../../src/modules/patients/infrastructure/persistence/patient-contact.typeorm-repository";
+import { PatientIdentifierOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-identifier.orm-entity";
+import { TypeOrmPatientIdentifierRepository } from "../../src/modules/patients/infrastructure/persistence/patient-identifier.typeorm-repository";
 import { PatientNameOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient-name.orm-entity";
 import { TypeOrmPatientNameRepository } from "../../src/modules/patients/infrastructure/persistence/patient-name.typeorm-repository";
 import { PatientOrmEntity } from "../../src/modules/patients/infrastructure/persistence/patient.orm-entity";
@@ -35,6 +38,7 @@ describe("Patients persistence (integration)", () => {
   let patientRepo: TypeOrmPatientRepository;
   let patientNameRepo: TypeOrmPatientNameRepository;
   let patientContactRepo: TypeOrmPatientContactRepository;
+  let patientIdentifierRepo: TypeOrmPatientIdentifierRepository;
   let auditEventRepo: TypeOrmAuditEventRepository;
   let unitOfWork: TypeOrmUnitOfWork;
 
@@ -49,6 +53,9 @@ describe("Patients persistence (integration)", () => {
     patientContactRepo = new TypeOrmPatientContactRepository(
       dataSource.getRepository(PatientContactOrmEntity),
     );
+    patientIdentifierRepo = new TypeOrmPatientIdentifierRepository(
+      dataSource.getRepository(PatientIdentifierOrmEntity),
+    );
     auditEventRepo = new TypeOrmAuditEventRepository(dataSource.getRepository(AuditEventOrmEntity));
     unitOfWork = new TypeOrmUnitOfWork(dataSource);
   });
@@ -56,7 +63,7 @@ describe("Patients persistence (integration)", () => {
   afterAll(async () => {
     if (dataSource?.isInitialized) {
       await dataSource.query(
-        'TRUNCATE TABLE "patient_contact", "patient_name", "patient", "patient_number_sequence", "audit_event", "user_account", "office" CASCADE',
+        'TRUNCATE TABLE "patient_identifier", "patient_contact", "patient_name", "patient", "patient_number_sequence", "audit_event", "user_account", "office" CASCADE',
       );
       await dataSource.destroy();
     }
@@ -155,6 +162,38 @@ describe("Patients persistence (integration)", () => {
       );
       expect(nameRows[0]?.original_value).toBe("علي رضایی");
       expect(nameRows[0]?.normalized_value).toBe("علی رضایی");
+    });
+
+    it("persists an optional national-code identifier, original value preserved and canonicalized separately", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patient = Patient.create({
+        id: asUuid(randomUUID()),
+        officeId,
+        patientNumber,
+        dateOfBirth: null,
+        sex: "unspecified",
+        contactUnavailable: true,
+        createdBy: actorUserId,
+        now,
+      });
+      await patientRepo.create(patient);
+
+      const identifier = PatientIdentifier.create({
+        id: asUuid(randomUUID()),
+        patientId: patient.id,
+        rawNationalCode: "۱۲۳۴۵۶۷۸۹۱", // Persian digits, as-entered
+        createdBy: actorUserId,
+        now,
+      });
+      await patientIdentifierRepo.create(identifier);
+
+      const rows: Array<{ original_value: string; normalized_value: string; identifier_type: string }> =
+        await dataSource!.query('SELECT * FROM "patient_identifier" WHERE "patient_id" = $1', [patient.id]);
+      expect(rows[0]?.identifier_type).toBe("national_code");
+      expect(rows[0]?.original_value).toBe("۱۲۳۴۵۶۷۸۹۱");
+      expect(rows[0]?.normalized_value).toBe("1234567891");
     });
 
     it("enforces (office_id, patient_number) uniqueness", async () => {

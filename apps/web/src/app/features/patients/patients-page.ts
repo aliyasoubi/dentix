@@ -18,6 +18,7 @@ const KNOWN_ERROR_CODES = new Set([
   "INVALID_PHONE",
   "CONTACT_REQUIRED",
   "INVALID_DATE_OF_BIRTH",
+  "INVALID_NATIONAL_CODE",
   // Returned by the API's global ValidationPipe for a body that is the wrong
   // shape. With the form's own validators, a user working through the UI
   // should never see it — it means something bypassed the form.
