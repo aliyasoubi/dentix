@@ -26,5 +26,5 @@ export class WhoAmIResponseDto {
     description:
       "UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request.",
   })
-  readonly isOfficeAdmin!: boolean;
+  readonly canManageUsers!: boolean;
 }

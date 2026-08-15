@@ -23,6 +23,17 @@ import { UserAccount } from "../src/modules/identity-access/domain/entities/user
 import { UserAccountOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/user-account.orm-entity";
 import { TypeOrmUserAccountRepository } from "../src/modules/identity-access/infrastructure/persistence/user-account.typeorm-repository";
 import { OfficeUserOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/office-user.orm-entity";
+import { RoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/role.orm-entity";
+import { TypeOrmRoleRepository } from "../src/modules/identity-access/infrastructure/persistence/role.typeorm-repository";
+import { PermissionOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/permission.orm-entity";
+import { TypeOrmPermissionRepository } from "../src/modules/identity-access/infrastructure/persistence/permission.typeorm-repository";
+import { RolePermissionOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/role-permission.orm-entity";
+import { TypeOrmRolePermissionRepository } from "../src/modules/identity-access/infrastructure/persistence/role-permission.typeorm-repository";
+import { UserRoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/user-role.orm-entity";
+import { TypeOrmUserRoleRepository } from "../src/modules/identity-access/infrastructure/persistence/user-role.typeorm-repository";
+import { SeedDefaultRolesUseCase } from "../src/modules/identity-access/application/use-cases/seed-default-roles.use-case";
+
+const OFFICE_MANAGER_ROLE_CODE = "office_manager";
 
 const DEV_OFFICE_CODE = "main";
 const DEV_ISSUER = process.env.OIDC_ISSUER_URL ?? "http://localhost:8080/realms/dentix";
@@ -62,22 +73,16 @@ async function main() {
   }
 
   const officeUserRepo = dataSource.getRepository(OfficeUserOrmEntity);
-  const existingMembership = await officeUserRepo.findOne({ where: { userId: account.id } });
-  if (!existingMembership) {
+  let membership = await officeUserRepo.findOne({ where: { userId: account.id } });
+  if (!membership) {
     const now = new Date();
+    const id = randomUUID();
     await officeUserRepo.insert({
-      id: randomUUID(),
+      id,
       officeId: office.id,
       userId: account.id,
       permissionVersion: 1,
       isActive: true,
-      // Admin, and deliberately only here: OfficeUser.create() (the path
-      // AddOfficeUserUseCase goes through) always starts a new membership
-      // as non-admin, on purpose — someone has to be the first admin for
-      // that use case to have an actor at all, and a raw dev bootstrap
-      // script bypassing the domain factory is the one place that's meant
-      // to happen outside the normal flow.
-      isOfficeAdmin: true,
       createdAt: now,
       createdBy: null,
       updatedAt: now,
@@ -85,9 +90,43 @@ async function main() {
       archivedAt: null,
       archivedBy: null,
     });
-    console.log(`Linked office_user membership: ${account.id} -> office ${office.id} (admin)`);
+    membership = await officeUserRepo.findOneOrFail({ where: { id } });
+    console.log(`Linked office_user membership: ${account.id} -> office ${office.id}`);
   } else {
-    console.log(`office_user membership already exists (${existingMembership.id})`);
+    console.log(`office_user membership already exists (${membership.id})`);
+  }
+
+  // The bootstrapped identity needs to be able to add further users too —
+  // granting the office_manager role (user.manage, among others) is the
+  // real-permission-system equivalent of the old isOfficeAdmin flag this
+  // script used to set directly. Roles are seeded per office by
+  // SeedDefaultRolesUseCase (also what the CreateRolePermissions/
+  // SeedDefaultRoles migrations run for offices that existed at migration
+  // time); seed on demand here so this script works against a freshly
+  // created office too, not just 'main'.
+  const roleRepo = new TypeOrmRoleRepository(dataSource.getRepository(RoleOrmEntity));
+  let officeManagerRole = await roleRepo.findByOfficeIdAndCode(office.id, OFFICE_MANAGER_ROLE_CODE);
+  if (!officeManagerRole) {
+    const seedDefaultRoles = new SeedDefaultRolesUseCase(
+      roleRepo,
+      new TypeOrmPermissionRepository(dataSource.getRepository(PermissionOrmEntity)),
+      new TypeOrmRolePermissionRepository(dataSource.getRepository(RolePermissionOrmEntity)),
+    );
+    await seedDefaultRoles.execute({ officeId: office.id });
+    officeManagerRole = await roleRepo.findByOfficeIdAndCode(office.id, OFFICE_MANAGER_ROLE_CODE);
+    console.log(`Seeded default roles for office ${office.id}`);
+  }
+  if (!officeManagerRole) {
+    throw new Error(`office_manager role not found for office ${office.id} after seeding`);
+  }
+
+  const userRoleRepo = new TypeOrmUserRoleRepository(dataSource.getRepository(UserRoleOrmEntity));
+  const existingRoleIds = await userRoleRepo.findRoleIdsByOfficeUserId(asUuid(membership.id));
+  if (!existingRoleIds.includes(officeManagerRole.id)) {
+    await userRoleRepo.grant(asUuid(membership.id), officeManagerRole.id, null);
+    console.log(`Granted role '${OFFICE_MANAGER_ROLE_CODE}' to office_user ${membership.id}`);
+  } else {
+    console.log(`office_user ${membership.id} already has role '${OFFICE_MANAGER_ROLE_CODE}'`);
   }
 
   await dataSource.destroy();

@@ -24,10 +24,15 @@ import type {
 } from "../src/modules/identity-access/application/ports/keycloak-admin.port";
 import { SessionTokenService } from "../src/modules/identity-access/infrastructure/crypto/session-token.service";
 import { OfficeUserOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/office-user.orm-entity";
+import { RoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/role.orm-entity";
+import { UserRoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/user-role.orm-entity";
+import { SeedDefaultRolesUseCase } from "../src/modules/identity-access/public-api";
 import {
   SESSION_COOKIE_NAME,
   CSRF_COOKIE_NAME,
 } from "../src/modules/identity-access/presentation/http/cookies";
+
+const OFFICE_MANAGER_ROLE_CODE = "office_manager";
 
 interface ErrorResponseBody {
   readonly code?: string;
@@ -55,6 +60,9 @@ describe("Office users (API contract)", () => {
   let sessions: UserSessionRepository;
   let sessionTokens: SessionTokenService;
   let officeUserOrmRepo: Repository<OfficeUserOrmEntity>;
+  let roleOrmRepo: Repository<RoleOrmEntity>;
+  let userRoleOrmRepo: Repository<UserRoleOrmEntity>;
+  let seedDefaultRoles: SeedDefaultRolesUseCase;
 
   /** Reassigned per test to steer the stubbed provider lookup. */
   let providerUser: KeycloakAdminUser | null;
@@ -85,6 +93,9 @@ describe("Office users (API contract)", () => {
     sessions = moduleFixture.get(USER_SESSION_REPOSITORY);
     sessionTokens = moduleFixture.get(SessionTokenService);
     officeUserOrmRepo = moduleFixture.get(getRepositoryToken(OfficeUserOrmEntity));
+    roleOrmRepo = moduleFixture.get(getRepositoryToken(RoleOrmEntity));
+    userRoleOrmRepo = moduleFixture.get(getRepositoryToken(UserRoleOrmEntity));
+    seedDefaultRoles = moduleFixture.get(SeedDefaultRolesUseCase);
   });
 
   beforeEach(() => {
@@ -97,7 +108,7 @@ describe("Office users (API contract)", () => {
   });
 
   async function seedSession(
-    options: { isOfficeAdmin?: boolean; authenticatedAt?: Date } = {},
+    options: { grantUserManage?: boolean; authenticatedAt?: Date } = {},
   ): Promise<{ sessionToken: string; csrfToken: string; officeId: Uuid; userId: Uuid }> {
     const office = Office.create({
       id: asUuid(randomUUID()),
@@ -114,13 +125,13 @@ describe("Office users (API contract)", () => {
     });
     await userAccounts.create(account);
 
+    const officeUserId = randomUUID();
     await officeUserOrmRepo.insert({
-      id: randomUUID(),
+      id: officeUserId,
       officeId: office.id,
       userId: account.id,
       permissionVersion: 1,
       isActive: true,
-      isOfficeAdmin: options.isOfficeAdmin ?? true,
       createdAt: new Date(),
       createdBy: null,
       updatedAt: new Date(),
@@ -128,6 +139,25 @@ describe("Office users (API contract)", () => {
       archivedAt: null,
       archivedBy: null,
     });
+
+    // Real role/permission grant, not a boolean flag: mirrors what an
+    // actual admin flow does (seed the office's default roles, then link
+    // one via user_role) so this suite exercises AuthorizationPort's real
+    // resolution path rather than a stand-in.
+    if (options.grantUserManage ?? true) {
+      await seedDefaultRoles.execute({ officeId: office.id });
+      const officeManagerRole = await roleOrmRepo.findOneByOrFail({
+        officeId: office.id,
+        code: OFFICE_MANAGER_ROLE_CODE,
+      });
+      await userRoleOrmRepo.insert({
+        id: randomUUID(),
+        officeUserId,
+        roleId: officeManagerRole.id,
+        createdAt: new Date(),
+        createdBy: null,
+      });
+    }
 
     const sessionToken = sessionTokens.generateOpaqueToken();
     const csrfToken = sessionTokens.generateOpaqueToken();
@@ -184,7 +214,7 @@ describe("Office users (API contract)", () => {
     });
 
     it("returns 403 FORBIDDEN for an authenticated non-admin, without querying the provider", async () => {
-      const credentials = await seedSession({ isOfficeAdmin: false });
+      const credentials = await seedSession({ grantUserManage: false });
 
       const response = await post(credentials, { email: "new.person@example.com" });
 
@@ -274,7 +304,7 @@ describe("Office users (API contract)", () => {
   });
 
   describe("success", () => {
-    it("returns 201 and links the identity as a non-admin member of the caller's office", async () => {
+    it("returns 201 and links the identity as a plain member of the caller's office", async () => {
       const credentials = await seedSession();
 
       const response = await post(credentials, { email: "new.person@example.com" });
@@ -286,21 +316,23 @@ describe("Office users (API contract)", () => {
       // office_id comes from the session, never the request body.
       expect(created.officeId).toBe(credentials.officeId);
       expect(created.createdBy).toBe(credentials.userId);
-      // Admin rights are not grantable through this endpoint.
-      expect(created.isOfficeAdmin).toBe(false);
       expect(created.isActive).toBe(true);
+      // No role is granted through this endpoint — the new member starts
+      // with zero permissions until someone with role-management access
+      // grants one.
+      expect(await userRoleOrmRepo.countBy({ officeUserId: created.id })).toBe(0);
     });
 
     // Stronger than silently dropping them: forbidNonWhitelisted rejects the
-    // request outright, so an attempt to self-grant admin or write into
-    // another office fails loudly instead of appearing to succeed.
-    it("rejects a request that tries to smuggle in officeId or isOfficeAdmin", async () => {
+    // request outright, so an attempt to write into another office or
+    // self-grant a role fails loudly instead of appearing to succeed.
+    it("rejects a request that tries to smuggle in officeId or role", async () => {
       const credentials = await seedSession();
 
       const response = await post(credentials, {
         email: "new.person@example.com",
         officeId: randomUUID(),
-        isOfficeAdmin: true,
+        role: OFFICE_MANAGER_ROLE_CODE,
       });
 
       expect(response.status).toBe(400);

@@ -10,6 +10,8 @@ import type { OfficeUserRepository } from "../../domain/repositories/office-user
 import { USER_ACCOUNT_REPOSITORY } from "../../domain/repositories/user-account.repository";
 import type { UserAccountRepository } from "../../domain/repositories/user-account.repository";
 import { isWithinRecentAuthenticationWindow } from "../../domain/value-objects/session-policy";
+import { AUTHORIZATION_PORT } from "../ports/authorization.port";
+import type { AuthorizationPort } from "../ports/authorization.port";
 import { KEYCLOAK_ADMIN_PORT } from "../ports/keycloak-admin.port";
 import type { KeycloakAdminPort } from "../ports/keycloak-admin.port";
 import { UNIT_OF_WORK_PORT } from "../../../../platform/unit-of-work.port";
@@ -59,14 +61,19 @@ function requireEnv(name: string): string {
  *
  * Authorization is a fresh lookup here, not a claim trusted from the
  * caller's session — CLAUDE.md invariant 7 ("endpoint AND object-level
- * checks on every mutation"). whoami's isOfficeAdmin field is a UI
- * convenience only; this is the actual gate.
+ * checks on every mutation"). whoami's canManageUsers field is a UI
+ * convenience only; this call through AuthorizationPort is the actual
+ * gate — the same "user.manage" permission check a controller decorated
+ * with `@RequirePermission("user.manage")` would make, done explicitly
+ * here because this use case's FORBIDDEN needs to happen before the
+ * recent-authentication check below, not after (see that comment).
  */
 @Injectable()
 export class AddOfficeUserUseCase {
   constructor(
     @Inject(OFFICE_USER_REPOSITORY) private readonly officeUsers: OfficeUserRepository,
     @Inject(USER_ACCOUNT_REPOSITORY) private readonly userAccounts: UserAccountRepository,
+    @Inject(AUTHORIZATION_PORT) private readonly authorization: AuthorizationPort,
     @Inject(KEYCLOAK_ADMIN_PORT) private readonly keycloakAdmin: KeycloakAdminPort,
     @Inject(AUDIT_EVENT_REPOSITORY) private readonly auditEvents: AuditEventRepository,
     @Inject(UNIT_OF_WORK_PORT) private readonly unitOfWork: UnitOfWorkPort,
@@ -75,8 +82,12 @@ export class AddOfficeUserUseCase {
   async execute(
     command: AddOfficeUserCommand,
   ): Promise<Result<AddOfficeUserSuccess, AddOfficeUserErrorCode>> {
-    const actor = await this.officeUsers.findByUserId(command.actorUserId);
-    if (!actor || !actor.isActive || !actor.isOfficeAdmin) {
+    const canManageUsers = await this.authorization.hasPermission(
+      command.actorUserId,
+      command.officeId,
+      "user.manage",
+    );
+    if (!canManageUsers) {
       return fail("FORBIDDEN");
     }
 

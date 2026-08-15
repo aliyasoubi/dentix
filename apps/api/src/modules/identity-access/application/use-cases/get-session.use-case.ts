@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Uuid, fail, ok, Result } from "@dentix/kernel";
-import { OFFICE_USER_REPOSITORY } from "../../domain/repositories/office-user.repository";
-import type { OfficeUserRepository } from "../../domain/repositories/office-user.repository";
 import { USER_ACCOUNT_REPOSITORY } from "../../domain/repositories/user-account.repository";
 import type { UserAccountRepository } from "../../domain/repositories/user-account.repository";
+import { AUTHORIZATION_PORT } from "../ports/authorization.port";
+import type { AuthorizationPort } from "../ports/authorization.port";
 import { ResolveActiveSessionUseCase } from "./resolve-active-session.use-case";
 import type { ResolveSessionErrorCode } from "./resolve-active-session.use-case";
 
@@ -22,7 +22,7 @@ export interface CurrentSession {
    * of the request; this field must never be treated as authorization by
    * anything that reads it.
    */
-  readonly isOfficeAdmin: boolean;
+  readonly canManageUsers: boolean;
 }
 
 /** Backs GET /auth/whoami. */
@@ -31,7 +31,7 @@ export class GetSessionUseCase {
   constructor(
     private readonly resolveActiveSession: ResolveActiveSessionUseCase,
     @Inject(USER_ACCOUNT_REPOSITORY) private readonly userAccounts: UserAccountRepository,
-    @Inject(OFFICE_USER_REPOSITORY) private readonly officeUsers: OfficeUserRepository,
+    @Inject(AUTHORIZATION_PORT) private readonly authorization: AuthorizationPort,
   ) {}
 
   async execute(params: {
@@ -43,9 +43,9 @@ export class GetSessionUseCase {
     }
     const session = result.value;
 
-    const [account, officeUser] = await Promise.all([
+    const [account, canManageUsers] = await Promise.all([
       this.userAccounts.findById(session.userId),
-      this.officeUsers.findByUserId(session.userId),
+      this.authorization.hasPermission(session.userId, session.officeId, "user.manage"),
     ]);
 
     return ok({
@@ -55,7 +55,7 @@ export class GetSessionUseCase {
       permissionVersion: session.permissionVersion,
       authenticatedAt: session.authenticatedAt,
       isRecentlyAuthenticated: session.isRecentlyAuthenticated(new Date()),
-      isOfficeAdmin: officeUser?.isOfficeAdmin ?? false,
+      canManageUsers,
     });
   }
 }

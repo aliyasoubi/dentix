@@ -388,7 +388,7 @@
             "type": "boolean",
             "description": "Whether authentication happened recently enough for sensitive actions."
           },
-          "isOfficeAdmin": {
+          "canManageUsers": {
             "type": "boolean",
             "description": "UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request."
           }
@@ -400,7 +400,7 @@
           "permissionVersion",
           "authenticatedAt",
           "isRecentlyAuthenticated",
-          "isOfficeAdmin"
+          "canManageUsers"
         ]
       },
       "LogoutResponseDto": {

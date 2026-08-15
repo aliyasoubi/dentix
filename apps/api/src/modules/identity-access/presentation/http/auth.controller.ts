@@ -117,7 +117,7 @@ export class AuthController {
       permissionVersion: result.value.permissionVersion,
       authenticatedAt: result.value.authenticatedAt.toISOString(),
       isRecentlyAuthenticated: result.value.isRecentlyAuthenticated,
-      isOfficeAdmin: result.value.isOfficeAdmin,
+      canManageUsers: result.value.canManageUsers,
     });
   }
 

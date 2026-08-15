@@ -169,10 +169,6 @@ describe("Identity and Access persistence (integration)", () => {
       expect(found?.officeId).toBe(office.id);
       expect(found?.permissionVersion).toBe(1);
       expect(found?.isActive).toBe(true);
-      // The column defaults to false at the DB level; this row's insert
-      // above didn't set it, and the mapper must read that default back
-      // rather than silently coercing an absent value to something else.
-      expect(found?.isOfficeAdmin).toBe(false);
     });
 
     it("returns null for a user with no office membership", async () => {
@@ -180,7 +176,7 @@ describe("Identity and Access persistence (integration)", () => {
       expect(found).toBeNull();
     });
 
-    it("create() round-trips isOfficeAdmin and records the acting admin as createdBy — real SQL, not a mock", async () => {
+    it("create() records the acting admin as createdBy — real SQL, not a mock", async () => {
       const { userId, officeId } = await seedAccountAndOffice();
       const actor = await seedAccountAndOffice();
 
@@ -189,11 +185,6 @@ describe("Identity and Access persistence (integration)", () => {
 
       const found = await officeUserRepo.findByUserId(userId);
       expect(found?.officeId).toBe(officeId);
-      // OfficeUser.create() always starts non-admin — this is the same
-      // guarantee AddOfficeUserUseCase's own test locks in, proven here
-      // against the real column default and mapper round trip instead of a
-      // mock.
-      expect(found?.isOfficeAdmin).toBe(false);
 
       const raw = await dataSource!.getRepository(OfficeUserOrmEntity).findOneOrFail({
         where: { userId },

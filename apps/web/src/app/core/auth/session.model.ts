@@ -7,5 +7,5 @@ export interface CurrentSession {
   readonly authenticatedAt: string;
   readonly isRecentlyAuthenticated: boolean;
   /** UI convenience only — whether to show the add-user entry point. The server re-checks independently; see AddOfficeUserUseCase. */
-  readonly isOfficeAdmin: boolean;
+  readonly canManageUsers: boolean;
 }

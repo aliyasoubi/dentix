@@ -4,6 +4,7 @@ import { AddOfficeUserCommand, AddOfficeUserUseCase } from "./add-office-user.us
 import { AuditEvent } from "../../../audit/domain/entities/audit-event.entity";
 import { OfficeUser } from "../../domain/entities/office-user.entity";
 import { UserAccount } from "../../domain/entities/user-account.entity";
+import type { PermissionCode } from "../../domain/value-objects/permission-code";
 import type { KeycloakAdminUser } from "../ports/keycloak-admin.port";
 import type { UnitOfWorkPort } from "../../../../platform/unit-of-work.port";
 
@@ -30,21 +31,8 @@ describe("AddOfficeUserUseCase", () => {
     return { officeId, actorUserId, email, authenticatedAt };
   }
 
-  function buildAdminActor(
-    overrides: Partial<{ isActive: boolean; isOfficeAdmin: boolean }> = {},
-  ): OfficeUser {
-    return OfficeUser.reconstitute({
-      id: asUuid(randomUUID()),
-      officeId,
-      userId: actorUserId,
-      permissionVersion: 1,
-      isActive: overrides.isActive ?? true,
-      isOfficeAdmin: overrides.isOfficeAdmin ?? true,
-    });
-  }
-
   function buildUseCase(options: {
-    actor?: OfficeUser | null;
+    authorized?: boolean;
     providerUser?: KeycloakAdminUser | null;
     existingAccount?: UserAccount | null;
     existingMembership?: OfficeUser | null;
@@ -59,16 +47,14 @@ describe("AddOfficeUserUseCase", () => {
       findById: jest.Mock<Promise<UserAccount | null>, [Uuid]>;
       create: jest.Mock<Promise<void>, [UserAccount, TransactionContext?]>;
     };
+    authorization: { hasPermission: jest.Mock<Promise<boolean>, [Uuid, Uuid, PermissionCode]> };
     keycloakAdmin: { findUserByEmail: jest.Mock<Promise<KeycloakAdminUser | null>, [string]> };
     auditEvents: { create: jest.Mock<Promise<void>, [AuditEvent, TransactionContext?]> };
   } {
-    const actor = options.actor === undefined ? buildAdminActor() : options.actor;
-
     const officeUsers = {
-      findByUserId: jest.fn<Promise<OfficeUser | null>, [Uuid]>().mockImplementation((userId) => {
-        if (userId === actorUserId) return Promise.resolve(actor);
-        return Promise.resolve(options.existingMembership ?? null);
-      }),
+      findByUserId: jest
+        .fn<Promise<OfficeUser | null>, [Uuid]>()
+        .mockResolvedValue(options.existingMembership ?? null),
       create: jest.fn<Promise<void>, [OfficeUser, Uuid | null, TransactionContext?]>(),
     };
     const userAccounts = {
@@ -77,6 +63,9 @@ describe("AddOfficeUserUseCase", () => {
         .mockResolvedValue(options.existingAccount ?? null),
       findById: jest.fn<Promise<UserAccount | null>, [Uuid]>(),
       create: jest.fn<Promise<void>, [UserAccount, TransactionContext?]>(),
+    };
+    const authorization = {
+      hasPermission: jest.fn().mockResolvedValue(options.authorized ?? true),
     };
     const keycloakAdmin = {
       findUserByEmail: jest
@@ -95,34 +84,24 @@ describe("AddOfficeUserUseCase", () => {
     const useCase = new AddOfficeUserUseCase(
       officeUsers,
       userAccounts,
+      authorization,
       keycloakAdmin,
       auditEvents,
       unitOfWork,
     );
 
-    return { useCase, officeUsers, userAccounts, keycloakAdmin, auditEvents };
+    return { useCase, officeUsers, userAccounts, authorization, keycloakAdmin, auditEvents };
   }
 
-  it("rejects a non-admin actor without ever calling the provider", async () => {
-    const { useCase, keycloakAdmin } = buildUseCase({ actor: buildAdminActor({ isOfficeAdmin: false }) });
+  it("rejects an actor without user.manage permission, without ever calling the provider", async () => {
+    const { useCase, keycloakAdmin, authorization } = buildUseCase({ authorized: false });
 
     const result = await useCase.execute(command("new.person@example.com"));
 
     expect(result.ok).toBe(false);
     expect(!result.ok && result.code).toBe("FORBIDDEN");
     expect(keycloakAdmin.findUserByEmail).not.toHaveBeenCalled();
-  });
-
-  it("rejects an actor with no office_user row at all (e.g. a stale/forged actorUserId)", async () => {
-    const { useCase } = buildUseCase({ actor: null });
-    const result = await useCase.execute(command("new.person@example.com"));
-    expect(!result.ok && result.code).toBe("FORBIDDEN");
-  });
-
-  it("rejects a deactivated admin — isOfficeAdmin alone is not enough", async () => {
-    const { useCase } = buildUseCase({ actor: buildAdminActor({ isActive: false, isOfficeAdmin: true }) });
-    const result = await useCase.execute(command("new.person@example.com"));
-    expect(!result.ok && result.code).toBe("FORBIDDEN");
+    expect(authorization.hasPermission).toHaveBeenCalledWith(actorUserId, officeId, "user.manage");
   });
 
   // Permission administration is on 09-authentication-session-architecture.md's
@@ -154,7 +133,7 @@ describe("AddOfficeUserUseCase", () => {
     // Order matters: a non-admin must not be told to go re-authenticate,
     // since doing so would not get them past the admin check anyway.
     it("reports FORBIDDEN, not RECENT_AUTHENTICATION_REQUIRED, for a stale non-admin", async () => {
-      const { useCase } = buildUseCase({ actor: buildAdminActor({ isOfficeAdmin: false }) });
+      const { useCase } = buildUseCase({ authorized: false });
 
       const result = await useCase.execute(command("new.person@example.com", STALE));
 
@@ -207,7 +186,6 @@ describe("AddOfficeUserUseCase", () => {
       userId: existingAccount.id,
       permissionVersion: 1,
       isActive: true,
-      isOfficeAdmin: false,
     });
     const { useCase, officeUsers, userAccounts } = buildUseCase({
       providerUser: { subject: "kc-sub-existing", email: "existing@example.com", enabled: true },
@@ -222,7 +200,7 @@ describe("AddOfficeUserUseCase", () => {
     expect(userAccounts.create).not.toHaveBeenCalled();
   });
 
-  it("creates a new user_account and links it, non-admin by default, with an audit event", async () => {
+  it("creates a new user_account and links it, with an audit event", async () => {
     const { useCase, officeUsers, userAccounts, auditEvents } = buildUseCase({});
 
     const result = await useCase.execute(command("new.person@example.com"));
@@ -236,9 +214,7 @@ describe("AddOfficeUserUseCase", () => {
     expect(officeUsers.create).toHaveBeenCalledTimes(1);
     const createdMembership = officeUsers.create.mock.calls[0][0];
     const createdBy = officeUsers.create.mock.calls[0][1];
-    // The whole point of OfficeUser.create() not taking an admin flag: it
-    // can't be granted through this path even if the request tried to.
-    expect(createdMembership.isOfficeAdmin).toBe(false);
+    expect(createdMembership.userId).toBe(createdAccount.id);
     expect(createdBy).toBe(actorUserId);
 
     expect(auditEvents.create).toHaveBeenCalledTimes(1);

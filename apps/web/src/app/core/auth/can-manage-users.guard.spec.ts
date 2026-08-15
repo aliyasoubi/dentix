@@ -3,9 +3,9 @@ import { provideHttpClientTesting } from "@angular/common/http/testing";
 import { TestBed } from "@angular/core/testing";
 import { provideRouter, Router, UrlTree } from "@angular/router";
 import { AuthService } from "./auth.service";
-import { officeAdminGuard } from "./office-admin.guard";
+import { canManageUsersGuard } from "./can-manage-users.guard";
 
-describe("officeAdminGuard", () => {
+describe("canManageUsersGuard", () => {
   let authService: AuthService;
 
   beforeEach(() => {
@@ -20,20 +20,20 @@ describe("officeAdminGuard", () => {
 
   async function runGuard(): Promise<boolean | UrlTree> {
     return TestBed.runInInjectionContext(() =>
-      officeAdminGuard({} as never, { url: "/office-users" } as never),
+      canManageUsersGuard({} as never, { url: "/office-users" } as never),
     ) as Promise<boolean | UrlTree>;
   }
 
-  it("allows an admin through", async () => {
+  it("allows a user who can manage users through", async () => {
     Object.defineProperty(authService, "session", {
-      value: () => ({ isOfficeAdmin: true }),
+      value: () => ({ canManageUsers: true }),
     });
     expect(await runGuard()).toBe(true);
   });
 
-  it("redirects a non-admin to /patients rather than throwing or looping", async () => {
+  it("redirects a user without the permission to /patients rather than throwing or looping", async () => {
     Object.defineProperty(authService, "session", {
-      value: () => ({ isOfficeAdmin: false }),
+      value: () => ({ canManageUsers: false }),
     });
 
     const result = await runGuard();
@@ -51,13 +51,13 @@ describe("officeAdminGuard", () => {
     expect(result).not.toBe(true);
   });
 
-  // Regression test: canActivate: [authGuard, officeAdminGuard] runs both
+  // Regression test: canActivate: [authGuard, canManageUsersGuard] runs both
   // guards concurrently, not in sequence — a cold/direct navigation to
   // /office-users used to reach this guard while auth.session() was still
-  // null, bouncing a real admin to /patients. See the guard's own comment.
+  // null, bouncing an eligible user to /patients. See the guard's own comment.
   it("loads the session itself when it runs before authGuard's check has resolved", async () => {
     Object.defineProperty(authService, "checked", { value: () => false });
-    Object.defineProperty(authService, "session", { value: () => ({ isOfficeAdmin: true }) });
+    Object.defineProperty(authService, "session", { value: () => ({ canManageUsers: true }) });
     const loadSession = vi.fn().mockResolvedValue(undefined);
     authService.loadSession = loadSession;
 

@@ -51,7 +51,6 @@ describe("CompleteLoginUseCase — auth_time enforcement and mfaContext derivati
       userId: account.id,
       permissionVersion: 1,
       isActive: true,
-      isOfficeAdmin: false,
     });
 
     const oidcClient: OidcClientPort = {

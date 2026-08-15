@@ -42,7 +42,6 @@ describe("ResolveEffectivePermissionsUseCase", () => {
             userId,
             permissionVersion: 1,
             isActive: true,
-            isOfficeAdmin: false,
           })
         : options.officeUser;
 
@@ -104,7 +103,6 @@ describe("ResolveEffectivePermissionsUseCase", () => {
         userId,
         permissionVersion: 1,
         isActive: false,
-        isOfficeAdmin: false,
       }),
       grantedPermissionIds: [permissionId("patient.view")],
     });
@@ -120,7 +118,6 @@ describe("ResolveEffectivePermissionsUseCase", () => {
         userId,
         permissionVersion: 1,
         isActive: true,
-        isOfficeAdmin: false,
       }),
     });
     const effective = await useCase.execute({ userId, officeId });

@@ -171,7 +171,7 @@ export interface components {
             /** @description Whether authentication happened recently enough for sensitive actions. */
             isRecentlyAuthenticated: boolean;
             /** @description UI convenience only, not an authorization decision — whether to offer the add-user entry point. The server re-checks independently on the actual request. */
-            isOfficeAdmin: boolean;
+            canManageUsers: boolean;
         };
         LogoutResponseDto: {
             /**

@@ -10,7 +10,6 @@ export class OfficeUserMapper {
       userId: asUuid(record.userId),
       permissionVersion: record.permissionVersion,
       isActive: record.isActive,
-      isOfficeAdmin: record.isOfficeAdmin,
     });
   }
 
@@ -22,7 +21,6 @@ export class OfficeUserMapper {
     record.userId = officeUser.userId;
     record.permissionVersion = officeUser.permissionVersion;
     record.isActive = officeUser.isActive;
-    record.isOfficeAdmin = officeUser.isOfficeAdmin;
     record.createdAt = new Date();
     record.createdBy = createdBy;
     record.updatedAt = new Date();

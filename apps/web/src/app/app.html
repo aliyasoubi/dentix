@@ -4,7 +4,7 @@
        root node; with several, the content silently falls through to the
        default slot instead — which here would drop the session controls into
        the page body rather than the toolbar (NG8011). -->
-  @if (auth.isAuthenticated() && auth.session()?.isOfficeAdmin) {
+  @if (auth.isAuthenticated() && auth.session()?.canManageUsers) {
   <app-ds-button dsAppShellNav tier="tertiary" routerLink="/office-users">
     {{ "common.nav.addUser" | translate }}
   </app-ds-button>
