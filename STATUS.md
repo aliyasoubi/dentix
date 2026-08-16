@@ -5,17 +5,25 @@ understand "what has been built and why," read this one — everything else in `
 the target design (mostly for features that don't exist yet) or gives an AI/engineer the detail
 needed to resume work, not a quick answer to "where are we."
 
-Last updated: 2026-08-12.
+Last updated: 2026-08-16.
 
 ## The one-paragraph version
 
 Dentix is a dental practice-management system for one Iranian office. Building it is split into
-phases (see the table below). We are in the **first phase**, whose entire job is to prove the
-hard technical stuff works — login, Persian dates, Persian/Arabic text, rial/toman money, PDF
-generation — using the smallest possible real feature, before spending months building the
-actual product features (scheduling, charting, treatment plans, billing) on top of an unproven
-foundation. That first phase is **not finished** — it's blocked on one decision (where to host
-the app) that only a human can make.
+phases (see the table below). The **first phase** — proving the hard technical stuff works
+(login, Persian dates, Persian/Arabic text, rial/toman money, PDF generation) using the smallest
+possible real feature — is functionally done, and the app is deployed behind Caddy with
+automated encrypted backups. Work has moved on to **Release 1** foundation pieces: real
+roles/permissions, and patient-registry fields (national code, address).
+
+Two caveats on that, both real:
+
+- The hosting decision (ADR-010) was made in practice — there is a running production stack —
+  but ADR-010 and ADR-006/007/009 are still formally marked *Proposed*, and each carries an
+  acceptance checklist that only the named approver can sign off. Deployment ran ahead of that
+  governance step. Closing it is a human decision, not more engineering.
+- Release 1 is genuinely started but far from finished, and the release-blocking gaps below are
+  the honest list.
 
 ## What you can actually do in the app right now
 
@@ -23,6 +31,10 @@ the app) that only a human can make.
 - Create a patient with a Persian name, an optional Latin name, and a phone number
 - Search for that patient by name or by phone (typed as `09…`, `+98…`, or in Persian digits)
 - Pick a birth date on a Persian (Jalali) calendar
+- Optionally record a national code (checksum-validated) and a structured address — **write-only
+  so far**: there is no patient detail screen, so neither can be viewed, edited, or searched
+- Add another office user and assign them one of the six roles, which now actually governs what
+  they can do
 - See rial/toman amounts formatted correctly in Storybook (not wired into a real screen yet —
   there's no billing feature yet to wire it into)
 - Generate a Persian PDF receipt from the command line (not wired into the UI yet, either)
@@ -36,8 +48,8 @@ report — it doesn't exist yet.
 
 | Phase                         | Delivers                                                                                                                                            | Status                                              |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| **Release 0.5 (we are here)** | Prove login, Persian dates, RTL, money, PDF generation, and the API/database plumbing all work, using patient create/search as the one test feature | In progress — blocked on the hosting decision below |
-| Release 1                     | Real patient management + a _basic_ appointment schedule                                                                                            | Not started                                         |
+| Release 0.5                   | Prove login, Persian dates, RTL, money, PDF generation, and the API/database plumbing all work, using patient create/search as the one test feature | Functionally complete; ADR sign-off outstanding     |
+| **Release 1 (we are here)**   | Real patient management + a _basic_ appointment schedule                                                                                            | In progress — see the blocking list below           |
 | Release 2                     | Full front-desk scheduling — "reception runs a whole day without spreadsheets"                                                                      | Not started                                         |
 | Release 3                     | Clinical charting — documenting what happened in an appointment                                                                                     | Not started                                         |
 | Release 4                     | Treatment plans, patient follow-up, lab-order tracking                                                                                              | Not started                                         |
@@ -86,10 +98,30 @@ to find frustrating if you were expecting to see product features by now.
 
 ## What's actually blocking progress
 
-One decision: **where does this get hosted** (a rented server in Iran, vs. a small server
-physically in the office)? That decision — recorded as "ADR-010" in the architecture docs — is
-the one thing standing between here and both (a) finishing this first phase and (b) starting
-Release 1's real feature work. It needs a person to decide, not more engineering.
+Hosting is no longer the blocker — a production stack is running. What stands between here and
+using this with real patient data, from an external review of the current `master`:
+
+1. **~~Patient endpoints bypassed permission checks~~ — fixed.** Any active office member could
+   read or create patient records regardless of role, because `PermissionGuard` existed but was
+   applied to no route. Now enforced, with denial tests.
+2. **~~Added users got no role~~ — fixed.** Adding a user now requires choosing one of the six
+   roles, written in the same transaction as the membership.
+3. **Backups do not include Keycloak.** Keycloak lives in a separate `keycloak` database and the
+   backup job dumps only the Dentix one, so a host loss would restore patient records but lose
+   every user, credential, and 2FA enrolment. **This is the most serious open item.**
+4. **Backup/restore briefly writes an unencrypted dump to disk** before encrypting it (and the
+   reverse on restore). An abrupt kill in that window leaves patient data in the clear.
+5. **The API holds Keycloak's master admin password**, so compromising the API compromises the
+   identity provider. Needs a realm-scoped service account, or removing user-linking from the
+   API entirely.
+6. **ADR-006/007/009/010 are still formally *Proposed*** while the technologies they cover are
+   deployed. A person has to accept them; the acceptance checklists are in each ADR.
+
+Items 1 and 2 are done. Items 3–5 are engineering work; item 6 is a human decision.
+
+Beyond those, national code and address can currently be *entered* but not viewed, edited, or
+searched — there is no patient detail screen yet. That's the next feature gap worth closing
+before adding further demographic fields.
 
 ## Where to go for more
 

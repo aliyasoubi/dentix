@@ -108,7 +108,15 @@ npm run build         # all workspaces
 The Angular app and the API **must** run combined, on one origin — the BFF
 session cookie and CSRF design assume it (`09-authentication-session-
 architecture.md`: "Browser API calls use the same origin"). Angular's own
-`ng serve` (`:4200`) is not proxied to the API, so it cannot complete login.
+`ng serve` (`:4200`) cannot complete login.
+
+**Adding a dev proxy to `:4200` does not fix this** — it has been tried and
+reverted. A proxy forwards `/api`, so reads appear to work, which makes it
+look correct; writes still fail, because `CsrfGuard` rejects any request
+whose `Origin` differs from `APP_BASE_URL`, and Keycloak registers the
+callback under `:3000` only. Making `:4200` genuinely work would mean a
+second registered origin and a second `APP_BASE_URL` — i.e. abandoning the
+single-origin property the session design rests on. Use `:3000`.
 
 ```bash
 npm run build --workspace apps/web       # Angular build the API will serve statically

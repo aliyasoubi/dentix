@@ -11,8 +11,9 @@ Guidance for AI-assisted development in this repository. Document authority and 
 ## Stack
 
 - Frontend: Angular 22 + Angular Material/CDK, custom dental design system on top. No PrimeNG/NG-ZORRO mixing.
-- Backend: NestJS on Node.js 24 LTS — modular monolith (NOT microservices, per ADR-001).
-- Database: PostgreSQL 18. Redis + BullMQ for background jobs. S3-compatible encrypted object storage.
+- Backend: NestJS 11 on **Node.js 22** (`.nvmrc` 22.23.2, `engines: >=22.22.3 <23`, and the API Dockerfile's `NODE_VERSION` are the sources of truth — this file previously said 24, which was never what shipped).
+- Database: PostgreSQL 18.
+- **Deferred, not built — do not import or design around these:** Redis + BullMQ (no dependency in any package.json, absent from production Compose) and S3-compatible object storage (MinIO exists in the dev/CI Compose only). The `outbox` module's schema exists but has no producer or consumer; see `docs/07-plans/00-build-sequencing.md` before building on any of it.
 - API: REST + OpenAPI at `/api/v1`; Angular client generated/type-checked from the contract.
 - Auth: OIDC + MFA with the server-side BFF session in `docs/04-architecture/09-authentication-session-architecture.md`; provider per ADR-007.
 - Pin exact dependency versions; update through review only.
