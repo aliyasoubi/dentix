@@ -156,7 +156,16 @@
       ]
     }
   ],
-  "clientScopeMappings": {},
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "dentix-admin-lookup",
+        "roles": [
+          "view-users"
+        ]
+      }
+    ]
+  },
   "clients": [
     {
       "id": "a4ea3c28-b7cf-4065-b643-ff7e5bd2751d",
@@ -223,6 +232,23 @@
         "organization",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "dentix-admin-lookup",
+      "name": "Dentix user lookup (service account)",
+      "description": "Least-privilege service account for the API's user-by-email lookup. Confidential, client_credentials only; view-users on this realm is its only permission. Replaces the master-realm admin credentials the API previously held.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": false
     }
   ],
   "clientScopes": [
@@ -1987,5 +2013,17 @@
   },
   "clientPolicies": {
     "policies": []
-  }
+  },
+  "users": [
+    {
+      "username": "service-account-dentix-admin-lookup",
+      "enabled": true,
+      "serviceAccountClientId": "dentix-admin-lookup",
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      }
+    }
+  ]
 }

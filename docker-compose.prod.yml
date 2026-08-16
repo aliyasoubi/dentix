@@ -146,8 +146,14 @@ services:
       # than round-tripping through the public domain.
       KEYCLOAK_ADMIN_URL: http://keycloak:8080
       KEYCLOAK_REALM: dentix
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+      # The `dentix-admin-lookup` service account, NOT the master-realm
+      # administrator this used to be. Scoped to the dentix realm with
+      # view-users as its only permission, so compromising the API no longer
+      # compromises the identity provider. KEYCLOAK_ADMIN/_PASSWORD are
+      # deliberately absent here — they belong to the keycloak service's own
+      # bootstrap and to operator scripts a human runs, never to this process.
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-dentix-admin-lookup}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET}
       # Caddy is the one proxy in front of this process. Without it the
       # throttler buckets the whole office under Caddy's container IP.
       TRUST_PROXY_HOPS: 1

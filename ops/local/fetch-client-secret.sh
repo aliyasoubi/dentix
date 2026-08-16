@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Fetches the dentix-bff client secret from the running Keycloak and prints
-# the line to put in .env.production.
+# Fetches both confidential client secrets from the running Keycloak and
+# prints the lines to put in .env.production: the BFF's (browser login) and
+# the service account's (the API's user lookups).
 #
-# Needed because Keycloak regenerates this secret on every realm import and
-# keycloak/dentix-realm.json deliberately does not contain it (a committed
+# Needed because Keycloak regenerates these on every realm import and
+# keycloak/dentix-realm.json deliberately does not contain them (a committed
 # realm export must never carry a secret).
 #
 # Uses Keycloak's own kcadm.sh rather than curl against the admin REST API:
@@ -46,18 +47,30 @@ kc config credentials \
   --user "$KEYCLOAK_ADMIN" \
   --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
 
-UUID=$(kc get clients -r "$REALM" -q "clientId=${CLIENT_ID}" --fields id --format csv --noquotes | tr -d '\r')
+secret_for() {
+  local client="$1"
+  local uuid secret
 
-if [ -z "$UUID" ]; then
-  echo "error: client '${CLIENT_ID}' not found in realm '${REALM}'" >&2
-  exit 1
-fi
+  uuid=$(kc get clients -r "$REALM" -q "clientId=${client}" --fields id --format csv --noquotes | tr -d '\r')
+  if [ -z "$uuid" ]; then
+    echo "error: client '${client}' not found in realm '${REALM}'" >&2
+    return 1
+  fi
 
-SECRET=$(kc get "clients/${UUID}/client-secret" -r "$REALM" --fields value --format csv --noquotes | tr -d '\r')
+  secret=$(kc get "clients/${uuid}/client-secret" -r "$REALM" --fields value --format csv --noquotes | tr -d '\r')
+  if [ -z "$secret" ]; then
+    echo "error: could not read the client secret for '${client}'" >&2
+    return 1
+  fi
 
-if [ -z "$SECRET" ]; then
-  echo "error: could not read the client secret" >&2
-  exit 1
-fi
+  printf '%s' "$secret"
+}
 
-echo "OIDC_CLIENT_SECRET=${SECRET}"
+# Two clients now, both confidential and both regenerated on every realm
+# import: the BFF that runs the browser login, and the least-privilege
+# service account the API uses for user lookups (which replaced the
+# master-realm admin credentials it used to hold).
+ADMIN_CLIENT_ID="${KEYCLOAK_ADMIN_CLIENT_ID:-dentix-admin-lookup}"
+
+echo "OIDC_CLIENT_SECRET=$(secret_for "$CLIENT_ID")"
+echo "KEYCLOAK_ADMIN_CLIENT_SECRET=$(secret_for "$ADMIN_CLIENT_ID")"

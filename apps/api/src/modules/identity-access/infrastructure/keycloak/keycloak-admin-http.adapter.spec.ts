@@ -18,8 +18,13 @@ describe("KeycloakAdminHttpAdapter", () => {
   beforeEach(() => {
     process.env["KEYCLOAK_ADMIN_URL"] = "http://keycloak-internal:8080";
     process.env["KEYCLOAK_REALM"] = "dentix";
-    process.env["KEYCLOAK_ADMIN"] = "admin";
-    process.env["KEYCLOAK_ADMIN_PASSWORD"] = "admin-secret";
+    process.env["KEYCLOAK_ADMIN_CLIENT_ID"] = "dentix-admin-lookup";
+    process.env["KEYCLOAK_ADMIN_CLIENT_SECRET"] = "service-account-secret";
+    // Deliberately NOT set: the adapter must never reach for the Keycloak
+    // superuser again. If a future change reintroduces a password grant,
+    // these tests fail on the missing env var rather than quietly working.
+    delete process.env["KEYCLOAK_ADMIN"];
+    delete process.env["KEYCLOAK_ADMIN_PASSWORD"];
     fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
     global.fetch = fetchMock;
   });
@@ -28,7 +33,7 @@ describe("KeycloakAdminHttpAdapter", () => {
     process.env = { ...originalEnv };
   });
 
-  it("authenticates against the master realm, then looks up the user by exact email", async () => {
+  it("authenticates as the realm service account, then looks up the user by exact email", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ access_token: "admin-token" }))
       .mockResolvedValueOnce(
@@ -41,7 +46,8 @@ describe("KeycloakAdminHttpAdapter", () => {
     expect(result).toEqual({ subject: "kc-subject-1", email: "reza@example.com", enabled: true });
 
     const [tokenCall, lookupCall] = fetchMock.mock.calls;
-    expect(tokenCall[0]).toBe("http://keycloak-internal:8080/realms/master/protocol/openid-connect/token");
+    // The application realm, NOT master — the whole point of the change.
+    expect(tokenCall[0]).toBe("http://keycloak-internal:8080/realms/dentix/protocol/openid-connect/token");
     expect(lookupCall[0]).toBe(
       "http://keycloak-internal:8080/admin/realms/dentix/users?email=reza%40example.com&exact=true",
     );
@@ -50,6 +56,31 @@ describe("KeycloakAdminHttpAdapter", () => {
     // so this reflects what the code under test actually constructs.
     const lookupHeaders = lookupCall[1]?.headers as Record<string, string> | undefined;
     expect(lookupHeaders?.["Authorization"]).toBe("Bearer admin-token");
+  });
+
+  // The security property this change exists for. If someone reintroduces a
+  // password grant — or points it back at master — this fails.
+  it("uses a client_credentials grant and sends no user password", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ access_token: "admin-token" }))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    await new KeycloakAdminHttpAdapter().findUserByEmail("reza@example.com");
+
+    const tokenCall = fetchMock.mock.calls[0];
+    const body = new URLSearchParams(tokenCall[1]?.body as string);
+    expect(body.get("grant_type")).toBe("client_credentials");
+    expect(body.get("client_id")).toBe("dentix-admin-lookup");
+    expect(body.get("client_secret")).toBe("service-account-secret");
+    expect(body.get("username")).toBeNull();
+    expect(body.get("password")).toBeNull();
+    expect(tokenCall[0] as string).not.toContain("/realms/master/");
+  });
+
+  it("requires the service-account credentials to be configured", async () => {
+    delete process.env["KEYCLOAK_ADMIN_CLIENT_SECRET"];
+    const adapter = new KeycloakAdminHttpAdapter();
+    await expect(adapter.findUserByEmail("reza@example.com")).rejects.toThrow(/KEYCLOAK_ADMIN_CLIENT_SECRET/);
   });
 
   it("returns null when no user matches", async () => {
