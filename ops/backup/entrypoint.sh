@@ -16,8 +16,20 @@ set -euo pipefail
 # overrode it would still work when run by hand and silently fall back to the
 # default on every scheduled run — the worst kind of backup bug, because it
 # only shows up during a restore.
-env | grep -E '^(POSTGRES_|BACKUP_|KEYCLOAK_DB=)' > /etc/backup-env
+# Created empty and locked down BEFORE any value is written: the file holds
+# POSTGRES_PASSWORD, so there must be no window where it exists world-readable.
+: > /etc/backup-env
 chmod 600 /etc/backup-env
+
+# Each value is shell-quoted with %q rather than dumped raw. The cron job
+# SOURCES this file, so a raw `POSTGRES_PASSWORD=a b` line would set the
+# password to "a" and then try to execute "b" — a generated password
+# containing a space, `$`, or a backtick would silently break the backup or
+# run arbitrary commands as root. %q makes the value survive re-parsing
+# exactly as-is.
+for name in $(env | grep -oE '^(POSTGRES_[A-Za-z0-9_]*|BACKUP_[A-Za-z0-9_]*|KEYCLOAK_DB)=' | tr -d '='); do
+  printf 'export %s=%q\n' "$name" "${!name}" >> /etc/backup-env
+done
 
 SCHEDULE="${BACKUP_CRON_SCHEDULE:-0 3 * * *}"
 echo "${SCHEDULE} root . /etc/backup-env && /scripts/backup-postgres.sh >> /var/log/backup.log 2>&1" > /etc/cron.d/dentix-backup

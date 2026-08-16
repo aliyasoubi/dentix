@@ -32,7 +32,8 @@ sequences the work against it.
 | 00-build-sequencing.md | cross-cutting | N/A — sequencing reference, not a release |
 | release-0-discovery.md | R0 | Clickable prototype approved by dentist, receptionist, assistant, and office manager |
 | release-0.5-walking-skeleton.md | R0.5 (added) | Risk stack proven end-to-end |
-| release-1-foundation.md | R1 | Fictional patient data can be managed securely with correct Jalali dates and unambiguous rial/toman amounts |
+| release-1-foundation.md | Foundation Recovery Sprint (not a product release) | Platform is secure and recoverable — engineering complete, governance items open |
+| **release-1-patient-book.md** | **R1 — ACTIVE CONTRACT** | Reception can register, find, view, edit and export patients without scheduling |
 | release-2-front-office.md | R2 | Reception can operate a full fictional day without spreadsheets |
 | release-3-clinical-core.md | R3 | Dentist can document selected common appointment types safely |
 | release-4-treatment-continuity.md | R4 | Implant, orthodontic, crown/bridge, and custom workflows have visible next actions |

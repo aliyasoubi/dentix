@@ -48,23 +48,31 @@ export class AddUserFormComponent {
 
   protected readonly form = this.formBuilder.nonNullable.group({
     email: ["", [Validators.required, Validators.email]],
-    // No blank default: a membership with no role has zero permissions, so
-    // the backend requires a role code. Defaulting to the least-privileged
-    // of the six rather than pre-selecting something powerful.
-    roleCode: ["cashier" as AddOfficeUserRequest["roleCode"], [Validators.required]],
+    // Deliberately unselected. This previously defaulted to `cashier`, on the
+    // stated grounds that it was "the least-privileged of the six" — which is
+    // simply false: cashier carries ledger.refund, ledger.discount and
+    // ledger.day-end-close, none of which receptionist has. An admin who did
+    // not touch the dropdown silently created an account that could issue
+    // refunds. The six roles are NOT a privilege ladder — they are different
+    // jobs — so there is no safe default to pick, and the choice must be made
+    // explicitly.
+    roleCode: ["" as AddOfficeUserRequest["roleCode"] | "", [Validators.required]],
   });
 
   /**
-   * The six fixed roles (01-product/04-roles-and-permissions.md). Ordered
-   * least- to most-privileged so the destructive choice isn't the nearest
-   * one. Labels are translation keys — DsSelectFieldComponent resolves them.
+   * The six fixed roles (01-product/04-roles-and-permissions.md), ordered by
+   * how often an office actually onboards them — NOT by privilege, which does
+   * not order linearly (see the roleCode comment above). Cashier and system
+   * administrator come last because they are specialist money-handling and
+   * operator accounts, not because they are "most powerful".
+   * Labels are translation keys — DsSelectFieldComponent resolves them.
    */
   protected readonly ROLE_OPTIONS: readonly DsSelectOption[] = [
-    { value: "cashier", label: "officeUsers.role.cashier" },
     { value: "receptionist", label: "officeUsers.role.receptionist" },
     { value: "dental_assistant", label: "officeUsers.role.dental_assistant" },
     { value: "dentist", label: "officeUsers.role.dentist" },
     { value: "office_manager", label: "officeUsers.role.office_manager" },
+    { value: "cashier", label: "officeUsers.role.cashier" },
     { value: "system_administrator", label: "officeUsers.role.system_administrator" },
   ];
 
@@ -86,11 +94,16 @@ export class AddUserFormComponent {
     // leading/trailing whitespace (verified — form.invalid is true for one),
     // so by the time this line runs the value can't contain any to trim.
     const value = this.form.getRawValue();
+    if (!value.roleCode) {
+      // Unreachable via the UI (Validators.required already failed above), but
+      // narrows the "" out of the type rather than casting it away.
+      return;
+    }
     this.submitted.emit({ email: value.email, roleCode: value.roleCode });
   }
 
   /** Public, parent-driven — same reasoning as PatientRegistrationFormComponent.reset(): only the parent knows the add actually succeeded. */
   reset(): void {
-    this.form.reset({ email: "", roleCode: "cashier" });
+    this.form.reset({ email: "", roleCode: "" });
   }
 }

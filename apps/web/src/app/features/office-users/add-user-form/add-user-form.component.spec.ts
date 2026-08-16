@@ -51,9 +51,27 @@ describe("AddUserFormComponent", () => {
 
   // The backend rejects a request with no role, so the form must never be
   // able to send one — a membership with no role has zero permissions.
-  it("defaults to a role rather than starting blank", () => {
-    expect(form().getRawValue().roleCode).toBe("cashier");
-    expect(form().controls.roleCode.valid).toBe(true);
+  // Was "defaults to a role rather than starting blank", asserting a default of
+  // `cashier` on the stated grounds it was least-privileged. It is not: cashier
+  // holds ledger.refund, ledger.discount and ledger.day-end-close, which
+  // receptionist does not. An admin who never opened the dropdown created a
+  // refund-capable account. The six roles are different jobs, not a ladder, so
+  // there is no safe default and the choice must be explicit.
+  it("starts with no role selected and is invalid until one is chosen", () => {
+    expect(form().getRawValue().roleCode).toBe("");
+    expect(form().controls.roleCode.valid).toBe(false);
+    expect(form().valid).toBe(false);
+  });
+
+  it("emits nothing when submitted without a role", () => {
+    form().patchValue({ email: "reza@example.com" });
+    component["submit"]();
+    expect(emitted).toEqual([]);
+  });
+
+  it("becomes valid once a role is explicitly chosen", () => {
+    form().setValue({ email: "reza@example.com", roleCode: "receptionist" });
+    expect(form().valid).toBe(true);
   });
 
   // Locks in why the component doesn't need its own trim() call.
@@ -86,10 +104,10 @@ describe("AddUserFormComponent", () => {
   });
 
   describe("reset", () => {
-    it("clears the form", () => {
+    it("clears the form back to no selected role", () => {
       form().setValue({ email: "reza@example.com", roleCode: "cashier" });
       component.reset();
-      expect(form().getRawValue()).toEqual({ email: "", roleCode: "cashier" });
+      expect(form().getRawValue()).toEqual({ email: "", roleCode: "" });
     });
 
     // Public and parent-driven, same reasoning as PatientRegistrationFormComponent.

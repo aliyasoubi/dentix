@@ -31,6 +31,31 @@ if [ ! -f "$ENCRYPTED_PATH" ]; then
   exit 1
 fi
 
+# This script DROPs the target database. It used to accept any name, while a
+# comment below claimed it "only ever touches TARGET_DB" — true but useless,
+# because TARGET_DB could be `dentix`. Passing the live database name would
+# have destroyed production data with no prompt. The guard is here rather than
+# in documentation because a drill is exactly when someone types fast.
+case "$TARGET_DB" in
+  *[!a-zA-Z0-9_]* | "" | [!a-zA-Z_]*)
+    echo "error: target database name '${TARGET_DB}' is not a plain identifier" >&2
+    exit 1
+    ;;
+esac
+
+for protected in "${POSTGRES_DB:-}" "${KEYCLOAK_DB:-}" postgres template0 template1; do
+  if [ -n "$protected" ] && [ "$TARGET_DB" = "$protected" ]; then
+    if [ "${ALLOW_DESTRUCTIVE_RESTORE:-}" = "yes-destroy-${protected}" ]; then
+      echo "dentix-restore: DESTRUCTIVE restore into live database '${protected}' explicitly authorised" >&2
+      break
+    fi
+    echo "error: '${TARGET_DB}' is a live database. Restore into an isolated name and validate there." >&2
+    echo "       A real recovery that must overwrite it requires:" >&2
+    echo "       ALLOW_DESTRUCTIVE_RESTORE=yes-destroy-${protected}" >&2
+    exit 1
+  fi
+done
+
 export PGPASSWORD="${POSTGRES_PASSWORD}"
 START_EPOCH=$(date +%s)
 echo "dentix-restore: starting at $(date -u +%Y-%m-%dT%H:%M:%SZ), target database '${TARGET_DB}'"
@@ -41,13 +66,20 @@ echo "dentix-restore: starting at $(date -u +%Y-%m-%dT%H:%M:%SZ), target databas
 if [ -f "${ENCRYPTED_PATH}.sha256" ]; then
   ( cd "$(dirname "$ENCRYPTED_PATH")" && sha256sum -c "$(basename "$ENCRYPTED_PATH").sha256" )
   echo "dentix-restore: checksum OK"
+elif [ "${ALLOW_MISSING_CHECKSUM:-}" = "yes" ]; then
+  echo "warning: no .sha256 alongside ${ENCRYPTED_PATH}; proceeding because ALLOW_MISSING_CHECKSUM=yes" >&2
 else
-  echo "warning: no .sha256 file found alongside ${ENCRYPTED_PATH} — skipping integrity check" >&2
+  # Previously a warning that carried on regardless, which defeats the point:
+  # the drill would pass on a truncated or tampered file and only fail later
+  # with an ambiguous pg_restore error, or not at all.
+  echo "error: no .sha256 file alongside ${ENCRYPTED_PATH} — refusing to trust it." >&2
+  echo "       Copy the .sha256 with the backup, or set ALLOW_MISSING_CHECKSUM=yes to override." >&2
+  exit 1
 fi
 
-# Isolated on purpose: DROP/CREATE only ever touches TARGET_DB, never the
-# database this script was pointed at connecting to (`postgres`, used purely
-# as the maintenance connection CREATE DATABASE requires).
+# DROP/CREATE only ever touches TARGET_DB, which the guard above has already
+# confirmed is not a live database. The connection itself is made to
+# `postgres`, purely as the maintenance database CREATE DATABASE requires.
 psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 \
   -c "DROP DATABASE IF EXISTS \"${TARGET_DB}\";" \
   -c "CREATE DATABASE \"${TARGET_DB}\";"

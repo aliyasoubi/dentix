@@ -15,9 +15,12 @@ Release 1 builds only:
 7. Basic OIDC/MFA and a server-side session.
 8. Database migrations, authorization, and essential audit events.
 9. Patient registration/search.
-10. A basic appointment schedule.
-11. One deployed fictional-data vertical slice.
-12. Storybook for the first five or six shared components.
+10. One deployed fictional-data vertical slice.
+11. Storybook for the first five or six shared components.
+
+The basic appointment schedule that used to be item 10 **moved to Release 2 — Appointment Book**
+on 2026-08-16, so that Release 1 can be finished and used as a patient registry on its own.
+Items 1–8 above are the Foundation Recovery Sprint, not a product release.
 
 This list satisfies the two differences the office explicitly needs from day one: complete Iranian localization, and exact rial/toman handling. Everything else in the architecture docs is real, but later.
 
@@ -49,4 +52,15 @@ A Proposed ADR blocking one of these areas (see `open-decisions.md`) is accepted
 
 ## What this means when reading the architecture docs
 
-`04-data-model.md`, `10-event-catalog.md`, and the ADRs remain authoritative for what the system eventually looks like. When a table, event, or decision in those documents belongs to a capability in the defer table above, it is annotated inline with when it is actually built. Absence of an annotation means it is in scope now.
+`04-data-model.md`, `10-event-catalog.md`, and the ADRs remain authoritative for what the system eventually looks like. When a table, event, or decision in those documents belongs to a capability in the defer table above, it is annotated inline with when it is actually built.
+
+**An unannotated item is NOT thereby in scope.** This document previously said the opposite —
+"absence of an annotation means it is in scope now" — which made every unannotated table in the
+data model read as a work order. That is the rule that produced a permission system enforcing
+nothing on any route, ~44 permission codes for modules that do not exist, an outbox with no
+producer or consumer, and patient fields that could be entered but never viewed.
+
+Scope comes from the **active release contract** (`README.md` → the current release plan), never
+from the absence of a marker in an architecture document. If something is unannotated and you
+believe it is needed, the question to answer is "which workflow in the current release consumes
+it?" — not "is it forbidden?".

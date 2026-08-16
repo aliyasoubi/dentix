@@ -18,8 +18,10 @@ roles/permissions, and patient-registry fields (national code, address).
 
 Two caveats on that, both real:
 
-- The hosting decision (ADR-010) was made in practice — there is a running production stack —
-  but ADR-010 and ADR-006/007/009 are still formally marked *Proposed*, and each carries an
+- The hosting decision (ADR-010) was made in practice — the production Compose stack has been
+  rehearsed end to end, though only on a developer machine, not on a real server the office
+  would use —
+  but ADR-010 and ADR-006/007/009 are still formally marked _Proposed_, and each carries an
   acceptance checklist that only the named approver can sign off. Deployment ran ahead of that
   governance step. Closing it is a human decision, not more engineering.
 - Release 1 is genuinely started but far from finished, and the release-blocking gaps below are
@@ -46,22 +48,20 @@ report — it doesn't exist yet.
 
 ## What's actually built vs. what's left
 
-| Phase                         | Delivers                                                                                                                                            | Status                                              |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 Each row below names the **office outcome** it delivers, not the architecture it contains, and
 every numbered release must stay usable if nothing after it is ever built. A later release may
 add capability; it must never finish fundamentals an earlier one left broken.
 
-| Phase                                | Standalone office outcome                                                                       | Status                                         |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Release 0.5                          | Prove the risky technical stack end to end (login, Jalali dates, RTL, money, PDF)                | Functionally complete; ADR sign-off outstanding |
-| Foundation Recovery Sprint           | Secure, recoverable platform. **Not a product** — an office cannot use this on its own           | Engineering done; governance items open         |
-| **Release 1 — Patient Book (next)**  | Replaces the patient spreadsheet or paper index                                                  | Not started as a release; some pieces exist     |
-| Release 2 — Appointment Book         | Replaces the appointment notebook — reception runs a whole day in Dentix                        | Not started                                     |
-| Release 3 — Treatment Record         | Dentist records a common treatment from planning to completion                                   | Not started                                     |
-| Release 4 — Follow-up Centre         | No implant, orthodontic or lab case is left without a next action                                | Not started                                     |
-| Release 5 — Patient Finance          | Patient charges, payments and balances reconcile (optional; must not block 1–4)                  | Not started                                     |
-| Later                                | Production-readiness hardening, then piloting with the real office                               | Not started                                     |
+| Phase                               | Standalone office outcome                                                              | Status                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Release 0.5                         | Prove the risky technical stack end to end (login, Jalali dates, RTL, money, PDF)      | Functionally complete; ADR sign-off outstanding |
+| Foundation Recovery Sprint          | Secure, recoverable platform. **Not a product** — an office cannot use this on its own | Engineering done; governance items open         |
+| **Release 1 — Patient Book (next)** | Replaces the patient spreadsheet or paper index                                        | Not started as a release; some pieces exist     |
+| Release 2 — Appointment Book        | Replaces the appointment notebook — reception runs a whole day in Dentix               | Not started                                     |
+| Release 3 — Treatment Record        | Dentist records a common treatment from planning to completion                         | Not started                                     |
+| Release 4 — Follow-up Centre        | No implant, orthodontic or lab case is left without a next action                      | Not started                                     |
+| Release 5 — Patient Finance         | Patient charges, payments and balances reconcile (optional; must not block 1–4)        | Not started                                     |
+| Later                               | Production-readiness hardening, then piloting with the real office                     | Not started                                     |
 
 ## Why there's so much code for so few visible screens
 
@@ -104,7 +104,8 @@ to find frustrating if you were expecting to see product features by now.
 
 ## Foundation Recovery Sprint
 
-Hosting is no longer the blocker — a production stack is running. What was blocking was a set of
+Hosting is no longer the blocker — the production stack runs, albeit only as a local rehearsal
+so far, never on an office server. What was blocking was a set of
 trust defects found by an external review of `master`. This work is **not a product release**:
 it makes the platform safe to build on, but on its own it is not something a dental office can
 use. Calling it "Release 1" is what let horizontal infrastructure work look like progress.
@@ -132,7 +133,7 @@ Still open, and **not** engineering work:
 
 - **Branch protection.** `master` accepts direct pushes, so CI reports failures after the fact
   instead of preventing them landing.
-- **ADR-006/007/009/010 are formally *Proposed*** while the technologies they cover are deployed.
+- **ADR-006/007/009/010 are formally _Proposed_** while the technologies they cover are deployed.
   Each carries an acceptance checklist only the named approver can sign.
 - **The Real-Data Authorization Gate** (`05-quality/01-security-privacy.md`) has never been
   scheduled. Until it is approved, everything here stays fictional-data only — including any
@@ -140,7 +141,7 @@ Still open, and **not** engineering work:
 
 ## Release 1 — Patient Book
 
-The first release that is a *product*: it must replace the office's patient spreadsheet or paper
+The first release that is a _product_: it must replace the office's patient spreadsheet or paper
 index, and stay useful even if nothing after it is ever built. Not started as a whole; some
 pieces exist.
 
