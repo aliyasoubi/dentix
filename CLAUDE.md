@@ -38,6 +38,34 @@ Guidance for AI-assisted development in this repository. Document authority and 
 - One use case = one transaction + outbox/audit writes.
 - Strict TypeScript, no `any` outside audited adapters, exhaustive state handling, stable error codes (backend returns codes, UI owns localized wording).
 
+## What authorizes implementation (read before picking up work)
+
+**Target architecture documents describe long-term boundaries, not the current implementation
+queue. Implement only work explicitly included in the active release contract. Every release
+must deliver a deployable, end-to-end office workflow that remains useful if no later release is
+built.**
+
+This rule exists because ignoring it already happened. `docs/04-architecture/*` and the release
+checklists were read as a work queue, which produced: a permission system with time-bound
+grant/deny exceptions while `PermissionGuard` was applied to zero routes; ~44 permission codes
+for modules that do not exist; an outbox with no producer or consumer; and patient fields that
+could be entered but never viewed or edited. All of it satisfied a document. None of it made an
+office workflow usable.
+
+Concretely:
+
+- An unchecked box in a plan, an ADR, or a data-model table **is not a work order**. The active
+  release contract is (`docs/07-plans/README.md` → the current release plan).
+- **A field is not done until it can be entered, validated, stored, displayed, edited,
+  authorized and tested.** Ship the whole vertical or do not start it.
+- **New infrastructure needs a consumer in the current release.** "Needed later" is not a
+  reason. This applies especially to queues, events, workers, object storage, caching, generic
+  engines, permission abstractions and design-system wrappers.
+- **Generalise only after repetition** — direct implementation first, a helper on the second
+  real use, a shared component only once the behaviour is stable. Do not wrap Angular Material
+  merely to avoid referencing it.
+- Do not delete stable unused code just because it is unused; freeze it and stop extending it.
+
 ## Working conventions for AI agents
 
 - All implementation follows the slice workflow in `docs/08-implementation/01-workflow.md`: read the slice's spec references, write the failing tests first, implement inside the module layout, run the canonical verification commands, then tick the plan checkbox. The current release's slices live in `docs/08-implementation/02-slices-*.md`.

@@ -1,5 +1,29 @@
 # Product Roadmap
 
+> **Release naming was corrected on 2026-08-16.** The releases below were named for the
+> *architecture* they contain ("Platform foundation", "Front office"), which let horizontal
+> infrastructure work look like product progress — a permission system enforcing nothing, an
+> outbox with no consumer, patient fields that could not be viewed. Releases are now named for
+> the **office outcome** they deliver and must each be independently usable:
+>
+> | Stage | Outcome |
+> |---|---|
+> | Foundation Recovery Sprint | Secure, recoverable platform. **Not a product release.** |
+> | Release 1 — Patient Book | Replaces the patient spreadsheet or paper index |
+> | Release 2 — Appointment Book | Replaces the appointment notebook |
+> | Release 3 — Treatment Record | Dentist records a common treatment end to end |
+> | Release 4 — Follow-up Centre | No implant/ortho/lab case lacks a next action |
+> | Release 5 — Patient Finance | Patient charges, payments, balances (optional) |
+>
+> The governing test: *if development stopped permanently after this release, could the office
+> still deploy and use what was delivered?* A later release may add capability; it must never
+> complete fundamentals an earlier one left broken.
+>
+> **The scope lists below remain the long-term target and do NOT authorize implementation.**
+> See the rule in CLAUDE.md ("What authorizes implementation"). Note in particular that the
+> basic appointment schedule once folded into Release 1 now belongs to Release 2, so that
+> Release 1 can be finished and used as a patient registry on its own.
+
 ## Release 0 - Discovery and prototype
 
   - Observe the office’s real workflows

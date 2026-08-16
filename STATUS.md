@@ -48,14 +48,20 @@ report — it doesn't exist yet.
 
 | Phase                         | Delivers                                                                                                                                            | Status                                              |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Release 0.5                   | Prove login, Persian dates, RTL, money, PDF generation, and the API/database plumbing all work, using patient create/search as the one test feature | Functionally complete; ADR sign-off outstanding     |
-| **Release 1 (we are here)**   | Real patient management + a _basic_ appointment schedule                                                                                            | In progress — see the blocking list below           |
-| Release 2                     | Full front-desk scheduling — "reception runs a whole day without spreadsheets"                                                                      | Not started                                         |
-| Release 3                     | Clinical charting — documenting what happened in an appointment                                                                                     | Not started                                         |
-| Release 4                     | Treatment plans, patient follow-up, lab-order tracking                                                                                              | Not started                                         |
-| Release 5                     | Patient billing — charges, payments, refunds                                                                                                        | Not started                                         |
-| Release 6                     | Production-readiness hardening                                                                                                                      | Not started                                         |
-| Release 7                     | Piloting with the real office                                                                                                                       | Not started                                         |
+Each row below names the **office outcome** it delivers, not the architecture it contains, and
+every numbered release must stay usable if nothing after it is ever built. A later release may
+add capability; it must never finish fundamentals an earlier one left broken.
+
+| Phase                                | Standalone office outcome                                                                       | Status                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Release 0.5                          | Prove the risky technical stack end to end (login, Jalali dates, RTL, money, PDF)                | Functionally complete; ADR sign-off outstanding |
+| Foundation Recovery Sprint           | Secure, recoverable platform. **Not a product** — an office cannot use this on its own           | Engineering done; governance items open         |
+| **Release 1 — Patient Book (next)**  | Replaces the patient spreadsheet or paper index                                                  | Not started as a release; some pieces exist     |
+| Release 2 — Appointment Book         | Replaces the appointment notebook — reception runs a whole day in Dentix                        | Not started                                     |
+| Release 3 — Treatment Record         | Dentist records a common treatment from planning to completion                                   | Not started                                     |
+| Release 4 — Follow-up Centre         | No implant, orthodontic or lab case is left without a next action                                | Not started                                     |
+| Release 5 — Patient Finance          | Patient charges, payments and balances reconcile (optional; must not block 1–4)                  | Not started                                     |
+| Later                                | Production-readiness hardening, then piloting with the real office                               | Not started                                     |
 
 ## Why there's so much code for so few visible screens
 
@@ -96,32 +102,56 @@ to find frustrating if you were expecting to see product features by now.
   Vazirmatn font, minimal decoration. That's the actual design direction (`docs/03-ux/05-ui-design-system.md`),
   not an unfinished skin.
 
-## What's actually blocking progress
+## Foundation Recovery Sprint
 
-Hosting is no longer the blocker — a production stack is running. What stands between here and
-using this with real patient data, from an external review of the current `master`:
+Hosting is no longer the blocker — a production stack is running. What was blocking was a set of
+trust defects found by an external review of `master`. This work is **not a product release**:
+it makes the platform safe to build on, but on its own it is not something a dental office can
+use. Calling it "Release 1" is what let horizontal infrastructure work look like progress.
 
-1. **~~Patient endpoints bypassed permission checks~~ — fixed.** Any active office member could
-   read or create patient records regardless of role, because `PermissionGuard` existed but was
-   applied to no route. Now enforced, with denial tests.
-2. **~~Added users got no role~~ — fixed.** Adding a user now requires choosing one of the six
-   roles, written in the same transaction as the membership.
-3. **Backups do not include Keycloak.** Keycloak lives in a separate `keycloak` database and the
-   backup job dumps only the Dentix one, so a host loss would restore patient records but lose
-   every user, credential, and 2FA enrolment. **This is the most serious open item.**
-4. **Backup/restore briefly writes an unencrypted dump to disk** before encrypting it (and the
-   reverse on restore). An abrupt kill in that window leaves patient data in the clear.
-5. **The API holds Keycloak's master admin password**, so compromising the API compromises the
-   identity provider. Needs a realm-scoped service account, or removing user-linking from the
-   API entirely.
-6. **ADR-006/007/009/010 are still formally *Proposed*** while the technologies they cover are
-   deployed. A person has to accept them; the acceptance checklists are in each ADR.
+Engineering items — all now done:
 
-Items 1 and 2 are done. Items 3–5 are engineering work; item 6 is a human decision.
+1. **~~Patient endpoints bypassed permission checks~~.** Any active office member could read or
+   create patient records regardless of role: `PermissionGuard` existed and was applied to no
+   route. Now enforced, with denial tests.
+2. **~~Added users got no role~~.** Adding a user now requires one of the six roles, written in
+   the same transaction as the membership.
+3. **~~Backups excluded Keycloak~~.** Keycloak lives in its own database and the job dumped only
+   the Dentix one, so a host loss would have restored every patient record and lost every login.
+   Both databases are now backed up.
+4. **~~Backup/restore wrote plaintext dumps to disk~~.** Both directions are streamed
+   (`pg_dump | gpg`, `gpg | pg_restore`), so cleartext never touches the volume.
+5. **~~The API held Keycloak's master admin password~~.** Replaced with a realm-scoped service
+   account whose only permission is `view-users` — verified unable to create users, reset
+   credentials, or read the master realm.
+6. **~~Restore drill~~.** Both databases restored into isolated targets, the source Keycloak
+   destroyed, and a user logged in with password **and TOTP** against a Keycloak that knew only
+   the backup. Procedure and its two traps are written up in `06-operations/02-backup-recovery.md`.
 
-Beyond those, national code and address can currently be *entered* but not viewed, edited, or
-searched — there is no patient detail screen yet. That's the next feature gap worth closing
-before adding further demographic fields.
+Still open, and **not** engineering work:
+
+- **Branch protection.** `master` accepts direct pushes, so CI reports failures after the fact
+  instead of preventing them landing.
+- **ADR-006/007/009/010 are formally *Proposed*** while the technologies they cover are deployed.
+  Each carries an acceptance checklist only the named approver can sign.
+- **The Real-Data Authorization Gate** (`05-quality/01-security-privacy.md`) has never been
+  scheduled. Until it is approved, everything here stays fictional-data only — including any
+  "controlled period" trial of Release 1.
+
+## Release 1 — Patient Book
+
+The first release that is a *product*: it must replace the office's patient spreadsheet or paper
+index, and stay useful even if nothing after it is ever built. Not started as a whole; some
+pieces exist.
+
+The rule that governs it: **a patient field is not done until it can be entered, validated,
+stored, displayed, edited, authorized and tested.** National code and address currently fail
+that — they can be entered and stored but not viewed, edited, or searched, because there is no
+patient detail screen. That gap is what Release 1 opens with; no further demographic fields
+until it is closed.
+
+Also missing for an office to actually operate it: **roles can be granted at onboarding but
+never changed.** There is no way to fix a wrong role, or to see who holds what, short of SQL.
 
 ## Where to go for more
 

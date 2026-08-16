@@ -5,6 +5,16 @@ execution layer on top of it: each plan states a goal, the spec sections in scop
 checklist, and exit criteria taken from `05-quality/03-acceptance-criteria.md` and
 `05-quality/04-definition-of-done.md`.
 
+> **A checklist item here is not a work order.** Only the *active* release plan authorizes
+> implementation, and only for work that ships as a complete vertical (entered, validated,
+> stored, displayed, edited, authorized, tested). Everything else in `docs/` — including the
+> architecture documents and the unbuilt items in later plans — describes the long-term target.
+> See CLAUDE.md, "What authorizes implementation", for why this is stated so bluntly.
+>
+> `release-1-foundation.md` is a **Foundation Recovery Sprint**, not a product release: it makes
+> the platform trustworthy but delivers no office workflow on its own. The first release an
+> office can actually use is Release 1 — Patient Book.
+
 Plans state scope and gates; execution happens as ordered, individually testable vertical
 slices defined per release in `../08-implementation/` (workflow, test layers, verification
 commands). Plans follow the release roadmap in `01-product/06-product-roadmap.md` (R0–R7), with one

@@ -1,4 +1,20 @@
-# Release 1 — Platform Foundation
+# Foundation Recovery Sprint (formerly "Release 1 — Platform Foundation")
+
+> **This is not a product release.** It makes the platform secure and recoverable; an office
+> cannot use it for anything on its own. It was previously numbered as Release 1, which is
+> precisely how horizontal infrastructure came to look like product progress. The first usable
+> product release is **Release 1 — Patient Book**, which starts only once the items below are
+> closed. See CLAUDE.md, "What authorizes implementation".
+>
+> **Status (2026-08-16):** the engineering items are complete — patient RBAC enforced with
+> denial tests, roles required at onboarding, both databases backed up with streamed encryption,
+> Keycloak master credentials removed from the API in favour of a `view-users`-only service
+> account, and a restore drill that ended in a real password + TOTP login against a Keycloak
+> that knew only the backup. Outstanding items are governance, not code: branch protection on
+> `master`, acceptance of ADR-006/007/009/010, and scheduling the Real-Data Authorization Gate.
+>
+> A checklist item below that is still unticked describes the long-term target and does **not**
+> authorize implementation on its own.
 
 **Goal:** the minimal practical foundation: identity, permissions, i18n/date/money primitives, patient registry, audit, backups. Scope is deliberately smaller than the full architecture — see `00-build-sequencing.md`.
 **Spec in scope:** 02-requirements/01-patient-management.md, 03-ux/02-design-system.md, 03-ux/03-bilingual-rtl-guidelines.md, 04-architecture/*, 05-quality/01-security-privacy.md, 00-build-sequencing.md
