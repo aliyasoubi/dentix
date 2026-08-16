@@ -11,7 +11,12 @@
 # explicitly sources.
 set -euo pipefail
 
-env | grep -E '^(POSTGRES_|BACKUP_)' > /etc/backup-env
+# KEYCLOAK_DB is in this list deliberately: backup-postgres.sh dumps that
+# database too, and if the var didn't propagate here a deployment that
+# overrode it would still work when run by hand and silently fall back to the
+# default on every scheduled run — the worst kind of backup bug, because it
+# only shows up during a restore.
+env | grep -E '^(POSTGRES_|BACKUP_|KEYCLOAK_DB=)' > /etc/backup-env
 chmod 600 /etc/backup-env
 
 SCHEDULE="${BACKUP_CRON_SCHEDULE:-0 3 * * *}"

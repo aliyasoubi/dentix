@@ -11,6 +11,12 @@ Initial targets must be confirmed with the office. Recommended starting targets:
 
 ## Backup scope
 
+  - **Both PostgreSQL databases: the application database AND `keycloak`.** They share one
+    Postgres instance but `pg_dump` takes one database per invocation, so this has to be
+    explicit. Backing up only the application database yields a recovery in which every patient
+    record returns and nobody can log in — users, credentials and TOTP enrolments all live in
+    the `keycloak` database. A backup run is only a success once both encrypted files and both
+    checksums exist.
   - PostgreSQL base backups and point-in-time recovery logs
   - Object storage versioning or backup
   - Application configuration excluding secrets, with secret-recovery procedure
@@ -19,7 +25,10 @@ Initial targets must be confirmed with the office. Recommended starting targets:
 
 ## Backup requirements
 
-  - Encryption
+  - Encryption. `pg_dump` is piped directly into `gpg`, and `gpg --decrypt` directly into
+    `pg_restore`, so an unencrypted dump never exists on disk at any point — not even briefly.
+    Writing plaintext and deleting it afterwards is not sufficient: an abrupt termination in
+    that window leaves patient data in the clear on the backup volume.
   - Separate failure domain
   - Retention tiers
   - Automated success/failure monitoring
@@ -30,12 +39,15 @@ Initial targets must be confirmed with the office. Recommended starting targets:
 
 1. Declare incident and identify recovery point.
 2. Preserve evidence and current state where relevant.
-3. Restore database and object storage to isolated environment.
+3. Restore **both** databases and object storage to an isolated environment.
 4. Validate referential integrity and representative patient records.
 5. Validate audit continuity and ledger totals.
-6. Obtain recovery approval.
-7. Restore production service or perform controlled data promotion.
-8. Document data loss window and actions.
+6. Boot an isolated Keycloak against the restored `keycloak` database and complete a real login
+   including TOTP. A successful `pg_restore` proves the rows came back, not that anyone can
+   authenticate — treat the drill as failed until a login actually succeeds.
+7. Obtain recovery approval.
+8. Restore production service or perform controlled data promotion.
+9. Document data loss window and actions.
 
 ## Testing
 

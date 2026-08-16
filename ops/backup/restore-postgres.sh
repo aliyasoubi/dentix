@@ -8,6 +8,14 @@
 # Postgres and the same passphrase file):
 #   ./restore-postgres.sh <path-to-backup.dump.gpg> [target-db-name]
 #
+# Works for either database the backup job produces — the application one
+# and `keycloak`. A drill that only restores the application database proves
+# half of recovery: it shows patient records come back while saying nothing
+# about whether anyone can log in to reach them. Restore both, and for the
+# Keycloak one, point an isolated Keycloak at the restored database and
+# confirm a real login plus TOTP still works. A green pg_restore is not
+# evidence of that.
+#
 # Prints wall-clock timing at the end — this is the script the RTO drill
 # actually runs, so the number it prints is the number that goes in the log.
 set -euo pipefail
@@ -37,13 +45,6 @@ else
   echo "warning: no .sha256 file found alongside ${ENCRYPTED_PATH} — skipping integrity check" >&2
 fi
 
-DECRYPTED_PATH="${ENCRYPTED_PATH%.gpg}"
-cleanup() { rm -f "$DECRYPTED_PATH"; }
-trap cleanup EXIT
-
-gpg --batch --yes --passphrase-file "$BACKUP_ENCRYPTION_PASSPHRASE_FILE" \
-  --decrypt --output "$DECRYPTED_PATH" "$ENCRYPTED_PATH"
-
 # Isolated on purpose: DROP/CREATE only ever touches TARGET_DB, never the
 # database this script was pointed at connecting to (`postgres`, used purely
 # as the maintenance connection CREATE DATABASE requires).
@@ -51,8 +52,17 @@ psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d postgres -v 
   -c "DROP DATABASE IF EXISTS \"${TARGET_DB}\";" \
   -c "CREATE DATABASE \"${TARGET_DB}\";"
 
-pg_restore -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$TARGET_DB" \
-  --no-owner --exit-on-error "$DECRYPTED_PATH"
+# Streamed, mirroring backup-postgres.sh. This used to decrypt to a
+# plaintext file next to the encrypted one and rm it in an EXIT trap, which
+# left real patient data on disk for the whole duration of the restore and
+# indefinitely if the process was killed. pg_restore reads a custom-format
+# archive from stdin, so the cleartext only ever exists in the pipe.
+# (No -j here: parallel restore needs a seekable file, and correctness on a
+# recovery path is worth more than speed.)
+gpg --batch --yes --passphrase-file "$BACKUP_ENCRYPTION_PASSPHRASE_FILE" \
+  --decrypt "$ENCRYPTED_PATH" \
+  | pg_restore -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$TARGET_DB" \
+      --no-owner --exit-on-error
 
 END_EPOCH=$(date +%s)
 ELAPSED=$((END_EPOCH - START_EPOCH))

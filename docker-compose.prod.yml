@@ -227,6 +227,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Keycloak's own database (users, credentials, TOTP enrolments) is
+      # backed up alongside the application one — see backup-postgres.sh.
+      # Explicit here rather than relying on the script's default so the
+      # coupling to 10-create-keycloak-db.sh is visible at the deployment layer.
+      KEYCLOAK_DB: ${KEYCLOAK_DB:-keycloak}
       BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE:-0 3 * * *}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
       BACKUP_HEALTHCHECK_URL: ${BACKUP_HEALTHCHECK_URL:-}
