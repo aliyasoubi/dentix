@@ -54,7 +54,8 @@ The repository must expose exactly these scripts, wired in CI from the first sli
 
 | Command | Runs |
 |---|---|
-| `npm run lint` | ESLint + Prettier |
+| `npm run format` | **Prettier across the whole repo, including Markdown.** CI's first step — if it fails, nothing else runs |
+| `npm run lint` | ESLint (which applies Prettier rules to TypeScript only — it does **not** check Markdown) |
 | `npm run lint:arch` | Module-boundary rules: no framework imports in `domain/`, no cross-module repository imports, no unregistered entity files, adapter-only Jalali imports |
 | `npm run test` | All unit tests |
 | `npm run test:int` | Integration tests (requires `docker compose up -d`) |
@@ -63,7 +64,13 @@ The repository must expose exactly these scripts, wired in CI from the first sli
 | `npm run openapi:check` | Regenerates the OpenAPI contract and fails on uncommitted drift |
 | `npm run db:migrate` / `db:migrate:down` | Applies / reverts migrations |
 
-`lint`, `lint:arch`, `test`, `test:int`, `test:api`, and `openapi:check` are the always-on gate for every slice. `test:e2e` runs for slices that complete a user-visible journey.
+`format`, `lint`, `lint:arch`, `test`, `test:int`, `test:api`, and `openapi:check` are the always-on gate for every slice. `test:e2e` runs for slices that complete a user-visible journey.
+
+**Run `format` first, and never treat `lint` as covering it.** This table previously described
+`lint` as "ESLint + Prettier" and omitted `format` entirely. Running the documented set therefore
+passed locally while CI failed at its very first step on a Markdown file — which kept `master`
+red for four consecutive commits, with lint, tests, migrations, OpenAPI checks and the image
+build never executing at all.
 
 ## Fixtures and data
 
