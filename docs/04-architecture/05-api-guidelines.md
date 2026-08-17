@@ -20,7 +20,7 @@
 
 ## Resource examples
 
-  - GET /api/v1/patients?query=
+  - POST /api/v1/patients/search
   - POST /api/v1/patients
   - GET /api/v1/patients/{patientId}
   - POST /api/v1/appointments
@@ -71,7 +71,11 @@ Retryable create, payment, reversal, export, and message commands require an ide
   - Permission and object-level authorization
   - Session-bound CSRF token on every unsafe request
   - Rate limits for authentication, search, export, and message endpoints
-  - No PHI in URL query values except controlled search terms over TLS; logs redact query values
+  - No PHI in URL query values, ever — search takes its term in a request body (`POST .../search`),
+    never a query string. (Corrected 2026-08-17: this previously carved out "controlled search
+    terms over TLS" conditioned on "logs redact query values", a mitigation nothing in this
+    codebase implements. A URL's exposure isn't only a server-log concern either — it survives in
+    browser history and shared-terminal devtools regardless of what the server logs.)
 
 ## Generated client
 

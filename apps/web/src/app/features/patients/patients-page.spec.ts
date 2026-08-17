@@ -31,6 +31,8 @@ const VALID_REQUEST: CreatePatientRequest = {
   dateOfBirth: null,
 };
 
+const SEARCH_URL = "/api/v1/patients/search";
+
 /**
  * These tests exercise the page as the orchestrator it now is: they drive the
  * child components through their *public* contracts (the form's `submitted`
@@ -59,7 +61,7 @@ describe("PatientsPage", () => {
     fixture.detectChanges();
 
     // The initial empty-query search fired from the constructor.
-    httpMock.expectOne((req) => req.url === "/api/v1/patients").flush([]);
+    httpMock.expectOne(SEARCH_URL).flush([]);
     await fixture.whenStable();
   });
 
@@ -84,7 +86,7 @@ describe("PatientsPage", () => {
 
     createReq.flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
     await fixture.whenStable();
-    httpMock.expectOne((req) => req.url === "/api/v1/patients").flush([]);
+    httpMock.expectOne(SEARCH_URL).flush([]);
     await fixture.whenStable();
   });
 
@@ -96,7 +98,7 @@ describe("PatientsPage", () => {
       .expectOne("/api/v1/patients")
       .flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
     await fixture.whenStable();
-    httpMock.expectOne((req) => req.url === "/api/v1/patients").flush([]);
+    httpMock.expectOne(SEARCH_URL).flush([]);
     await fixture.whenStable();
 
     expect(resetSpy).toHaveBeenCalledTimes(1);
@@ -135,7 +137,7 @@ describe("PatientsPage", () => {
       .expectOne("/api/v1/patients")
       .flush({ id: "11111111-1111-1111-1111-111111111111", patientNumber: 1 });
     await fixture.whenStable();
-    httpMock.expectOne((req) => req.url === "/api/v1/patients").flush(created);
+    httpMock.expectOne(SEARCH_URL).flush(created);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -143,10 +145,14 @@ describe("PatientsPage", () => {
   });
 
   describe("search", () => {
-    it("passes the typed query to the API", async () => {
+    it("posts the typed query in the request body, not a query string", async () => {
       const promise = fixture.componentInstance["onQueryChange"]("رضا");
-      const req = httpMock.expectOne((r) => r.url === "/api/v1/patients");
-      expect(req.request.params.get("query")).toBe("رضا");
+      const req = httpMock.expectOne(SEARCH_URL);
+      expect(req.request.method).toBe("POST");
+      // The whole point of this endpoint being POST: a patient's name never
+      // appears in req.url, only in the body.
+      expect(req.request.url).toBe(SEARCH_URL);
+      expect(req.request.body).toEqual({ query: "رضا" });
       req.flush([]);
       await fixture.whenStable();
       await promise;
@@ -154,9 +160,7 @@ describe("PatientsPage", () => {
 
     it("surfaces an error and clears stale rows instead of leaving the old list looking current", async () => {
       const promise = fixture.componentInstance["onQueryChange"]("رضا");
-      httpMock
-        .expectOne((req) => req.url === "/api/v1/patients")
-        .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
+      httpMock.expectOne(SEARCH_URL).flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
       await fixture.whenStable();
       await promise;
       fixture.detectChanges();
@@ -174,9 +178,7 @@ describe("PatientsPage", () => {
         .flush({ id: "33333333-3333-3333-3333-333333333333", patientNumber: 3 });
       await fixture.whenStable();
 
-      httpMock
-        .expectOne((req) => req.url === "/api/v1/patients")
-        .flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
+      httpMock.expectOne(SEARCH_URL).flush({ code: "BOOM" }, { status: 500, statusText: "Server Error" });
       await fixture.whenStable();
       fixture.detectChanges();
 

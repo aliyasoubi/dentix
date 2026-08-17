@@ -24,12 +24,14 @@ export interface PatientRepository {
   /**
    * `normalizedQuery` empty returns the most recently created patients
    * (a plain list); non-empty matches against patient_name and
-   * patient_contact's normalized values.
+   * patient_contact's normalized values, plus an exact patient_number
+   * match when the query parses as one.
    */
   search(params: {
     readonly officeId: Uuid;
     readonly normalizedQuery: string;
     readonly canonicalPhoneQuery: string | null;
+    readonly patientNumberQuery: number | null;
     readonly limit: number;
   }): Promise<PatientSearchResult[]>;
 }

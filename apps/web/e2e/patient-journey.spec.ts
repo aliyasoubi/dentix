@@ -52,7 +52,12 @@ test("login, register a patient, and find them by phone in three forms", async (
   // Back on the Dentix app, authenticated.
   await expect(page.getByRole("heading", { name: "بیماران" })).toBeVisible();
 
-  const uniqueSuffix = Date.now().toString().slice(-6);
+  // 7 digits, not 6: an Iranian mobile is 11 digits total (09 + 9 more).
+  // "0912" + a 6-digit suffix is only 10 — one short of what
+  // canonicalizeIranianMobile's IRANIAN_MOBILE_LOCAL (`/^9\d{9}$/`) requires,
+  // so this test's own registration step was silently exercising
+  // INVALID_PHONE rather than the golden path it claims to prove.
+  const uniqueSuffix = Date.now().toString().slice(-7);
   const nativeName = `بیمار تست ${uniqueSuffix}`;
   const latinName = `Test Patient ${uniqueSuffix}`;
   const phone = `0912${uniqueSuffix}`;

@@ -22,9 +22,13 @@ export class PatientsApiService {
     return firstValueFrom(this.http.post<CreatePatientResponse>("/api/v1/patients", request));
   }
 
+  // POST with the term in the body, not GET ?query=. A URL carrying a
+  // patient's name or mobile number survives in browser history and
+  // devtools regardless of what the server itself logs — see
+  // SearchPatientsRequestDto's comment.
   search(query: string): Promise<PatientSearchResult[]> {
     return firstValueFrom(
-      this.http.get<PatientSearchResult[]>("/api/v1/patients", { params: query ? { query } : {} }),
+      this.http.post<PatientSearchResult[]>("/api/v1/patients/search", query ? { query } : {}),
     );
   }
 }

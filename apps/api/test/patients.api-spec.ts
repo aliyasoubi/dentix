@@ -163,6 +163,26 @@ describe("Patients (API contract)", () => {
     return { sessionToken, csrfToken, officeId: office.id, userId: account.id };
   }
 
+  /**
+   * The endpoint under test is POST — see patients.controller.ts's own
+   * comment for why search takes its term in a body rather than a query
+   * string. This helper exists so every call site gets the CSRF header for
+   * free, matching how the browser client always sends it.
+   */
+  function search(
+    credentials: { sessionToken: string; csrfToken: string },
+    body: { query?: string; limit?: number } = {},
+  ): request.Test {
+    return request(app.getHttpServer())
+      .post("/api/v1/patients/search")
+      .set(
+        "Cookie",
+        `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+      )
+      .set("X-CSRF-Token", credentials.csrfToken)
+      .send(body);
+  }
+
   describe("POST /patients", () => {
     it("returns 401 with no session cookie", async () => {
       const response = await request(app.getHttpServer())
@@ -208,17 +228,13 @@ describe("Patients (API contract)", () => {
         expect(create.status).toBe(403);
         expect((create.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
 
-        const search = await request(app.getHttpServer())
-          .get("/api/v1/patients")
-          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
-        expect(search.status).toBe(200);
+        const searchResponse = await search({ sessionToken, csrfToken });
+        expect(searchResponse.status).toBe(200);
       });
 
       it("returns 403 MISSING_PERMISSION when a roleless member searches patients", async () => {
-        const { sessionToken } = await seedActiveSession(null);
-        const response = await request(app.getHttpServer())
-          .get("/api/v1/patients")
-          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+        const credentials = await seedActiveSession(null);
+        const response = await search(credentials);
         expect(response.status).toBe(403);
         expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
       });
@@ -403,6 +419,31 @@ describe("Patients (API contract)", () => {
         expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       });
 
+      // Every column behind these fields is an unbounded varchar — nothing at
+      // the database stops an oversized value. These limits are the only
+      // push-back, so prove they're wired, not merely declared.
+      it("rejects a nativeName over the 200-character ceiling", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "ر".repeat(201), contactUnavailable: true });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects deliveryNotes over the 500-character ceiling", async () => {
+        const { sessionToken, csrfToken } = await seedActiveSession();
+        const response = await request(app.getHttpServer())
+          .post("/api/v1/patients")
+          .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+          .set("X-CSRF-Token", csrfToken)
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true, deliveryNotes: "ن".repeat(501) });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
       it("rejects a non-string nationalCode with 400 VALIDATION_FAILED instead of crashing", async () => {
         const { sessionToken, csrfToken } = await seedActiveSession();
         const response = await request(app.getHttpServer())
@@ -451,11 +492,14 @@ describe("Patients (API contract)", () => {
     });
 
     it("accepts a well-known date of birth and returns it unchanged from search", async () => {
-      const { sessionToken, csrfToken } = await seedActiveSession();
+      const credentials = await seedActiveSession();
       const create = await request(app.getHttpServer())
         .post("/api/v1/patients")
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
-        .set("X-CSRF-Token", csrfToken)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
         // 2024-03-20 = Nowruz (Farvardin 1, 1403) — the exact ADR-008 boundary
         // date; also exercises the raw-SQL date_of_birth::text cast, which
         // must survive round-trip regardless of the server process's own
@@ -464,9 +508,7 @@ describe("Patients (API contract)", () => {
       expect(create.status).toBe(201);
       const createdId = (create.body as CreatePatientResponseBody).id;
 
-      const response = await request(app.getHttpServer())
-        .get("/api/v1/patients?query=" + encodeURIComponent("سارا نوروزی"))
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      const response = await search(credentials, { query: "سارا نوروزی" });
 
       expect(response.status).toBe(200);
       const results = response.body as PatientSearchResultBody[];
@@ -475,41 +517,62 @@ describe("Patients (API contract)", () => {
     });
 
     it("dateOfBirth is null in search results when not provided", async () => {
-      const { sessionToken, csrfToken } = await seedActiveSession();
+      const credentials = await seedActiveSession();
       const create = await request(app.getHttpServer())
         .post("/api/v1/patients")
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
-        .set("X-CSRF-Token", csrfToken)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
         .send({ nativeName: "بدون تاریخ تولد", contactUnavailable: true });
       const createdId = (create.body as CreatePatientResponseBody).id;
 
-      const response = await request(app.getHttpServer())
-        .get("/api/v1/patients?query=" + encodeURIComponent("بدون تاریخ تولد"))
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      const response = await search(credentials, { query: "بدون تاریخ تولد" });
 
       const results = response.body as PatientSearchResultBody[];
       expect(results.find((r) => r.id === createdId)?.dateOfBirth).toBeNull();
     });
   });
 
-  describe("GET /patients", () => {
+  describe("POST /patients/search", () => {
     it("returns 401 with no session cookie", async () => {
-      const response = await request(app.getHttpServer()).get("/api/v1/patients");
+      const response = await request(app.getHttpServer()).post("/api/v1/patients/search").send({});
       expect(response.status).toBe(401);
     });
 
+    it("returns 403 when the session is valid but no CSRF header is sent", async () => {
+      const { sessionToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients/search")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`)
+        .send({});
+      expect(response.status).toBe(403);
+    });
+
+    // The whole point of this endpoint: the search term travels in the
+    // request body, never in the URL a query string would put it in.
+    it("never puts the search term in the URL", async () => {
+      const credentials = await seedActiveSession();
+      const response = await search(credentials, { query: "رضا احمدی" });
+      expect(response.request.url).not.toContain("رضا");
+      expect(response.request.url).not.toContain(encodeURIComponent("رضا احمدی"));
+      expect(response.status).toBe(200);
+    });
+
     it("finds a just-created patient by a Persian-digit form of its phone number", async () => {
-      const { sessionToken, csrfToken } = await seedActiveSession();
+      const credentials = await seedActiveSession();
       const create = await request(app.getHttpServer())
         .post("/api/v1/patients")
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
-        .set("X-CSRF-Token", csrfToken)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
         .send({ nativeName: "زهرا کریمی", phone: "09121112233" });
       const createdId = (create.body as CreatePatientResponseBody).id;
 
-      const response = await request(app.getHttpServer())
-        .get("/api/v1/patients?query=" + encodeURIComponent("۰۹۱۲۱۱۱۲۲۳۳"))
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      const response = await search(credentials, { query: "۰۹۱۲۱۱۱۲۲۳۳" });
 
       expect(response.status).toBe(200);
       const results = response.body as PatientSearchResultBody[];
@@ -517,21 +580,63 @@ describe("Patients (API contract)", () => {
     });
 
     it("finds a just-created patient by a partial Arabic-Yeh spelling of its native name", async () => {
-      const { sessionToken, csrfToken } = await seedActiveSession();
+      const credentials = await seedActiveSession();
       const create = await request(app.getHttpServer())
         .post("/api/v1/patients")
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
-        .set("X-CSRF-Token", csrfToken)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
         .send({ nativeName: "علی رضایی", contactUnavailable: true });
       const createdId = (create.body as CreatePatientResponseBody).id;
 
-      const response = await request(app.getHttpServer())
-        .get("/api/v1/patients?query=" + encodeURIComponent("علي")) // Arabic Yeh
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}`);
+      const response = await search(credentials, { query: "علي" }); // Arabic Yeh
 
       expect(response.status).toBe(200);
       const results = response.body as PatientSearchResultBody[];
       expect(results.map((r) => r.id)).toContain(createdId);
+    });
+
+    // The search placeholder promises "name, patient number, or mobile" —
+    // this is the half of that promise the SQL didn't implement until now.
+    it("finds a just-created patient by its exact patient number", async () => {
+      const credentials = await seedActiveSession();
+      const create = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
+        .send({ nativeName: "کیان مرادی", contactUnavailable: true });
+      const created = create.body as CreatePatientResponseBody;
+
+      const response = await search(credentials, { query: String(created.patientNumber) });
+
+      expect(response.status).toBe(200);
+      const results = response.body as PatientSearchResultBody[];
+      expect(results.map((r) => r.id)).toContain(created.id);
+    });
+
+    // A phone number is also all-digits — this proves the two matching
+    // paths don't collide: an 11-digit query finds by phone, not by
+    // patient_number (which never reaches 11 digits — see the use case's
+    // own MAX_PATIENT_NUMBER_DIGITS comment), and doesn't 500 from binding
+    // an out-of-range value to the integer search parameter.
+    it("does not error when a full phone number is also searched as a candidate patient number", async () => {
+      const credentials = await seedActiveSession();
+      await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
+        .send({ nativeName: "امیر رضایی", phone: "09121112233" });
+
+      const response = await search(credentials, { query: "09121112233" });
+      expect(response.status).toBe(200);
     });
 
     it("does not leak another office's patient into a search result", async () => {
@@ -546,12 +651,44 @@ describe("Patients (API contract)", () => {
         .set("X-CSRF-Token", officeA.csrfToken)
         .send({ nativeName: "بیمار محرمانه", contactUnavailable: true });
 
-      const response = await request(app.getHttpServer())
-        .get("/api/v1/patients?query=" + encodeURIComponent("محرمانه"))
-        .set("Cookie", `${SESSION_COOKIE_NAME}=${officeB.sessionToken}`);
+      const response = await search(officeB, { query: "محرمانه" });
 
       expect(response.status).toBe(200);
       expect(response.body as PatientSearchResultBody[]).toHaveLength(0);
+    });
+
+    describe("request validation (type-level)", () => {
+      it("rejects a non-string query with 400 VALIDATION_FAILED", async () => {
+        const credentials = await seedActiveSession();
+        const response = await search(credentials, { query: 123 as unknown as string });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects a query longer than 200 characters", async () => {
+        const credentials = await seedActiveSession();
+        const response = await search(credentials, { query: "a".repeat(201) });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
+
+      it("rejects a limit outside 1-100", async () => {
+        const credentials = await seedActiveSession();
+        const tooLarge = await search(credentials, { limit: 101 });
+        expect(tooLarge.status).toBe(400);
+        const zero = await search(credentials, { limit: 0 });
+        expect(zero.status).toBe(400);
+      });
+
+      it("rejects unknown properties rather than silently ignoring them", async () => {
+        const credentials = await seedActiveSession();
+        const response = await search(credentials, {
+          query: "test",
+          officeId: randomUUID(),
+        } as unknown as { query: string });
+        expect(response.status).toBe(400);
+        expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+      });
     });
   });
 });

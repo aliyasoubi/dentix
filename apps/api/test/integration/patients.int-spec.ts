@@ -430,6 +430,7 @@ describe("Patients persistence (integration)", () => {
           officeId,
           normalizedQuery: wildcard,
           canonicalPhoneQuery: null,
+          patientNumberQuery: null,
           limit: 10,
         });
         expect(results.map((r) => r.id)).not.toContain(patientId);
@@ -441,6 +442,7 @@ describe("Patients persistence (integration)", () => {
         officeId,
         normalizedQuery: normalizeForSearch("مریم"),
         canonicalPhoneQuery: null,
+        patientNumberQuery: null,
         limit: 10,
       });
       expect(realHit.map((r) => r.id)).toContain(patientId);
@@ -478,6 +480,7 @@ describe("Patients persistence (integration)", () => {
         officeId,
         normalizedQuery: normalizeForSearch("علي"), // Arabic Yeh — must still match
         canonicalPhoneQuery: null,
+        patientNumberQuery: null,
         limit: 10,
       });
       expect(results.map((r) => r.id)).toContain(patientId);
@@ -526,6 +529,7 @@ describe("Patients persistence (integration)", () => {
           officeId,
           normalizedQuery: "",
           canonicalPhoneQuery: canonicalizeIranianMobile(typedForm),
+          patientNumberQuery: null,
           limit: 10,
         });
         expect(results.map((r) => r.id)).toContain(patientId);
@@ -538,9 +542,63 @@ describe("Patients persistence (integration)", () => {
         officeId,
         normalizedQuery: "",
         canonicalPhoneQuery: null,
+        patientNumberQuery: null,
         limit: 10,
       });
       expect(Array.isArray(results)).toBe(true);
+    });
+
+    it("matches by exact patient_number, and only that patient", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+
+      const targetNumber = await patientRepo.nextPatientNumber(officeId);
+      const targetId = asUuid(randomUUID());
+      await patientRepo.create(
+        Patient.create({
+          id: targetId,
+          officeId,
+          patientNumber: targetNumber,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      // A second patient in the same office, whose own number must NOT match
+      // a search for the first one's number.
+      const otherNumber = await patientRepo.nextPatientNumber(officeId);
+      await patientRepo.create(
+        Patient.create({
+          id: asUuid(randomUUID()),
+          officeId,
+          patientNumber: otherNumber,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      // normalizedQuery is the same digit string, not "" — an empty
+      // normalizedQuery means "list mode" in the WHERE clause's `$2 = ''`
+      // branch, which returns every patient in the office regardless of
+      // patientNumberQuery. SearchPatientsUseCase never actually calls the
+      // repository this way (patientNumberQuery is only ever non-null when
+      // raw, and therefore normalizedQuery, is also non-empty) — passing ""
+      // here failed by exercising a combination production code never
+      // produces, not by finding a real bug in the SQL.
+      const results = await patientRepo.search({
+        officeId,
+        normalizedQuery: String(targetNumber),
+        canonicalPhoneQuery: null,
+        patientNumberQuery: targetNumber,
+        limit: 10,
+      });
+      expect(results.map((r) => r.id)).toEqual([targetId]);
     });
   });
 });

@@ -116,11 +116,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search patients by name or phone, or list most recent when query is empty */
-        get: operations["PatientsController_list"];
+        get?: never;
         put?: never;
         /** Create a patient */
         post: operations["PatientsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patients/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search patients by name, phone, or patient number, or list most recent when query is empty */
+        post: operations["PatientsController_search"];
         delete?: never;
         options?: never;
         head?: never;
@@ -231,6 +247,12 @@ export interface components {
             id: string;
             /** @description Office-scoped sequential patient number. */
             patientNumber: number;
+        };
+        SearchPatientsRequestDto: {
+            /** @description Name, mobile number, or patient number fragment; omit to list most recent. */
+            query?: string;
+            /** @default 25 */
+            limit: number;
         };
         PatientSearchResultDto: {
             /** Format: uuid */
@@ -406,37 +428,6 @@ export interface operations {
             };
         };
     };
-    PatientsController_list: {
-        parameters: {
-            query?: {
-                /** @description Name or phone fragment; omit to list most recent. */
-                query?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PatientSearchResultDto"][];
-                };
-            };
-            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.view. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponseDto"];
-                };
-            };
-        };
-    };
     PatientsController_create: {
         parameters: {
             query?: never;
@@ -468,6 +459,38 @@ export interface operations {
                 };
             };
             /** @description MISSING_PERMISSION — the caller's roles do not grant patient.create. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    PatientsController_search: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchPatientsRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientSearchResultDto"][];
+                };
+            };
+            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.view. */
             403: {
                 headers: {
                     [name: string]: unknown;

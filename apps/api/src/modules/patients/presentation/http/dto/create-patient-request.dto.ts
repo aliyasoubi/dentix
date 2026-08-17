@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import type { PatientSex } from "../../../domain/entities/patient.entity";
 
 const PATIENT_SEX_VALUES: readonly PatientSex[] = ["male", "female", "unspecified"];
@@ -19,10 +19,17 @@ const PATIENT_SEX_VALUES: readonly PatientSex[] = ["male", "female", "unspecifie
  * (NATIVE_NAME_REQUIRED, INVALID_PHONE, CONTACT_REQUIRED,
  * INVALID_DATE_OF_BIRTH, INVALID_NATIONAL_CODE) rather than collapsing
  * into one generic validation error. One rule, one owner.
+ *
+ * MaxLength IS a type-level concern despite bounding content, not a domain
+ * rule: every column behind these fields is an unbounded `varchar` (no DB
+ * constraint), so without a limit here a client can post an arbitrarily
+ * large string straight into a row with no push-back until something else
+ * breaks. The numbers are generous ceilings, not formatting opinions.
  */
 export class CreatePatientRequestDto {
   @ApiProperty({ description: "Patient's name as entered, typically Persian." })
   @IsString()
+  @MaxLength(200)
   readonly nativeName!: string;
 
   @ApiPropertyOptional({
@@ -32,6 +39,7 @@ export class CreatePatientRequestDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   readonly latinName?: string | null;
 
   @ApiPropertyOptional({
@@ -41,6 +49,7 @@ export class CreatePatientRequestDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   readonly phone?: string | null;
 
   @ApiPropertyOptional({ description: "True only when the patient explicitly has no contact method." })
@@ -62,6 +71,7 @@ export class CreatePatientRequestDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(10)
   readonly dateOfBirth?: string | null;
 
   @ApiPropertyOptional({
@@ -72,40 +82,48 @@ export class CreatePatientRequestDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   readonly nationalCode?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: province." })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   readonly province?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: city." })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   readonly city?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: district/locality." })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   readonly district?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: street/address line 1." })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   readonly addressLine1?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: street/address line 2." })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   readonly addressLine2?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: postal code." })
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   readonly postalCode?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: free-form delivery notes." })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   readonly deliveryNotes?: string | null;
 }

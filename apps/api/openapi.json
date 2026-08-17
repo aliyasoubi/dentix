@@ -235,20 +235,22 @@
         "tags": [
           "patients"
         ]
-      },
-      "get": {
-        "operationId": "PatientsController_list",
-        "parameters": [
-          {
-            "name": "query",
-            "required": false,
-            "in": "query",
-            "description": "Name or phone fragment; omit to list most recent.",
-            "schema": {
-              "type": "string"
+      }
+    },
+    "/api/v1/patients/search": {
+      "post": {
+        "operationId": "PatientsController_search",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchPatientsRequestDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "",
@@ -279,7 +281,7 @@
             "cookie": []
           }
         ],
-        "summary": "Search patients by name or phone, or list most recent when query is empty",
+        "summary": "Search patients by name, phone, or patient number, or list most recent when query is empty",
         "tags": [
           "patients"
         ]
@@ -569,6 +571,21 @@
           "id",
           "patientNumber"
         ]
+      },
+      "SearchPatientsRequestDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Name, mobile number, or patient number fragment; omit to list most recent."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        }
       },
       "PatientSearchResultDto": {
         "type": "object",

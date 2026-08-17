@@ -1,22 +1,5 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Post,
-  Query,
-  UseFilters,
-  UseGuards,
-} from "@nestjs/common";
-import {
-  ApiBody,
-  ApiCookieAuth,
-  ApiOkResponse,
-  ApiOperation,
-  ApiQuery,
-  ApiResponse,
-  ApiTags,
-} from "@nestjs/swagger";
+import { BadRequestException, Body, Controller, HttpCode, Post, UseFilters, UseGuards } from "@nestjs/common";
+import { ApiBody, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CreatePatientUseCase } from "../../application/use-cases/create-patient.use-case";
 import { SearchPatientsUseCase } from "../../application/use-cases/search-patients.use-case";
 import {
@@ -32,6 +15,7 @@ import { ErrorResponseDto } from "../../../../platform/dto/error-response.dto";
 import { CreatePatientRequestDto } from "./dto/create-patient-request.dto";
 import { CreatePatientResponseDto } from "./dto/create-patient-response.dto";
 import { PatientSearchResultDto } from "./dto/patient-search-result.dto";
+import { SearchPatientsRequestDto } from "./dto/search-patients-request.dto";
 
 /**
  * 02-slices-release-0.5.md S4. Every route requires an authenticated
@@ -103,24 +87,32 @@ export class PatientsController {
     return { id: result.value.id, patientNumber: result.value.patientNumber };
   }
 
-  @Get()
+  // POST, not GET: 01-patient-management.md's search terms are names,
+  // mobile numbers, and national codes — a query string puts that directly
+  // in the URL, which survives in browser history and any devtools/proxy
+  // log regardless of what the server itself logs. See the DTO's comment.
+  @Post("search")
+  @HttpCode(200)
+  @UseGuards(CsrfGuard)
   @RequirePermission("patient.view")
-  @ApiOperation({ summary: "Search patients by name or phone, or list most recent when query is empty" })
+  @ApiOperation({
+    summary: "Search patients by name, phone, or patient number, or list most recent when query is empty",
+  })
   @ApiResponse({
     status: 403,
     type: ErrorResponseDto,
     description: "MISSING_PERMISSION — the caller's roles do not grant patient.view.",
   })
-  @ApiQuery({
-    name: "query",
-    required: false,
-    description: "Name or phone fragment; omit to list most recent.",
-  })
+  @ApiBody({ type: SearchPatientsRequestDto })
   @ApiOkResponse({ type: PatientSearchResultDto, isArray: true })
-  async list(
+  async search(
     @CurrentSession() session: UserSession,
-    @Query("query") query?: string,
+    @Body() body: SearchPatientsRequestDto,
   ): Promise<PatientSearchResultDto[]> {
-    return this.searchPatients.execute({ officeId: session.officeId, query });
+    return this.searchPatients.execute({
+      officeId: session.officeId,
+      query: body.query,
+      limit: body.limit,
+    });
   }
 }

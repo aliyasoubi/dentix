@@ -67,6 +67,7 @@ export class TypeOrmPatientRepository implements PatientRepository {
     readonly officeId: Uuid;
     readonly normalizedQuery: string;
     readonly canonicalPhoneQuery: string | null;
+    readonly patientNumberQuery: number | null;
     readonly limit: number;
   }): Promise<PatientSearchResult[]> {
     // date_of_birth is cast to text in SQL rather than left as a `date`
@@ -98,6 +99,7 @@ export class TypeOrmPatientRepository implements PatientRepository {
           OR native."normalized_value" ILIKE '%' || $5 || '%' ESCAPE '\\'
           OR latin."normalized_value" ILIKE '%' || $5 || '%' ESCAPE '\\'
           OR ($3::varchar IS NOT NULL AND preferred_contact."normalized_value" = $3)
+          OR ($6::integer IS NOT NULL AND p."patient_number" = $6)
         )
       ORDER BY p."created_at" DESC
       LIMIT $4
@@ -108,6 +110,7 @@ export class TypeOrmPatientRepository implements PatientRepository {
         params.canonicalPhoneQuery,
         params.limit,
         escapeLikePattern(params.normalizedQuery),
+        params.patientNumberQuery,
       ],
     );
 
