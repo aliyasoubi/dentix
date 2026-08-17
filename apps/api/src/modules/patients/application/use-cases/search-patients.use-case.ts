@@ -14,15 +14,25 @@ const DEFAULT_LIMIT = 25;
 // here means a full Iranian mobile number is simply never considered a
 // patient-number candidate, which also removes any ambiguity between the
 // two search paths.
-const DIGITS_ONLY = /^\d+$/;
+//
+// A leading zero is rejected outright, not just left to the length cap: a
+// receptionist typing an Iranian mobile always starts "0912…", so the
+// in-progress partial "0912" would otherwise parse (JS's Number() strips
+// the leading zero) as patient number 912 and momentarily show a real but
+// unrelated patient while they finish typing. Nobody types a patient
+// number with a leading zero — "5", never "05" — so this loses no real
+// search capability.
+const DIGITS_ONLY_NO_LEADING_ZERO = /^[1-9]\d*$/;
 const MAX_PATIENT_NUMBER_DIGITS = 9;
 
 function parsePatientNumberQuery(normalizedDigits: string): number | null {
-  if (!DIGITS_ONLY.test(normalizedDigits) || normalizedDigits.length > MAX_PATIENT_NUMBER_DIGITS) {
+  if (
+    !DIGITS_ONLY_NO_LEADING_ZERO.test(normalizedDigits) ||
+    normalizedDigits.length > MAX_PATIENT_NUMBER_DIGITS
+  ) {
     return null;
   }
-  const value = Number(normalizedDigits);
-  return value > 0 ? value : null;
+  return Number(normalizedDigits);
 }
 
 export interface SearchPatientsQuery {

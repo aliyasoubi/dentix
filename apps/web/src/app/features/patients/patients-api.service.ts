@@ -1,6 +1,6 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
-import { firstValueFrom } from "rxjs";
+import { firstValueFrom, Observable } from "rxjs";
 import { components } from "../../core/http/api-types.gen";
 
 /**
@@ -26,9 +26,12 @@ export class PatientsApiService {
   // patient's name or mobile number survives in browser history and
   // devtools regardless of what the server itself logs — see
   // SearchPatientsRequestDto's comment.
-  search(query: string): Promise<PatientSearchResult[]> {
-    return firstValueFrom(
-      this.http.post<PatientSearchResult[]>("/api/v1/patients/search", query ? { query } : {}),
-    );
+  //
+  // Returns an Observable, not a Promise, unlike create() above: the caller
+  // (PatientsPage) runs this through switchMap on every keystroke, and
+  // switchMap's unsubscribe from a stale request needs to actually abort the
+  // underlying HttpClient call, not just discard an already-settled Promise.
+  search(query: string): Observable<PatientSearchResult[]> {
+    return this.http.post<PatientSearchResult[]>("/api/v1/patients/search", query ? { query } : {});
   }
 }

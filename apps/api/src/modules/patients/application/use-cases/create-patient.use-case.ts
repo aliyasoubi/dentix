@@ -3,6 +3,7 @@ import {
   asUuid,
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
+  canonicalizePassportNumber,
   fail,
   ok,
   Result,
@@ -12,7 +13,7 @@ import { randomUUID } from "crypto";
 import { AuditEvent, AUDIT_EVENT_REPOSITORY } from "../../../audit/public-api";
 import type { AuditEventRepository } from "../../../audit/public-api";
 import { PatientAddress } from "../../domain/entities/patient-address.entity";
-import { Patient, PatientSex } from "../../domain/entities/patient.entity";
+import { Patient, PatientNationality, PatientSex } from "../../domain/entities/patient.entity";
 import { PatientContact } from "../../domain/entities/patient-contact.entity";
 import { PatientIdentifier } from "../../domain/entities/patient-identifier.entity";
 import { PatientName } from "../../domain/entities/patient-name.entity";
@@ -34,7 +35,8 @@ export type CreatePatientErrorCode =
   | "INVALID_PHONE"
   | "CONTACT_REQUIRED"
   | "INVALID_DATE_OF_BIRTH"
-  | "INVALID_NATIONAL_CODE";
+  | "INVALID_NATIONAL_CODE"
+  | "INVALID_PASSPORT_NUMBER";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;
@@ -47,8 +49,17 @@ export interface CreatePatientCommand {
   readonly sex?: PatientSex;
   /** Canonical Gregorian ISO date string ("YYYY-MM-DD") — "where known" (01-patient-management.md), the Jalali picker converts to this at the UI boundary (ADR-008, ADR-012). */
   readonly dateOfBirth?: string | null;
-  /** Optional (01-patient-management.md: "only when legally and operationally justified"); checksum-validated when provided, never required. */
-  readonly nationalCode?: string | null;
+  /** Defaults to "iranian" when omitted — see Patient.create()'s own default. Determines which document identifierNumber is validated as. */
+  readonly nationality?: PatientNationality;
+  /**
+   * Optional (01-patient-management.md: "only when legally and
+   * operationally justified"); validated when provided, never required.
+   * Holds a national code for an "iranian" patient, a passport number for
+   * a "foreign" one — which validation applies is `nationality`'s call,
+   * not inferred from the value's own shape (a passport number can be all
+   * digits too).
+   */
+  readonly identifierNumber?: string | null;
   /** All optional free text (01-patient-management.md: "remains usable for foreign or nonstandard addresses"); a row is only created if at least one is non-blank. */
   readonly province?: string | null;
   readonly city?: string | null;
@@ -89,11 +100,11 @@ export interface CreatePatientSuccess {
 
 /**
  * S4's spine use case (02-slices-release-0.5.md), now carrying R1's
- * patient-registry additions (national code, address). Every write —
- * patient, its name(s), its contact, its identifier, its address, and the
- * audit record — lands in one transaction (03-module-boundaries.md), same
- * pattern as CompleteLoginUseCase: nothing here should be able to
- * half-succeed.
+ * patient-registry additions (national code/passport, address,
+ * international-patient nationality). Every write — patient, its name(s),
+ * its contact, its identifier, its address, and the audit record — lands
+ * in one transaction (03-module-boundaries.md), same pattern as
+ * CompleteLoginUseCase: nothing here should be able to half-succeed.
  */
 @Injectable()
 export class CreatePatientUseCase {
@@ -133,9 +144,16 @@ export class CreatePatientUseCase {
       }
     }
 
-    const nationalCode = command.nationalCode?.trim() || null;
-    if (nationalCode && !canonicalizeIranianNationalCode(nationalCode)) {
-      return fail("INVALID_NATIONAL_CODE");
+    const nationality = command.nationality ?? "iranian";
+    const identifierNumber = command.identifierNumber?.trim() || null;
+    if (identifierNumber) {
+      const isValid =
+        nationality === "iranian"
+          ? canonicalizeIranianNationalCode(identifierNumber) !== null
+          : canonicalizePassportNumber(identifierNumber) !== null;
+      if (!isValid) {
+        return fail(nationality === "iranian" ? "INVALID_NATIONAL_CODE" : "INVALID_PASSPORT_NUMBER");
+      }
     }
 
     const now = new Date();
@@ -149,6 +167,7 @@ export class CreatePatientUseCase {
         patientNumber,
         dateOfBirth,
         sex: command.sex ?? "unspecified",
+        nationality,
         contactUnavailable: !phone,
         createdBy: command.actorUserId,
         now,
@@ -194,12 +213,13 @@ export class CreatePatientUseCase {
         );
       }
 
-      if (nationalCode) {
+      if (identifierNumber) {
         await this.patientIdentifiers.create(
           PatientIdentifier.create({
             id: asUuid(randomUUID()),
             patientId,
-            rawNationalCode: nationalCode,
+            identifierType: nationality === "iranian" ? "national_code" : "passport",
+            rawValue: identifierNumber,
             createdBy: command.actorUserId,
             now,
           }),

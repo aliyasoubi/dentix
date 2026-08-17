@@ -160,6 +160,7 @@ describe("Patients persistence (integration)", () => {
       const reloaded = await patientRepo.findById(patient.id);
       expect(reloaded?.patientNumber).toBe(patientNumber);
       expect(reloaded?.status).toBe("active");
+      expect(reloaded?.nationality).toBe("iranian");
 
       // The original, as-entered value survives untouched — only the
       // normalized_value column reflects Yeh normalization.
@@ -190,7 +191,8 @@ describe("Patients persistence (integration)", () => {
       const identifier = PatientIdentifier.create({
         id: asUuid(randomUUID()),
         patientId: patient.id,
-        rawNationalCode: "۱۲۳۴۵۶۷۸۹۱", // Persian digits, as-entered
+        identifierType: "national_code",
+        rawValue: "۱۲۳۴۵۶۷۸۹۱", // Persian digits, as-entered
         createdBy: actorUserId,
         now,
       });
@@ -201,6 +203,46 @@ describe("Patients persistence (integration)", () => {
       expect(rows[0]?.identifier_type).toBe("national_code");
       expect(rows[0]?.original_value).toBe("۱۲۳۴۵۶۷۸۹۱");
       expect(rows[0]?.normalized_value).toBe("1234567891");
+    });
+
+    it("persists an optional passport identifier for a foreign patient, canonicalized separately", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patient = Patient.create({
+        id: asUuid(randomUUID()),
+        officeId,
+        patientNumber,
+        dateOfBirth: null,
+        sex: "unspecified",
+        nationality: "foreign",
+        contactUnavailable: true,
+        createdBy: actorUserId,
+        now,
+      });
+      await patientRepo.create(patient);
+
+      const identifier = PatientIdentifier.create({
+        id: asUuid(randomUUID()),
+        patientId: patient.id,
+        identifierType: "passport",
+        rawValue: "ab 123-4567", // as a receptionist might copy it off a printed passport
+        createdBy: actorUserId,
+        now,
+      });
+      await patientIdentifierRepo.create(identifier);
+
+      const rows: Array<{ original_value: string; normalized_value: string; identifier_type: string }> =
+        await dataSource!.query('SELECT * FROM "patient_identifier" WHERE "patient_id" = $1', [patient.id]);
+      expect(rows[0]?.identifier_type).toBe("passport");
+      expect(rows[0]?.original_value).toBe("ab 123-4567");
+      expect(rows[0]?.normalized_value).toBe("AB1234567");
+
+      const [patientRow]: Array<{ nationality: string }> = await dataSource!.query(
+        'SELECT "nationality" FROM "patient" WHERE "id" = $1',
+        [patient.id],
+      );
+      expect(patientRow?.nationality).toBe("foreign");
     });
 
     it("persists an optional address with structured Iranian fields, trimmed", async () => {

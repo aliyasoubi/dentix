@@ -1,4 +1,16 @@
-import { Component, inject, signal, viewChild } from "@angular/core";
+import { Component, DestroyRef, inject, signal, viewChild } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import {
+  Subject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  merge,
+  of,
+  switchMap,
+  tap,
+} from "rxjs";
 import { ApiErrorMessageService } from "../../core/errors/api-error-message.service";
 import { TranslationService } from "../../core/i18n/translation.service";
 import { TranslatePipe } from "../../core/i18n/translate.pipe";
@@ -19,11 +31,19 @@ const KNOWN_ERROR_CODES = new Set([
   "CONTACT_REQUIRED",
   "INVALID_DATE_OF_BIRTH",
   "INVALID_NATIONAL_CODE",
+  "INVALID_PASSPORT_NUMBER",
   // Returned by the API's global ValidationPipe for a body that is the wrong
   // shape. With the form's own validators, a user working through the UI
   // should never see it — it means something bypassed the form.
   "VALIDATION_FAILED",
 ]);
+
+/** Keeps a rapid typist from firing a request per keystroke without adding noticeable lag to a deliberate search. Exported so the spec doesn't hardcode a second copy of this number. */
+export const SEARCH_DEBOUNCE_MS = 300;
+
+type SearchOutcome =
+  | { readonly ok: true; readonly results: readonly PatientSearchResult[] }
+  | { readonly ok: false; readonly error: unknown };
 
 /**
  * Composition root for the patients screen.
@@ -49,6 +69,7 @@ export class PatientsPage {
   private readonly api = inject(PatientsApiService);
   private readonly translation = inject(TranslationService);
   private readonly errorMessages = inject(ApiErrorMessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Needed to clear the form after a *successful* create — see the component's own reset() note. */
   private readonly registrationForm = viewChild.required(PatientRegistrationFormComponent);
@@ -64,8 +85,54 @@ export class PatientsPage {
   /** A failed search must say so rather than leaving the previous list on screen looking current. */
   protected readonly searchError = signal<string | null>(null);
 
+  /**
+   * Two sources feed one search pipeline. User keystrokes go through
+   * `typedQuery$` — debounced and deduplicated, since a rapid typist
+   * shouldn't fire a request per character. Programmatic refreshes (the
+   * initial load, and the list refresh after a successful create) go
+   * through `refreshQuery$` immediately: they aren't a rapid input stream,
+   * so waiting out a debounce window before them would just be a visible
+   * delay for no benefit.
+   *
+   * Both are merged into one switchMap, which is what actually fixes the
+   * out-of-order-response bug the previous async/await version had: if a
+   * slow request for "زهر" is still in flight when "زهرا" fires, switchMap
+   * unsubscribes the stale one — and because PatientsApiService.search()
+   * returns the raw HttpClient Observable (not a Promise), that unsubscribe
+   * reaches all the way down and aborts the underlying request instead of
+   * merely discarding an already-settled value.
+   */
+  private readonly typedQuery$ = new Subject<string>();
+  private readonly refreshQuery$ = new Subject<string>();
+
   constructor() {
-    void this.runSearch("");
+    merge(this.typedQuery$.pipe(debounceTime(SEARCH_DEBOUNCE_MS), distinctUntilChanged()), this.refreshQuery$)
+      .pipe(
+        tap(() => this.searching.set(true)),
+        switchMap((query) =>
+          this.api.search(query).pipe(
+            map((results): SearchOutcome => ({ ok: true, results })),
+            catchError((error: unknown) => of<SearchOutcome>({ ok: false, error })),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((outcome) => {
+        this.searching.set(false);
+        this.hasSearched.set(true);
+        if (outcome.ok) {
+          this.results.set(outcome.results);
+          this.searchError.set(null);
+        } else {
+          // Previously left the stale list on screen looking current on a
+          // search failure; cleared here for the same reason a failed
+          // create must not appear to have silently done nothing.
+          this.results.set([]);
+          this.searchError.set(this.describe(outcome.error));
+        }
+      });
+
+    this.refreshQuery$.next("");
   }
 
   protected async create(request: CreatePatientRequest): Promise<void> {
@@ -94,29 +161,12 @@ export class PatientsPage {
     // read. When this was inside the try, a failing refresh surfaced as a
     // *creation* error — so the user would retry a create that had actually
     // succeeded and end up with a duplicate patient record.
-    await this.runSearch(this.searchQuery());
+    this.refreshQuery$.next(this.searchQuery());
   }
 
-  protected async onQueryChange(value: string): Promise<void> {
+  protected onQueryChange(value: string): void {
     this.searchQuery.set(value);
-    await this.runSearch(value);
-  }
-
-  private async runSearch(query: string): Promise<void> {
-    this.searching.set(true);
-    this.searchError.set(null);
-    try {
-      this.results.set(await this.api.search(query));
-    } catch (error) {
-      // Previously try/finally with no catch: the stale list stayed on screen
-      // looking current, and the constructor/keystroke callers turned the
-      // rejection into an unhandled promise rejection.
-      this.results.set([]);
-      this.searchError.set(this.describe(error));
-    } finally {
-      this.searching.set(false);
-      this.hasSearched.set(true);
-    }
+    this.typedQuery$.next(value);
   }
 
   private describe(error: unknown): string {

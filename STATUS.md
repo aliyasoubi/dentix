@@ -14,7 +14,8 @@ phases (see the table below). The **first phase** — proving the hard technical
 (login, Persian dates, Persian/Arabic text, rial/toman money, PDF generation) using the smallest
 possible real feature — is functionally done, and the app is deployed behind Caddy with
 automated encrypted backups. Work has moved on to **Release 1** foundation pieces: real
-roles/permissions, and patient-registry fields (national code, address).
+roles/permissions, international-patient support (nationality/passport), and patient-registry
+fields (address).
 
 Two caveats on that, both real:
 
@@ -31,10 +32,15 @@ Two caveats on that, both real:
 
 - Log in with a username, password, and a 2FA code (real authentication, not a mock)
 - Create a patient with a Persian name, an optional Latin name, and a phone number
-- Search for that patient by name or by phone (typed as `09…`, `+98…`, or in Persian digits)
+- Mark a patient as a foreign national — the identifier field switches from an Iranian national
+  code (checksum-validated) to a passport number (format-validated) accordingly
+- Search for that patient by name, by phone (typed as `09…`, `+98…`, or in Persian digits), or by
+  exact patient number — debounced, and a slow response for an old search can no longer overwrite
+  results for a newer one
 - Pick a birth date on a Persian (Jalali) calendar
-- Optionally record a national code (checksum-validated) and a structured address — **write-only
-  so far**: there is no patient detail screen, so neither can be viewed, edited, or searched
+- Optionally record a national code/passport number (validated) and a structured address —
+  **write-only so far**: there is no patient detail screen, so neither can be viewed or edited, and
+  the identifier still can't be searched by its own value (only by name/phone/patient number)
 - Add another office user and assign them one of the six roles, which now actually governs what
   they can do
 - See rial/toman amounts formatted correctly in Storybook (not wired into a real screen yet —
@@ -146,10 +152,10 @@ index, and stay useful even if nothing after it is ever built. Not started as a 
 pieces exist.
 
 The rule that governs it: **a patient field is not done until it can be entered, validated,
-stored, displayed, edited, authorized and tested.** National code and address currently fail
-that — they can be entered and stored but not viewed, edited, or searched, because there is no
-patient detail screen. That gap is what Release 1 opens with; no further demographic fields
-until it is closed.
+stored, displayed, edited, authorized and tested.** The identifier (national code/passport) and
+address currently fail that — they can be entered and stored but not viewed, edited, or searched
+by their own value, because there is no patient detail screen. That gap is what Release 1 opens
+with; no further demographic fields until it is closed.
 
 Also missing for an office to actually operate it: **roles can be granted at onboarding but
 never changed.** There is no way to fix a wrong role, or to see who holds what, short of SQL.

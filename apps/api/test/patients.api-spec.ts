@@ -303,7 +303,7 @@ describe("Patients (API contract)", () => {
         .post("/api/v1/patients")
         .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
         .set("X-CSRF-Token", csrfToken)
-        .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: "1234567891" });
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, identifierNumber: "1234567891" });
       expect(response.status).toBe(201);
     });
 
@@ -313,9 +313,88 @@ describe("Patients (API contract)", () => {
         .post("/api/v1/patients")
         .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
         .set("X-CSRF-Token", csrfToken)
-        .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: "1234567890" });
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, identifierNumber: "1234567890" });
       expect(response.status).toBe(400);
       expect((response.body as ErrorResponseBody).code).toBe("INVALID_NATIONAL_CODE");
+    });
+
+    // International-patient support: nationality "foreign" switches
+    // identifierNumber from national-code checksum validation to a loose
+    // passport-number format check.
+    it("accepts a well-formed passport number for a foreign patient", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          nativeName: "جان اسمیت",
+          contactUnavailable: true,
+          nationality: "foreign",
+          identifierNumber: "AB1234567",
+        });
+      expect(response.status).toBe(201);
+    });
+
+    it("returns 400 INVALID_PASSPORT_NUMBER for a foreign patient's too-short identifier", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          nativeName: "جان اسمیت",
+          contactUnavailable: true,
+          nationality: "foreign",
+          identifierNumber: "AB",
+        });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_PASSPORT_NUMBER");
+    });
+
+    // The same value is checksum-valid as a national code but must not be
+    // silently accepted as one once nationality says "foreign" — proves the
+    // switch is real, not cosmetic.
+    it("validates identifierNumber as a passport, not a national code, once nationality is foreign", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        // A bad Iranian check digit — INVALID_NATIONAL_CODE for an iranian
+        // patient (proven above) — but a perfectly fine 10-character
+        // alphanumeric-looking passport number.
+        .send({
+          nativeName: "جان اسمیت",
+          contactUnavailable: true,
+          nationality: "foreign",
+          identifierNumber: "1234567890",
+        });
+      expect(response.status).toBe(201);
+    });
+
+    it("defaults nationality to iranian when omitted", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      // A well-formed passport number that is NOT checksum-valid as a
+      // national code — must be rejected under the default nationality.
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, identifierNumber: "AB1234567" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_NATIONAL_CODE");
+    });
+
+    it("rejects an unknown nationality value", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationality: "martian" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
     });
 
     // A missing national code must never block registration — it's the one
@@ -444,13 +523,13 @@ describe("Patients (API contract)", () => {
         expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       });
 
-      it("rejects a non-string nationalCode with 400 VALIDATION_FAILED instead of crashing", async () => {
+      it("rejects a non-string identifierNumber with 400 VALIDATION_FAILED instead of crashing", async () => {
         const { sessionToken, csrfToken } = await seedActiveSession();
         const response = await request(app.getHttpServer())
           .post("/api/v1/patients")
           .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
           .set("X-CSRF-Token", csrfToken)
-          .send({ nativeName: "رضا احمدی", contactUnavailable: true, nationalCode: 1234567891 });
+          .send({ nativeName: "رضا احمدی", contactUnavailable: true, identifierNumber: 1234567891 });
         expect(response.status).toBe(400);
         expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       });
@@ -637,6 +716,29 @@ describe("Patients (API contract)", () => {
 
       const response = await search(credentials, { query: "09121112233" });
       expect(response.status).toBe(200);
+    });
+
+    // Regression: a receptionist typing an Iranian mobile always starts
+    // "0912…". JS's Number() strips the leading zero, so this partial input
+    // used to parse as patient number 912 and briefly show an unrelated
+    // real patient mid-keystroke if one happened to exist.
+    it("does not match a leading-zero numeric query against a same-value patient number", async () => {
+      const credentials = await seedActiveSession();
+      const decoy = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
+        .send({ nativeName: "بیمار غیرمرتبط", contactUnavailable: true });
+      const decoyPatientNumber = (decoy.body as CreatePatientResponseBody).patientNumber;
+
+      const response = await search(credentials, { query: `0${decoyPatientNumber}` });
+
+      expect(response.status).toBe(200);
+      const results = response.body as PatientSearchResultBody[];
+      expect(results.map((r) => r.id)).not.toContain((decoy.body as CreatePatientResponseBody).id);
     });
 
     it("does not leak another office's patient into a search result", async () => {

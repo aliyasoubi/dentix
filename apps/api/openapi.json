@@ -510,10 +510,19 @@
             "format": "date",
             "nullable": true
           },
-          "nationalCode": {
+          "nationality": {
+            "type": "string",
+            "enum": [
+              "iranian",
+              "foreign"
+            ],
+            "default": "iranian",
+            "description": "Determines whether identifierNumber is validated as a national code or a passport number."
+          },
+          "identifierNumber": {
             "type": "string",
             "nullable": true,
-            "description": "Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted."
+            "description": "National code (کد ملی) for an iranian patient, or a passport number for a foreign one — see `nationality`. Only when legally and operationally justified. Optional; never blocks registration when omitted."
           },
           "province": {
             "type": "string",

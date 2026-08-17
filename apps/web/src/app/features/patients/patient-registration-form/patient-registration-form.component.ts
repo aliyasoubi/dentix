@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from "@angular/core";
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, output } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { DateAdapter } from "@angular/material/core";
 import { DsAlertComponent } from "../../../design-system/foundation/alert/ds-alert.component";
@@ -16,10 +17,12 @@ import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { CreatePatientRequest } from "../patients-api.service";
 import {
   contactRequired,
+  identifierNumber,
   iranianMobile,
-  iranianNationalCode,
   requiredNonBlank,
 } from "./patient-form.validators";
+
+type PatientNationality = "iranian" | "foreign";
 
 /**
  * Patient registration form.
@@ -56,6 +59,7 @@ import {
 export class PatientRegistrationFormComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly dateAdapter = inject<DateAdapter<Date>>(DateAdapter);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Disables submission while the parent's create request is in flight. */
   readonly submitting = input(false);
@@ -78,7 +82,13 @@ export class PatientRegistrationFormComponent {
       dateOfBirth: this.formBuilder.control<Date | null>(null),
       contactUnavailable: [false],
       sex: ["unspecified" as "male" | "female" | "unspecified"],
-      nationalCode: ["", [iranianNationalCode]],
+      // Defaults to "iranian" — the predominant case for this office;
+      // matches Patient.create()'s own backend default (patient.entity.ts).
+      nationality: ["iranian" as PatientNationality],
+      // Holds a national code for an iranian patient, a passport number for
+      // a foreign one — identifierNumber (patient-form.validators.ts) reads
+      // the sibling `nationality` control above to know which.
+      identifierNumber: ["", [identifierNumber]],
       province: [""],
       city: [""],
       district: [""],
@@ -89,6 +99,18 @@ export class PatientRegistrationFormComponent {
     },
     { validators: [contactRequired] },
   );
+
+  constructor() {
+    // identifierNumber's own validator already reads nationality correctly
+    // whenever IT runs — but changing nationality doesn't by itself re-run
+    // a sibling control's validators in reactive forms, so a previously
+    // valid/invalid identifierNumber would keep showing its stale state
+    // until the user next edited it. This keeps the two in sync the moment
+    // nationality changes instead.
+    this.form.controls.nationality.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.form.controls.identifierNumber.updateValueAndValidity();
+    });
+  }
 
   // Declaration order is display priority — a blank name reports that it is
   // required rather than that it is blank, which are the same failure said
@@ -102,8 +124,9 @@ export class PatientRegistrationFormComponent {
     iranianMobile: "patients.form.error.INVALID_PHONE",
   };
 
-  protected readonly NATIONAL_CODE_ERRORS: DsFieldErrorKeys = {
+  protected readonly IDENTIFIER_NUMBER_ERRORS: DsFieldErrorKeys = {
     iranianNationalCode: "patients.form.error.INVALID_NATIONAL_CODE",
+    passportNumber: "patients.form.error.INVALID_PASSPORT_NUMBER",
   };
 
   protected readonly SEX_OPTIONS: readonly DsSelectOption[] = [
@@ -112,11 +135,21 @@ export class PatientRegistrationFormComponent {
     { value: "female", label: "patients.form.sex.female" },
   ];
 
+  protected readonly NATIONALITY_OPTIONS: readonly DsSelectOption[] = [
+    { value: "iranian", label: "patients.form.nationality.iranian" },
+    { value: "foreign", label: "patients.form.nationality.foreign" },
+  ];
+
+  /** Drives the identifier field's label/placeholder in the template — "کد ملی" for an iranian patient, "شماره پاسپورت" for a foreign one. */
+  protected isForeignNationality(): boolean {
+    return this.form.controls.nationality.value === "foreign";
+  }
+
   protected submit(): void {
     if (this.form.invalid) {
       // markAllAsTouched, not a silent return: the group-level contact rule
-      // and the untouched required name both stay invisible otherwise, so the
-      // button would appear to do nothing.
+      // and the untouched required field both stay invisible otherwise, so
+      // the button would appear to do nothing.
       this.form.markAllAsTouched();
       return;
     }
@@ -132,7 +165,8 @@ export class PatientRegistrationFormComponent {
         value.dateOfBirth && this.dateAdapter.isValid(value.dateOfBirth)
           ? this.dateAdapter.toIso8601(value.dateOfBirth)
           : null,
-      nationalCode: value.nationalCode || null,
+      nationality: value.nationality,
+      identifierNumber: value.identifierNumber || null,
       province: value.province || null,
       city: value.city || null,
       district: value.district || null,
@@ -157,7 +191,8 @@ export class PatientRegistrationFormComponent {
       dateOfBirth: null,
       contactUnavailable: false,
       sex: "unspecified",
-      nationalCode: "",
+      nationality: "iranian",
+      identifierNumber: "",
       province: "",
       city: "",
       district: "",

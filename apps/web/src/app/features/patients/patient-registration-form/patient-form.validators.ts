@@ -1,5 +1,9 @@
 import { AbstractControl, ValidationErrors } from "@angular/forms";
-import { canonicalizeIranianMobile, canonicalizeIranianNationalCode } from "@dentix/kernel";
+import {
+  canonicalizeIranianMobile,
+  canonicalizeIranianNationalCode,
+  canonicalizePassportNumber,
+} from "@dentix/kernel";
 
 /**
  * Patient-form validation rules, kept as free functions rather than methods on
@@ -35,6 +39,12 @@ export function iranianMobile(control: AbstractControl<string>): ValidationError
  * canonicalizeIranianNationalCode rather than a re-implemented checksum, so
  * client and server can't drift apart on what counts as valid. The national
  * code is always optional — empty is valid here too.
+ *
+ * Kept as its own exported function (rather than folded into
+ * identifierNumber below) because it's independently useful and
+ * independently tested — identifierNumber is the one actually wired to the
+ * form control, and dispatches to this or to passportNumber below
+ * depending on the sibling nationality control.
  */
 export function iranianNationalCode(control: AbstractControl<string>): ValidationErrors | null {
   const value = control.value.trim();
@@ -42,6 +52,28 @@ export function iranianNationalCode(control: AbstractControl<string>): Validatio
     return null;
   }
   return canonicalizeIranianNationalCode(value) === null ? { iranianNationalCode: true } : null;
+}
+
+/** Same shape as iranianNationalCode, calling the backend's canonicalizePassportNumber instead. Always optional. */
+export function passportNumber(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value.trim();
+  if (value.length === 0) {
+    return null;
+  }
+  return canonicalizePassportNumber(value) === null ? { passportNumber: true } : null;
+}
+
+/**
+ * The identifier field's actual validator: dispatches to iranianNationalCode
+ * or passportNumber above based on the sibling `nationality` control's
+ * current value, read via `control.parent`. This is the one place that
+ * decision is made — the component only has to re-run this control's own
+ * validity check when nationality changes (see the component's
+ * `updateValueAndValidity()` call), not duplicate the branching itself.
+ */
+export function identifierNumber(control: AbstractControl<string>): ValidationErrors | null {
+  const nationality = (control.parent?.get("nationality")?.value as string | undefined) ?? "iranian";
+  return nationality === "foreign" ? passportNumber(control) : iranianNationalCode(control);
 }
 
 /**

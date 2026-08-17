@@ -140,3 +140,26 @@ export function canonicalizeIranianNationalCode(rawInput: string): string | null
   const padded = digitsOnly.padStart(NATIONAL_CODE_LENGTH, "0");
   return hasValidNationalCodeChecksum(padded) ? padded : null;
 }
+
+const PASSPORT_MIN_LENGTH = 4;
+const PASSPORT_MAX_LENGTH = 20;
+const PASSPORT_ALLOWED_CHARS = /^[A-Z0-9]+$/;
+
+/**
+ * A deliberately loose format check, not a checksum — unlike the national
+ * code above, passport-number formats vary by issuing country with no
+ * single standard the way Iran's national code has (ICAO 9303 standardizes
+ * the *document*'s machine-readable zone, not what a receptionist reads off
+ * the photo page and types in). Accepts Persian/Arabic-Indic or Latin
+ * digits, letters, and common punctuation someone might copy off a printed
+ * passport (spaces, dashes) — normalizes digits, strips the punctuation,
+ * uppercases, and accepts anything 4-20 alphanumeric characters long.
+ * Returns the canonical form, or null if empty or outside that range.
+ */
+export function canonicalizePassportNumber(rawInput: string): string | null {
+  const cleaned = normalizeDigits(rawInput).replace(/[\s-]/g, "").toUpperCase();
+  if (cleaned.length < PASSPORT_MIN_LENGTH || cleaned.length > PASSPORT_MAX_LENGTH) {
+    return null;
+  }
+  return PASSPORT_ALLOWED_CHARS.test(cleaned) ? cleaned : null;
+}

@@ -49,7 +49,8 @@ describe("PatientRegistrationFormComponent", () => {
       dateOfBirth: null,
       contactUnavailable: false,
       sex: "unspecified",
-      nationalCode: "",
+      nationality: "iranian",
+      identifierNumber: "",
       province: "",
       city: "",
       district: "",
@@ -77,7 +78,8 @@ describe("PatientRegistrationFormComponent", () => {
         contactUnavailable: false,
         sex: "unspecified",
         dateOfBirth: null,
-        nationalCode: null,
+        nationality: "iranian",
+        identifierNumber: null,
         province: null,
         city: null,
         district: null,
@@ -89,10 +91,18 @@ describe("PatientRegistrationFormComponent", () => {
     ]);
   });
 
-  it("emits a well-formed national code, mapping an empty one to null", () => {
-    fill({ nationalCode: "1234567891" });
+  it("emits a well-formed national code for the default iranian nationality, mapping an empty one to null", () => {
+    fill({ identifierNumber: "1234567891" });
     submit();
-    expect(emitted[0]?.nationalCode).toBe("1234567891");
+    expect(emitted[0]?.nationality).toBe("iranian");
+    expect(emitted[0]?.identifierNumber).toBe("1234567891");
+  });
+
+  it("emits a well-formed passport number once nationality is switched to foreign", () => {
+    fill({ nationality: "foreign", identifierNumber: "AB1234567" });
+    submit();
+    expect(emitted[0]?.nationality).toBe("foreign");
+    expect(emitted[0]?.identifierNumber).toBe("AB1234567");
   });
 
   it("emits address fields exactly as entered, mapping empty ones to null", () => {
@@ -135,8 +145,15 @@ describe("PatientRegistrationFormComponent", () => {
     });
 
     it("checksum-invalid national code — caught here rather than round-tripping to the server", () => {
-      fill({ nationalCode: "1234567890" });
-      expect(form().controls.nationalCode.hasError("iranianNationalCode")).toBe(true);
+      fill({ identifierNumber: "1234567890" });
+      expect(form().controls.identifierNumber.hasError("iranianNationalCode")).toBe(true);
+      submit();
+      expect(emitted).toEqual([]);
+    });
+
+    it("too-short passport number once nationality is foreign", () => {
+      fill({ nationality: "foreign", identifierNumber: "AB" });
+      expect(form().controls.identifierNumber.hasError("passportNumber")).toBe(true);
       submit();
       expect(emitted).toEqual([]);
     });
@@ -170,7 +187,8 @@ describe("PatientRegistrationFormComponent", () => {
         dateOfBirth: null,
         contactUnavailable: false,
         sex: "unspecified",
-        nationalCode: "",
+        nationality: "iranian",
+        identifierNumber: "",
         province: "",
         city: "",
         district: "",
@@ -188,6 +206,29 @@ describe("PatientRegistrationFormComponent", () => {
       fill({ latinName: "Zahra Karimi" });
       submit();
       expect(form().getRawValue().nativeName).toBe("زهرا کریمی");
+    });
+  });
+
+  describe("nationality-driven identifier validation", () => {
+    it("re-validates the already-typed identifier the moment nationality changes", () => {
+      // A national code that happens to also be a valid-shaped passport —
+      // no, deliberately invalid *as a national code* (bad check digit),
+      // so switching nationality is what makes it valid, not the value.
+      fill({ identifierNumber: "1234567890" });
+      expect(form().controls.identifierNumber.hasError("iranianNationalCode")).toBe(true);
+
+      form().controls.nationality.setValue("foreign");
+
+      // Reactive forms don't re-run a sibling control's OWN validators just
+      // because another control changed — this only passes because the
+      // component explicitly re-triggers it (see the constructor).
+      expect(form().controls.identifierNumber.valid).toBe(true);
+    });
+
+    it("switches the label from national code to passport", () => {
+      expect(component["isForeignNationality"]()).toBe(false);
+      form().controls.nationality.setValue("foreign");
+      expect(component["isForeignNationality"]()).toBe(true);
     });
   });
 });

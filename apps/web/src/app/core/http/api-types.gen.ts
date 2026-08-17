@@ -225,8 +225,14 @@ export interface components {
              * @description Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary (ADR-008/012).
              */
             dateOfBirth?: string | null;
-            /** @description Iranian national code (کد ملی), only when legally and operationally justified. Optional; never blocks registration when omitted. */
-            nationalCode?: string | null;
+            /**
+             * @description Determines whether identifierNumber is validated as a national code or a passport number.
+             * @default iranian
+             * @enum {string}
+             */
+            nationality: "iranian" | "foreign";
+            /** @description National code (کد ملی) for an iranian patient, or a passport number for a foreign one — see `nationality`. Only when legally and operationally justified. Optional; never blocks registration when omitted. */
+            identifierNumber?: string | null;
             /** @description Address: province. */
             province?: string | null;
             /** @description Address: city. */

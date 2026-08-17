@@ -1,8 +1,10 @@
 import { FormControl, FormGroup } from "@angular/forms";
 import {
   contactRequired,
+  identifierNumber,
   iranianMobile,
   iranianNationalCode,
+  passportNumber,
   requiredNonBlank,
 } from "./patient-form.validators";
 
@@ -62,6 +64,67 @@ describe("patient form validators", () => {
     it("treats empty as valid — the national code is always optional", () => {
       expect(iranianNationalCode(new FormControl("", { nonNullable: true }))).toBeNull();
       expect(iranianNationalCode(new FormControl("   ", { nonNullable: true }))).toBeNull();
+    });
+  });
+
+  describe("passportNumber", () => {
+    it.each(["AB1234567", "ab 123-4567", "123456789"])(
+      "accepts %j — a form the backend canonicalizes",
+      (value) => {
+        expect(passportNumber(new FormControl(value, { nonNullable: true }))).toBeNull();
+      },
+    );
+
+    it.each(["AB", "A".repeat(21), "AB@1234567"])("rejects %j", (value) => {
+      expect(passportNumber(new FormControl(value, { nonNullable: true }))).toEqual({
+        passportNumber: true,
+      });
+    });
+
+    it("treats empty as valid — the passport number is always optional", () => {
+      expect(passportNumber(new FormControl("", { nonNullable: true }))).toBeNull();
+    });
+  });
+
+  describe("identifierNumber", () => {
+    /** Returns the identifierNumber control itself, already attached to a parent group carrying the given nationality — which is what the validator reads. */
+    function identifierControlFor(nationality: string, identifierValue: string): FormControl<string> {
+      const identifierControl = new FormControl(identifierValue, { nonNullable: true });
+      new FormGroup({
+        nationality: new FormControl(nationality, { nonNullable: true }),
+        identifierNumber: identifierControl,
+      });
+      return identifierControl;
+    }
+
+    it("validates as a national code when nationality is iranian", () => {
+      expect(identifierNumber(identifierControlFor("iranian", "1234567891"))).toBeNull();
+      expect(identifierNumber(identifierControlFor("iranian", "1234567890"))).toEqual({
+        iranianNationalCode: true,
+      });
+    });
+
+    it("validates as a passport number when nationality is foreign", () => {
+      expect(identifierNumber(identifierControlFor("foreign", "AB1234567"))).toBeNull();
+      expect(identifierNumber(identifierControlFor("foreign", "AB"))).toEqual({ passportNumber: true });
+    });
+
+    // The same value passes as a passport but fails as a national code —
+    // proves the dispatch is real, not that both branches happen to agree.
+    it("accepts a value under foreign that would be rejected under iranian, and vice versa", () => {
+      expect(identifierNumber(identifierControlFor("foreign", "1234567890"))).toBeNull();
+      expect(identifierNumber(identifierControlFor("iranian", "AB1234567"))).toEqual({
+        iranianNationalCode: true,
+      });
+    });
+
+    it("defaults to national-code validation when there is no parent (unattached control)", () => {
+      expect(identifierNumber(new FormControl("1234567891", { nonNullable: true }))).toBeNull();
+    });
+
+    it("treats empty as valid regardless of nationality", () => {
+      expect(identifierNumber(identifierControlFor("iranian", ""))).toBeNull();
+      expect(identifierNumber(identifierControlFor("foreign", ""))).toBeNull();
     });
   });
 

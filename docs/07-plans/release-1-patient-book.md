@@ -25,18 +25,25 @@ authorized and tested**. Do not add a new field unless the same release delivers
 
 Two existing fields currently fail this rule and are the first work in the release:
 
-- **National code** — entered, validated (checksum), stored. Cannot be viewed, edited, or
-  searched.
+- **National code / passport number** — entered, validated (checksum for a national code, format
+  check for a passport), stored. Still cannot be viewed, edited, or searched by its own value —
+  no patient detail page exists yet.
 - **Address** — entered, stored. Cannot be viewed or edited.
 
 ## Included
 
 - Quick patient registration (exists)
-- Patient search by Persian name, mobile, national code (name/mobile exist; national code does not)
+- International patients: a `nationality` field (iranian/foreign) switches the identifier field
+  between an Iranian national code (checksum-validated) and a passport number (format-validated) —
+  added 2026-08-17 at the product owner's direction (exists)
+- Patient search by Persian name, mobile, or exact patient number (exists) — national-code/passport
+  search does not exist yet
+- Debounced, cancellation-safe search — a rapid typist no longer fires a request per keystroke,
+  and a slow response for an old query can no longer overwrite results for a newer one (exists)
 - **Patient detail page** (does not exist — the central gap)
 - **Edit demographics** (does not exist)
-- View and edit address, national code, contacts (does not exist)
-- Mobile and national-code validation (exists)
+- View and edit address, identifier (national code/passport), contacts (does not exist)
+- Mobile, national-code, and passport-number validation (exists)
 - Duplicate warning on create (does not exist)
 - Birth date, sex (exist)
 - Important medical alerts (does not exist)
@@ -63,7 +70,7 @@ A receptionist can:
 
 1. Register a fictional patient
 2. Be warned about a probable duplicate
-3. Find the patient by Persian name, by mobile, and by national code
+3. Find the patient by Persian name, by mobile, or by patient number
 4. Open the full patient profile
 5. Correct the address or contact details, and see the change recorded in the audit trail
 6. Be prevented from seeing the record when unauthorized (proved by a denial test, not by hope)

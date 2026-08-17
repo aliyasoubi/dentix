@@ -1,6 +1,7 @@
 import {
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
+  canonicalizePassportNumber,
   normalizeDigits,
   normalizeForSearch,
   normalizePersianText,
@@ -152,5 +153,40 @@ describe("canonicalizeIranianNationalCode", () => {
   it("returns null for empty or garbage input", () => {
     expect(canonicalizeIranianNationalCode("")).toBeNull();
     expect(canonicalizeIranianNationalCode("hello")).toBeNull();
+  });
+});
+
+describe("canonicalizePassportNumber", () => {
+  it("accepts a typical alphanumeric passport number, uppercased", () => {
+    expect(canonicalizePassportNumber("ab1234567")).toBe("AB1234567");
+  });
+
+  it("accepts Persian digits mixed with Latin letters", () => {
+    expect(canonicalizePassportNumber("AB۱۲۳۴۵۶۷")).toBe("AB1234567");
+  });
+
+  it("strips spaces and dashes commonly present when copied off a printed passport", () => {
+    expect(canonicalizePassportNumber("AB 123-4567")).toBe("AB1234567");
+  });
+
+  it("accepts an all-digit passport number (e.g. many countries' formats)", () => {
+    expect(canonicalizePassportNumber("123456789")).toBe("123456789");
+  });
+
+  it("rejects a value shorter than 4 characters", () => {
+    expect(canonicalizePassportNumber("AB1")).toBeNull();
+  });
+
+  it("rejects a value longer than 20 characters", () => {
+    expect(canonicalizePassportNumber("A".repeat(21))).toBeNull();
+  });
+
+  it("rejects punctuation other than spaces/dashes", () => {
+    expect(canonicalizePassportNumber("AB@1234567")).toBeNull();
+  });
+
+  it("returns null for empty input", () => {
+    expect(canonicalizePassportNumber("")).toBeNull();
+    expect(canonicalizePassportNumber("   ")).toBeNull();
   });
 });

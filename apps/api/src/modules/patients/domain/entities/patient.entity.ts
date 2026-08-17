@@ -2,6 +2,15 @@ import { Uuid } from "@dentix/kernel";
 
 export type PatientStatus = "active" | "inactive" | "deceased" | "duplicate_candidate" | "archived";
 export type PatientSex = "male" | "female" | "unspecified";
+/**
+ * Deliberately binary, not a country picker: the only thing this drives is
+ * which identifier document a patient's `identifierNumber` is validated and
+ * stored as (patient-identifier.entity.ts) — national code for "iranian",
+ * passport for "foreign". A specific country of origin isn't collected;
+ * that's a natural later addition if the office ever needs it, not
+ * something to build ahead of a proven need.
+ */
+export type PatientNationality = "iranian" | "foreign";
 
 export interface PatientProps {
   readonly id: Uuid;
@@ -11,6 +20,7 @@ export interface PatientProps {
   /** Nullable — "where known" (01-patient-management.md); S4's UI doesn't collect this yet, S5 adds the Jalali picker onto this same column. */
   readonly dateOfBirth: Date | null;
   readonly sex: PatientSex;
+  readonly nationality: PatientNationality;
   /** True only when the patient explicitly has no contact method — never true merely because one wasn't entered. */
   readonly contactUnavailable: boolean;
   readonly createdAt: Date;
@@ -39,6 +49,8 @@ export class Patient {
     readonly patientNumber: number;
     readonly dateOfBirth: Date | null;
     readonly sex: PatientSex;
+    /** Defaults to "iranian" — the predominant case for this office; a foreign patient is the explicit choice, not the default. */
+    readonly nationality?: PatientNationality;
     readonly contactUnavailable: boolean;
     readonly createdBy: Uuid;
     readonly now: Date;
@@ -50,6 +62,7 @@ export class Patient {
       status: "active",
       dateOfBirth: params.dateOfBirth,
       sex: params.sex,
+      nationality: params.nationality ?? "iranian",
       contactUnavailable: params.contactUnavailable,
       createdAt: params.now,
       createdBy: params.createdBy,
@@ -83,6 +96,10 @@ export class Patient {
 
   get sex(): PatientSex {
     return this.props.sex;
+  }
+
+  get nationality(): PatientNationality {
+    return this.props.nationality;
   }
 
   get contactUnavailable(): boolean {

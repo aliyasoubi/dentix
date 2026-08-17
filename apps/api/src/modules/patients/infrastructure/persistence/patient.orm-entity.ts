@@ -29,6 +29,9 @@ export class PatientOrmEntity {
   @Column({ type: "varchar", default: "unspecified" })
   sex!: string;
 
+  @Column({ type: "varchar", default: "iranian" })
+  nationality!: string;
+
   @Column({ name: "contact_unavailable", type: "boolean", default: false })
   contactUnavailable!: boolean;
 

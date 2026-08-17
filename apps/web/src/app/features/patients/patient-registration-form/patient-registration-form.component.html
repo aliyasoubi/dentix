@@ -37,10 +37,10 @@
 
   <!-- No [expanded] binding: DsDisclosureComponent deliberately offers none
        (a caller wanting one is a signal the field belongs above the fold
-       instead). nationalCode is the one field in here with a validator; its
-       error is only visible while the panel is open, same as any other
-       field a user would have to expand the panel to reach in the first
-       place. -->
+       instead). identifierNumber is the one field in here with a
+       validator; its error is only visible while the panel is open, same
+       as any other field a user would have to expand the panel to reach
+       in the first place. -->
   <app-ds-disclosure [title]="'patients.form.moreDetails' | translate">
     <div class="patients-form__row">
       <app-ds-text-field
@@ -62,12 +62,29 @@
         [control]="form.controls.dateOfBirth"
       />
 
+      <app-ds-select-field
+        [label]="'patients.form.nationality.label' | translate"
+        [control]="form.controls.nationality"
+        [options]="NATIONALITY_OPTIONS"
+      />
+    </div>
+
+    <div class="patients-form__row">
+      <!-- Label, placeholder, and even the identifier's own input mode
+           follow nationality: a national code is numeric, but passport
+           numbers are commonly alphanumeric, so forcing a numeric keyboard
+           for a foreign patient would actively get in the way. -->
       <app-ds-text-field
-        [label]="'patients.form.nationalCode.label' | translate"
-        [control]="form.controls.nationalCode"
-        [errors]="NATIONAL_CODE_ERRORS"
+        [label]="
+          (isForeignNationality()
+            ? 'patients.form.identifierNumber.label.passport'
+            : 'patients.form.identifierNumber.label.nationalCode'
+          ) | translate
+        "
+        [control]="form.controls.identifierNumber"
+        [errors]="IDENTIFIER_NUMBER_ERRORS"
         [latin]="true"
-        inputMode="numeric"
+        [inputMode]="isForeignNationality() ? 'text' : 'numeric'"
       />
     </div>
 
