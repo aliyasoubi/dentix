@@ -5,7 +5,9 @@ import { IdentityAccessModule } from "../identity-access/public-api";
 import { TypeOrmUnitOfWork } from "../../platform/typeorm-unit-of-work";
 import { UNIT_OF_WORK_PORT } from "../../platform/unit-of-work.port";
 import { CreatePatientUseCase } from "./application/use-cases/create-patient.use-case";
+import { GetPatientDetailUseCase } from "./application/use-cases/get-patient-detail.use-case";
 import { SearchPatientsUseCase } from "./application/use-cases/search-patients.use-case";
+import { UpdatePatientDemographicsUseCase } from "./application/use-cases/update-patient-demographics.use-case";
 import { PATIENT_ADDRESS_REPOSITORY } from "./domain/repositories/patient-address.repository";
 import { PATIENT_CONTACT_REPOSITORY } from "./domain/repositories/patient-contact.repository";
 import { PATIENT_IDENTIFIER_REPOSITORY } from "./domain/repositories/patient-identifier.repository";
@@ -48,6 +50,8 @@ import { PatientsController } from "./presentation/http/patients.controller";
     { provide: UNIT_OF_WORK_PORT, useClass: TypeOrmUnitOfWork },
     CreatePatientUseCase,
     SearchPatientsUseCase,
+    GetPatientDetailUseCase,
+    UpdatePatientDemographicsUseCase,
   ],
 })
 export class PatientsModule {}

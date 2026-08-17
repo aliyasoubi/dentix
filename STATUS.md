@@ -5,7 +5,7 @@ understand "what has been built and why," read this one — everything else in `
 the target design (mostly for features that don't exist yet) or gives an AI/engineer the detail
 needed to resume work, not a quick answer to "where are we."
 
-Last updated: 2026-08-16.
+Last updated: 2026-08-17.
 
 ## The one-paragraph version
 
@@ -38,9 +38,13 @@ Two caveats on that, both real:
   exact patient number — debounced, and a slow response for an old search can no longer overwrite
   results for a newer one
 - Pick a birth date on a Persian (Jalali) calendar
-- Optionally record a national code/passport number (validated) and a structured address —
-  **write-only so far**: there is no patient detail screen, so neither can be viewed or edited, and
-  the identifier still can't be searched by its own value (only by name/phone/patient number)
+- Optionally record a national code/passport number (validated) and a structured address
+- Click through from a search result to a **patient detail page** — status, identifier, address,
+  and contact details, all now visible in one place (still can't be searched by the identifier's
+  own value — only by name/phone/patient number)
+- **Correct a patient's demographics** from that detail page — name, phone, identifier, address —
+  with the change recorded in the audit trail; a stale copy is rejected rather than silently
+  overwriting someone else's concurrent edit
 - Add another office user and assign them one of the six roles, which now actually governs what
   they can do
 - See rial/toman amounts formatted correctly in Storybook (not wired into a real screen yet —
@@ -153,9 +157,9 @@ pieces exist.
 
 The rule that governs it: **a patient field is not done until it can be entered, validated,
 stored, displayed, edited, authorized and tested.** The identifier (national code/passport) and
-address currently fail that — they can be entered and stored but not viewed, edited, or searched
-by their own value, because there is no patient detail screen. That gap is what Release 1 opens
-with; no further demographic fields until it is closed.
+address now satisfy that — the patient detail page and its edit form closed the gap they used to
+fail on (2026-08-17). They still can't be _searched_ by their own value (only by name/phone/
+patient number), which is a separate, smaller gap.
 
 Also missing for an office to actually operate it: **roles can be granted at onboarding but
 never changed.** There is no way to fix a wrong role, or to see who holds what, short of SQL.

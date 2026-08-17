@@ -17,6 +17,12 @@ export const routes: Routes = [
     loadComponent: () => import("./features/patients/patients-page").then((m) => m.PatientsPage),
   },
   {
+    path: "patients/:id",
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import("./features/patients/patient-detail/patient-detail-page").then((m) => m.PatientDetailPage),
+  },
+  {
     path: "office-users",
     // Order matters: authGuard resolves the session first (loadSession() if
     // not already checked), and canManageUsersGuard's canManageUsers read

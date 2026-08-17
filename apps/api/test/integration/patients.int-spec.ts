@@ -96,6 +96,29 @@ describe("Patients persistence (integration)", () => {
     return { officeId: office.id, actorUserId: account.id };
   }
 
+  /** A bare active patient row — child-table tests (name/contact/identifier/address) need one to satisfy the FK, but don't care about its own fields. */
+  async function seedPatient(): Promise<{
+    officeId: ReturnType<typeof asUuid>;
+    actorUserId: ReturnType<typeof asUuid>;
+    patientId: ReturnType<typeof asUuid>;
+  }> {
+    const { officeId, actorUserId } = await seedOfficeAndActor();
+    const patientId = asUuid(randomUUID());
+    await patientRepo.create(
+      Patient.create({
+        id: patientId,
+        officeId,
+        patientNumber: await patientRepo.nextPatientNumber(officeId),
+        dateOfBirth: null,
+        sex: "unspecified",
+        contactUnavailable: true,
+        createdBy: actorUserId,
+        now: new Date(),
+      }),
+    );
+    return { officeId, actorUserId, patientId };
+  }
+
   describe("nextPatientNumber", () => {
     it("allocates sequential numbers per office starting at 1", async () => {
       const { officeId } = await seedOfficeAndActor();
@@ -641,6 +664,451 @@ describe("Patients persistence (integration)", () => {
         limit: 10,
       });
       expect(results.map((r) => r.id)).toEqual([targetId]);
+    });
+  });
+
+  describe("findDetailById", () => {
+    it("returns the full record — names, contact, identifier, address — for a patient in the caller's office", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      const patientId = asUuid(randomUUID());
+      await patientRepo.create(
+        Patient.create({
+          id: patientId,
+          officeId,
+          patientNumber,
+          dateOfBirth: null,
+          sex: "female",
+          nationality: "iranian",
+          contactUnavailable: false,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientNameRepo.create(
+        PatientName.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          nameType: "native",
+          value: "زهرا کریمی",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientNameRepo.create(
+        PatientName.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          nameType: "latin",
+          value: "Zahra Karimi",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientContactRepo.create(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          rawMobileNumber: "09123456789",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientIdentifierRepo.create(
+        PatientIdentifier.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          identifierType: "national_code",
+          rawValue: "1234567891",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientAddressRepo.create(
+        PatientAddress.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          province: "تهران",
+          city: "تهران",
+          district: null,
+          addressLine1: "خیابان ولیعصر",
+          addressLine2: null,
+          postalCode: "1234567890",
+          deliveryNotes: null,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      const detail = await patientRepo.findDetailById(officeId, patientId);
+      expect(detail).toEqual({
+        id: patientId,
+        patientNumber,
+        status: "active",
+        nativeName: "زهرا کریمی",
+        latinName: "Zahra Karimi",
+        phone: "09123456789",
+        contactUnavailable: false,
+        dateOfBirth: null,
+        sex: "female",
+        nationality: "iranian",
+        identifierNumber: "1234567891",
+        province: "تهران",
+        city: "تهران",
+        district: null,
+        addressLine1: "خیابان ولیعصر",
+        addressLine2: null,
+        postalCode: "1234567890",
+        deliveryNotes: null,
+        version: 1,
+      });
+    });
+
+    it("returns null for a patient that belongs to a different office", async () => {
+      const { officeId: ownerOfficeId, actorUserId } = await seedOfficeAndActor();
+      const { officeId: otherOfficeId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientNumber = await patientRepo.nextPatientNumber(ownerOfficeId);
+      const patientId = asUuid(randomUUID());
+      await patientRepo.create(
+        Patient.create({
+          id: patientId,
+          officeId: ownerOfficeId,
+          patientNumber,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      expect(await patientRepo.findDetailById(otherOfficeId, patientId)).toBeNull();
+    });
+
+    it("returns null for an unknown patient ID", async () => {
+      const { officeId } = await seedOfficeAndActor();
+      expect(await patientRepo.findDetailById(officeId, asUuid(randomUUID()))).toBeNull();
+    });
+  });
+
+  describe("updateDemographics", () => {
+    it("updates the row and bumps version when expectedVersion matches", async () => {
+      const { officeId, actorUserId, patientId } = await seedPatient();
+
+      const succeeded = await patientRepo.updateDemographics({
+        officeId,
+        id: patientId,
+        expectedVersion: 1,
+        dateOfBirth: null,
+        sex: "female",
+        nationality: "foreign",
+        contactUnavailable: false,
+        updatedBy: actorUserId,
+        now: new Date(),
+      });
+      expect(succeeded).toBe(true);
+
+      const detail = await patientRepo.findDetailById(officeId, patientId);
+      expect(detail?.sex).toBe("female");
+      expect(detail?.nationality).toBe("foreign");
+      expect(detail?.version).toBe(2);
+    });
+
+    it("does nothing and returns false when expectedVersion is stale", async () => {
+      const { officeId, actorUserId, patientId } = await seedPatient();
+
+      const succeeded = await patientRepo.updateDemographics({
+        officeId,
+        id: patientId,
+        expectedVersion: 99,
+        dateOfBirth: null,
+        sex: "female",
+        nationality: "foreign",
+        contactUnavailable: false,
+        updatedBy: actorUserId,
+        now: new Date(),
+      });
+      expect(succeeded).toBe(false);
+
+      const detail = await patientRepo.findDetailById(officeId, patientId);
+      expect(detail?.sex).toBe("unspecified");
+      expect(detail?.version).toBe(1);
+    });
+
+    it("returns false for a patient in a different office, even with the correct version", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      const { officeId: otherOfficeId } = await seedOfficeAndActor();
+
+      const succeeded = await patientRepo.updateDemographics({
+        officeId: otherOfficeId,
+        id: patientId,
+        expectedVersion: 1,
+        dateOfBirth: null,
+        sex: "female",
+        nationality: "iranian",
+        contactUnavailable: false,
+        updatedBy: actorUserId,
+        now: new Date(),
+      });
+      expect(succeeded).toBe(false);
+    });
+
+    // The whole point of an atomic `WHERE version = $expected` UPDATE: only
+    // one of two simultaneous edits can ever win, never both silently
+    // applying on top of each other.
+    it("lets only one of two concurrent updates against the same version succeed", async () => {
+      const { officeId, actorUserId, patientId } = await seedPatient();
+
+      const results = await Promise.all([
+        patientRepo.updateDemographics({
+          officeId,
+          id: patientId,
+          expectedVersion: 1,
+          dateOfBirth: null,
+          sex: "male",
+          nationality: "iranian",
+          contactUnavailable: true,
+          updatedBy: actorUserId,
+          now: new Date(),
+        }),
+        patientRepo.updateDemographics({
+          officeId,
+          id: patientId,
+          expectedVersion: 1,
+          dateOfBirth: null,
+          sex: "female",
+          nationality: "iranian",
+          contactUnavailable: true,
+          updatedBy: actorUserId,
+          now: new Date(),
+        }),
+      ]);
+
+      expect(results.filter(Boolean)).toHaveLength(1);
+      const detail = await patientRepo.findDetailById(officeId, patientId);
+      expect(detail?.version).toBe(2);
+    });
+  });
+
+  describe("patient_name.replaceCurrent", () => {
+    it("preserves the prior name as history instead of overwriting it", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      const firstNow = new Date();
+      const original = PatientName.create({
+        id: asUuid(randomUUID()),
+        patientId,
+        nameType: "native",
+        value: "رضا احمدی",
+        createdBy: actorUserId,
+        now: firstNow,
+      });
+      await patientNameRepo.create(original);
+
+      const laterNow = new Date(firstNow.getTime() + 1000);
+      await patientNameRepo.replaceCurrent(
+        PatientName.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          nameType: "native",
+          value: "رضا احمدی‌نژاد",
+          createdBy: actorUserId,
+          now: laterNow,
+        }),
+      );
+
+      const rows: Array<{ original_value: string; is_current: boolean }> = await dataSource!.query(
+        'SELECT "original_value", "is_current" FROM "patient_name" WHERE "patient_id" = $1 ORDER BY "created_at"',
+        [patientId],
+      );
+      expect(rows).toEqual([
+        { original_value: "رضا احمدی", is_current: false },
+        { original_value: "رضا احمدی‌نژاد", is_current: true },
+      ]);
+    });
+  });
+
+  describe("patient_contact.upsert / remove", () => {
+    it("updates the existing row in place rather than appending a second one", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      const now = new Date();
+      await patientContactRepo.create(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          rawMobileNumber: "09123456789",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      await patientContactRepo.upsert(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          rawMobileNumber: "09129999999",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      const rows: Array<{ original_value: string }> = await dataSource!.query(
+        'SELECT "original_value" FROM "patient_contact" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toEqual([{ original_value: "09129999999" }]);
+    });
+
+    it("inserts when no row exists yet for that patient/type", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      await patientContactRepo.upsert(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          rawMobileNumber: "09121234567",
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+
+      const rows: unknown[] = await dataSource!.query(
+        'SELECT 1 FROM "patient_contact" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it("removes the row entirely so a cleared phone can't keep surfacing", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      await patientContactRepo.create(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          rawMobileNumber: "09123456789",
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+
+      await patientContactRepo.remove(patientId, "mobile_phone");
+
+      const rows: unknown[] = await dataSource!.query(
+        'SELECT 1 FROM "patient_contact" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe("patient_identifier.upsert / remove", () => {
+    it("updates the existing row in place rather than appending a second one", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      const now = new Date();
+      await patientIdentifierRepo.create(
+        PatientIdentifier.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          identifierType: "national_code",
+          rawValue: "1234567891",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      await patientIdentifierRepo.upsert(
+        PatientIdentifier.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          identifierType: "passport",
+          rawValue: "AB1234567",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      const rows: Array<{ identifier_type: string; original_value: string }> = await dataSource!.query(
+        'SELECT "identifier_type", "original_value" FROM "patient_identifier" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toEqual([{ identifier_type: "passport", original_value: "AB1234567" }]);
+    });
+
+    it("removes the row entirely when cleared", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      await patientIdentifierRepo.create(
+        PatientIdentifier.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          identifierType: "national_code",
+          rawValue: "1234567891",
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+
+      await patientIdentifierRepo.remove(patientId);
+
+      const rows: unknown[] = await dataSource!.query(
+        'SELECT 1 FROM "patient_identifier" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe("patient_address.upsert / remove", () => {
+    it("updates the existing row in place, bumping its own version", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      const now = new Date();
+      await patientAddressRepo.create(
+        PatientAddress.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          province: "تهران",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      await patientAddressRepo.upsert({
+        address: PatientAddress.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          province: "اصفهان",
+          createdBy: actorUserId,
+          now,
+        }),
+        updatedBy: actorUserId,
+        now: new Date(now.getTime() + 1000),
+      });
+
+      const rows: Array<{ province: string; version: number }> = await dataSource!.query(
+        'SELECT "province", "version" FROM "patient_address" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toEqual([{ province: "اصفهان", version: 2 }]);
+    });
+
+    it("removes the row when every field is cleared back to empty", async () => {
+      const { actorUserId, patientId } = await seedPatient();
+      await patientAddressRepo.create(
+        PatientAddress.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          province: "تهران",
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+
+      await patientAddressRepo.remove(patientId);
+
+      const rows: unknown[] = await dataSource!.query(
+        'SELECT 1 FROM "patient_address" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toHaveLength(0);
     });
   });
 });

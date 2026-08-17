@@ -1,0 +1,30 @@
+.patient-detail__loading {
+  padding: var(--ds-space-4) 0;
+}
+
+.patient-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--ds-space-6) var(--ds-space-4);
+}
+
+// Same label style as DsDetailFieldComponent's own — duplicated rather than
+// shared because view encapsulation scopes that component's stylesheet to
+// itself; this row swaps the value slot for a status chip instead of plain
+// text, so it can't be DsDetailFieldComponent itself.
+.patient-detail__status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  align-items: flex-start;
+}
+
+.patient-detail__status-label {
+  color: var(--ds-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.patient-detail__edit-actions {
+  margin-top: var(--ds-space-4);
+}

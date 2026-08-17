@@ -72,8 +72,8 @@ export interface CreatePatientCommand {
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Parses a canonical ISO date string to a UTC-midnight Date, rejecting anything malformed, calendrically invalid, or in the future — matches PatientMapper's own `date`-column convention. */
-function parseDateOfBirth(value: string): Date | null {
+/** Parses a canonical ISO date string to a UTC-midnight Date, rejecting anything malformed, calendrically invalid, or in the future — matches PatientMapper's own `date`-column convention. Exported for UpdatePatientDemographicsUseCase, which validates the same field the same way. */
+export function parseDateOfBirth(value: string): Date | null {
   const match = ISO_DATE.exec(value);
   if (!match) {
     return null;

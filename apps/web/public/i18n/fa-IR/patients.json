@@ -45,5 +45,27 @@
   "patients.form.error.INVALID_DATE_OF_BIRTH": "تاریخ تولد معتبر نیست.",
   "patients.form.error.INVALID_NATIONAL_CODE": "کد ملی معتبر نیست.",
   "patients.form.error.INVALID_PASSPORT_NUMBER": "شماره پاسپورت معتبر نیست.",
-  "patients.form.error.VALIDATION_FAILED": "اطلاعات واردشده معتبر نیست. لطفاً مقادیر فرم را بررسی کنید."
+  "patients.form.error.VALIDATION_FAILED": "اطلاعات واردشده معتبر نیست. لطفاً مقادیر فرم را بررسی کنید.",
+  "patients.form.error.VERSION_CONFLICT": "این پرونده در همین حین توسط شخص دیگری تغییر کرده است. لطفاً صفحه را دوباره بارگذاری کنید و دوباره تلاش کنید.",
+  "patients.form.error.PATIENT_NOT_FOUND": "این بیمار یافت نشد.",
+
+  "patients.detail.loading": "در حال بارگذاری پرونده بیمار...",
+  "patients.detail.back": "بازگشت به فهرست بیماران",
+  "patients.detail.patientNumber": "شماره پرونده {{patientNumber}}",
+  "patients.detail.section.basic": "اطلاعات پایه",
+  "patients.detail.section.contact": "اطلاعات تماس",
+  "patients.detail.section.address": "آدرس",
+  "patients.detail.field.status": "وضعیت",
+  "patients.detail.field.contactUnavailable": "بدون روش تماس",
+  "patients.detail.status.active": "فعال",
+  "patients.detail.status.inactive": "غیرفعال",
+  "patients.detail.status.deceased": "فوت‌شده",
+  "patients.detail.status.duplicate_candidate": "احتمال تکراری بودن",
+  "patients.detail.status.archived": "بایگانی‌شده",
+  "patients.detail.error.PATIENT_NOT_FOUND": "این بیمار یافت نشد.",
+  "patients.detail.error.MISSING_PERMISSION": "شما مجوز مشاهده این پرونده را ندارید.",
+  "patients.detail.edit.start": "ویرایش",
+  "patients.detail.edit.heading": "ویرایش اطلاعات بیمار",
+  "patients.detail.edit.save": "ذخیره تغییرات",
+  "patients.detail.edit.cancel": "انصراف"
 }

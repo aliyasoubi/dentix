@@ -286,6 +286,157 @@
           "patients"
         ]
       }
+    },
+    "/api/v1/patients/{id}": {
+      "get": {
+        "operationId": "PatientsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDetailResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "MISSING_PERMISSION — the caller's roles do not grant patient.view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND — unknown ID, or the patient belongs to another office.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Get a single patient's full record",
+        "tags": [
+          "patients"
+        ]
+      },
+      "patch": {
+        "operationId": "PatientsController_updateDemographics",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The `version` last read from GET /patients/:id's ETag.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePatientDemographicsRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure, e.g. INVALID_PHONE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "MISSING_PERMISSION — the caller's roles do not grant patient.edit-demographics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "MISSING_IF_MATCH or VERSION_CONFLICT — the caller's copy is missing or stale; re-fetch and retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Correct a patient's demographics (never their status — see the transition endpoints)",
+        "tags": [
+          "patients"
+        ]
+      }
     }
   },
   "info": {
@@ -631,6 +782,211 @@
           "latinName",
           "phone",
           "dateOfBirth"
+        ]
+      },
+      "PatientDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientNumber": {
+            "type": "number",
+            "description": "Office-scoped sequential patient number."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "deceased",
+              "duplicate_candidate",
+              "archived"
+            ]
+          },
+          "nativeName": {
+            "type": "string"
+          },
+          "latinName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "contactUnavailable": {
+            "type": "boolean"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.",
+            "format": "date",
+            "nullable": true
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "unspecified"
+            ]
+          },
+          "nationality": {
+            "type": "string",
+            "enum": [
+              "iranian",
+              "foreign"
+            ]
+          },
+          "identifierNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "National code for an iranian patient, passport number for a foreign one — see nationality."
+          },
+          "province": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "district": {
+            "type": "string",
+            "nullable": true
+          },
+          "addressLine1": {
+            "type": "string",
+            "nullable": true
+          },
+          "addressLine2": {
+            "type": "string",
+            "nullable": true
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryNotes": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic-concurrency version — also echoed as the response's ETag header."
+          }
+        },
+        "required": [
+          "id",
+          "patientNumber",
+          "status",
+          "nativeName",
+          "latinName",
+          "phone",
+          "contactUnavailable",
+          "dateOfBirth",
+          "sex",
+          "nationality",
+          "identifierNumber",
+          "province",
+          "city",
+          "district",
+          "addressLine1",
+          "addressLine2",
+          "postalCode",
+          "deliveryNotes",
+          "version"
+        ]
+      },
+      "UpdatePatientDemographicsRequestDto": {
+        "type": "object",
+        "properties": {
+          "nativeName": {
+            "type": "string",
+            "description": "Patient's name as entered, typically Persian."
+          },
+          "latinName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional Latin-script name, stored and displayed unmirrored in RTL."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Iranian mobile number in any common display form (09…, +98…, Persian digits)."
+          },
+          "contactUnavailable": {
+            "type": "boolean",
+            "description": "True only when the patient explicitly has no contact method."
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "unspecified"
+            ]
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "description": "Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary.",
+            "format": "date",
+            "nullable": true
+          },
+          "nationality": {
+            "type": "string",
+            "enum": [
+              "iranian",
+              "foreign"
+            ],
+            "default": "iranian",
+            "description": "Determines whether identifierNumber is validated as a national code or a passport number."
+          },
+          "identifierNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "National code (کد ملی) for an iranian patient, or a passport number for a foreign one."
+          },
+          "province": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: province."
+          },
+          "city": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: city."
+          },
+          "district": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: district/locality."
+          },
+          "addressLine1": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: street/address line 1."
+          },
+          "addressLine2": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: street/address line 2."
+          },
+          "postalCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: postal code."
+          },
+          "deliveryNotes": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address: free-form delivery notes."
+          }
+        },
+        "required": [
+          "nativeName"
         ]
       }
     }

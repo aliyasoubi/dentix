@@ -144,7 +144,7 @@
 
   <div class="patients-form__actions">
     <app-ds-submit-button
-      [label]="'patients.form.submit' | translate"
+      [label]="submitLabelKey() | translate"
       [submitting]="submitting()"
       [disabled]="form.invalid"
     />

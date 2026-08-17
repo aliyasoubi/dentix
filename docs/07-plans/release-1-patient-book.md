@@ -23,12 +23,12 @@ repair.
 A patient field is not done until it can be **entered, validated, stored, displayed, edited,
 authorized and tested**. Do not add a new field unless the same release delivers all seven.
 
-Two existing fields currently fail this rule and are the first work in the release:
-
-- **National code / passport number** — entered, validated (checksum for a national code, format
-  check for a passport), stored. Still cannot be viewed, edited, or searched by its own value —
-  no patient detail page exists yet.
-- **Address** — entered, stored. Cannot be viewed or edited.
+As of 2026-08-17, national code/passport number and address all satisfy this rule — entered,
+validated, stored, displayed on the new patient detail page, edited via `PATCH /patients/:id`,
+permission-gated (`patient.view` / `patient.edit-demographics`), and tested at every layer.
+Neither is searchable by its own value yet — search still only matches name, phone, and patient
+number — which is a real, separate gap, not a completeness-rule failure (the rule doesn't require
+search).
 
 ## Included
 
@@ -40,14 +40,17 @@ Two existing fields currently fail this rule and are the first work in the relea
   search does not exist yet
 - Debounced, cancellation-safe search — a rapid typist no longer fires a request per keystroke,
   and a slow response for an old query can no longer overwrite results for a newer one (exists)
-- **Patient detail page** (does not exist — the central gap)
-- **Edit demographics** (does not exist)
-- View and edit address, identifier (national code/passport), contacts (does not exist)
+- **Patient detail page** — status, identifier, address, contacts, all now visible (exists, added
+  2026-08-17)
+- **Edit demographics** — `PATCH /patients/:id`, optimistic-concurrency (`If-Match`/`version`),
+  never touches `status` (a future transition endpoint's job) (exists, added 2026-08-17)
+- View and edit address, identifier (national code/passport), contacts (exists, added 2026-08-17)
 - Mobile, national-code, and passport-number validation (exists)
 - Duplicate warning on create (does not exist)
 - Birth date, sex (exist)
 - Important medical alerts (does not exist)
-- Audit trail for important changes (exists for create; not for edit)
+- Audit trail for important changes (exists for both create and edit — edits record which field
+  *names* changed, never the values, per the PHI-safe convention create already used)
 - **Role management** — grant *and change* a user's role, and see who holds what. Only granting
   at onboarding exists; a wrong role currently needs SQL to fix, which fails the standalone test.
 - Essential patient export (does not exist)

@@ -14,7 +14,7 @@ import { DsTextFieldComponent } from "../../../design-system/foundation/field/ds
 import { DsDisclosureComponent } from "../../../design-system/product/disclosure/ds-disclosure.component";
 import { DsSubmitButtonComponent } from "../../../design-system/product/submit-button/ds-submit-button.component";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
-import { CreatePatientRequest } from "../patients-api.service";
+import { CreatePatientRequest, PatientDetail } from "../patients-api.service";
 import {
   contactRequired,
   identifierNumber,
@@ -61,12 +61,14 @@ export class PatientRegistrationFormComponent {
   private readonly dateAdapter = inject<DateAdapter<Date>>(DateAdapter);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Disables submission while the parent's create request is in flight. */
+  /** Disables submission while the parent's create/save request is in flight. */
   readonly submitting = input(false);
-  /** Already-localized failure text from the parent's create attempt. */
+  /** Already-localized failure text from the parent's create/save attempt. */
   readonly errorMessage = input<string | null>(null);
   /** Already-localized confirmation text for the most recent successful create. */
   readonly successMessage = input<string | null>(null);
+  /** Overridable so the patient detail page's edit mode can say "Save" instead of "Register" — same form, a different verb for the action it's taking. */
+  readonly submitLabelKey = input("patients.form.submit");
 
   readonly submitted = output<CreatePatientRequest>();
 
@@ -200,6 +202,34 @@ export class PatientRegistrationFormComponent {
       addressLine2: "",
       postalCode: "",
       deliveryNotes: "",
+    });
+  }
+
+  /**
+   * Patches every control from an existing patient's stored demographics —
+   * the detail page's edit mode uses this instead of starting blank. Same
+   * shape reset() writes, real values instead of empty ones; `deserialize`
+   * is the adapter's own reverse of submit()'s `toIso8601` (both read the
+   * Date's local y/m/d as its Gregorian identity, independent of Jalali
+   * display — see the adapter's own comment).
+   */
+  loadValue(value: PatientDetail): void {
+    this.form.reset({
+      nativeName: value.nativeName,
+      latinName: value.latinName ?? "",
+      phone: value.phone ?? "",
+      dateOfBirth: value.dateOfBirth ? this.dateAdapter.deserialize(value.dateOfBirth) : null,
+      contactUnavailable: value.contactUnavailable,
+      sex: value.sex,
+      nationality: value.nationality,
+      identifierNumber: value.identifierNumber ?? "",
+      province: value.province ?? "",
+      city: value.city ?? "",
+      district: value.district ?? "",
+      addressLine1: value.addressLine1 ?? "",
+      addressLine2: value.addressLine2 ?? "",
+      postalCode: value.postalCode ?? "",
+      deliveryNotes: value.deliveryNotes ?? "",
     });
   }
 }

@@ -18,4 +18,13 @@ export class TypeOrmPatientNameRepository implements PatientNameRepository {
   async create(name: PatientName, tx?: TransactionContext): Promise<void> {
     await repositoryFor(this.repository, tx).insert(PatientNameMapper.toOrm(name));
   }
+
+  async replaceCurrent(name: PatientName, tx?: TransactionContext): Promise<void> {
+    const repo = repositoryFor(this.repository, tx);
+    await repo.update(
+      { patientId: name.patientId, nameType: name.nameType, isCurrent: true },
+      { isCurrent: false },
+    );
+    await repo.insert(PatientNameMapper.toOrm(name));
+  }
 }

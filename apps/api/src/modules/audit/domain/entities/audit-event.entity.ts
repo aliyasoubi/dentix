@@ -13,6 +13,7 @@ export type AuditAction =
   | "session_revoked_account_inactive"
   | "session_revoked_membership_inactive"
   | "patient_created"
+  | "patient_demographics_updated"
   | "office_user_added";
 
 export interface AuditEventProps {

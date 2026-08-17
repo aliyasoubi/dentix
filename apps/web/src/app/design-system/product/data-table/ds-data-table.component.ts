@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, input, output } from "@angular/core";
 import { MatTableModule } from "@angular/material/table";
 import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 
@@ -57,7 +57,15 @@ export interface DsDataTableColumn<T> {
       }
 
       <tr mat-header-row *matHeaderRowDef="columnKeys()"></tr>
-      <tr mat-row *matRowDef="let row; columns: columnKeys()"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: columnKeys()"
+        [class.ds-data-table__row--activatable]="activatable()"
+        [attr.tabindex]="activatable() ? 0 : null"
+        [attr.role]="activatable() ? 'button' : null"
+        (click)="onRowActivate(row)"
+        (keydown.enter)="onRowActivate(row)"
+      ></tr>
     </table>
   `,
   styleUrl: "./ds-data-table.component.scss",
@@ -65,7 +73,17 @@ export interface DsDataTableColumn<T> {
 export class DsDataTableComponent<T> {
   readonly columns = input.required<readonly DsDataTableColumn<T>[]>();
   readonly rows = input.required<readonly T[]>();
+  /** Off by default — most tables this product has today are plain lists; opt in where a row leads somewhere (e.g. the patient detail page). */
+  readonly activatable = input(false);
+
+  readonly rowActivate = output<T>();
 
   /** matHeaderRowDef/matRowDef need a plain string[]; derived so callers only ever declare columns once. */
   protected readonly columnKeys = computed(() => this.columns().map((column) => column.key));
+
+  protected onRowActivate(row: T): void {
+    if (this.activatable()) {
+      this.rowActivate.emit(row);
+    }
+  }
 }

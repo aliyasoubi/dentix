@@ -15,7 +15,12 @@
 }
 
 @if (results().length > 0) {
-  <app-ds-data-table [columns]="columns" [rows]="results()" />
+  <app-ds-data-table
+    [columns]="columns"
+    [rows]="results()"
+    [activatable]="true"
+    (rowActivate)="resultActivate.emit($event)"
+  />
 } @else if (hasSearched() && !searching()) {
   <app-ds-empty-state
     [title]="(query() ? 'patients.list.empty' : 'patients.list.empty.noQuery') | translate"

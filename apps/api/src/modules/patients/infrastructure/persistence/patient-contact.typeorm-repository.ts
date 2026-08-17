@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { TransactionContext } from "@dentix/kernel";
-import { PatientContact } from "../../domain/entities/patient-contact.entity";
+import { TransactionContext, Uuid } from "@dentix/kernel";
+import { PatientContact, PatientContactType } from "../../domain/entities/patient-contact.entity";
 import { PatientContactRepository } from "../../domain/repositories/patient-contact.repository";
 import { PatientContactMapper } from "../mappers/patient-contact.mapper";
 import { PatientContactOrmEntity } from "./patient-contact.orm-entity";
@@ -17,5 +17,24 @@ export class TypeOrmPatientContactRepository implements PatientContactRepository
 
   async create(contact: PatientContact, tx?: TransactionContext): Promise<void> {
     await repositoryFor(this.repository, tx).insert(PatientContactMapper.toOrm(contact));
+  }
+
+  async upsert(contact: PatientContact, tx?: TransactionContext): Promise<void> {
+    const repo = repositoryFor(this.repository, tx);
+    const result = await repo.update(
+      { patientId: contact.patientId, contactType: contact.contactType },
+      {
+        originalValue: contact.originalValue,
+        normalizedValue: contact.normalizedValue,
+        isPreferred: contact.isPreferred,
+      },
+    );
+    if (!result.affected) {
+      await repo.insert(PatientContactMapper.toOrm(contact));
+    }
+  }
+
+  async remove(patientId: Uuid, contactType: PatientContactType, tx?: TransactionContext): Promise<void> {
+    await repositoryFor(this.repository, tx).delete({ patientId, contactType });
   }
 }

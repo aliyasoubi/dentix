@@ -46,6 +46,8 @@ export class PatientSearchComponent {
   readonly errorMessage = input<string | null>(null);
 
   readonly queryChange = output<string>();
+  /** Bubbled up rather than navigated here — this component stays presentational; the page decides where a result leads. */
+  readonly resultActivate = output<PatientSearchResult>();
 
   /**
    * Latin isolation on the number, Latin-name and phone columns is a

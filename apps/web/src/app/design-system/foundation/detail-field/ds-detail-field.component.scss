@@ -1,0 +1,16 @@
+.ds-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.ds-detail-field__label {
+  color: var(--ds-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ds-detail-field__value {
+  color: var(--ds-text-primary);
+  font-size: 14px;
+}

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from "@angular/common
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { By } from "@angular/platform-browser";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
+import { provideRouter, Router } from "@angular/router";
 import { TranslationService } from "../../core/i18n/translation.service";
 import { provideJalaliDateAdapter } from "../../core/jalali/provide-jalali-date-adapter";
 import { PatientRegistrationFormComponent } from "./patient-registration-form/patient-registration-form.component";
@@ -70,6 +71,7 @@ describe("PatientsPage", () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideJalaliDateAdapter(),
+        provideRouter([]),
         { provide: TranslationService, useClass: StubTranslationService },
       ],
     }).compileComponents();
@@ -155,6 +157,15 @@ describe("PatientsPage", () => {
     fixture.detectChanges();
 
     expect(search().results()).toEqual(created);
+  });
+
+  it("navigates to the patient's detail page when a search result is activated", async () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, "navigate").mockResolvedValue(true);
+
+    search().resultActivate.emit(result());
+
+    expect(navigateSpy).toHaveBeenCalledWith(["/patients", result().id]);
   });
 
   describe("search", () => {

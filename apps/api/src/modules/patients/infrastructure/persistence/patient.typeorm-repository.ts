@@ -2,8 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { asUuid, TransactionContext, Uuid } from "@dentix/kernel";
-import { Patient } from "../../domain/entities/patient.entity";
-import { PatientRepository, PatientSearchResult } from "../../domain/repositories/patient.repository";
+import { Patient, PatientNationality, PatientSex, PatientStatus } from "../../domain/entities/patient.entity";
+import {
+  PatientDetail,
+  PatientRepository,
+  PatientSearchResult,
+} from "../../domain/repositories/patient.repository";
 import { PatientMapper } from "../mappers/patient.mapper";
 import { PatientOrmEntity } from "./patient.orm-entity";
 import { managerFor, repositoryFor } from "../../../../platform/typeorm-transaction";
@@ -15,6 +19,28 @@ interface PatientSearchRow {
   readonly latin_name: string | null;
   readonly phone: string | null;
   readonly date_of_birth: string | null;
+}
+
+interface PatientDetailRow {
+  readonly id: string;
+  readonly patient_number: number;
+  readonly status: string;
+  readonly sex: string;
+  readonly nationality: string;
+  readonly contact_unavailable: boolean;
+  readonly date_of_birth: string | null;
+  readonly version: number;
+  readonly native_name: string;
+  readonly latin_name: string | null;
+  readonly phone: string | null;
+  readonly identifier_number: string | null;
+  readonly province: string | null;
+  readonly city: string | null;
+  readonly district: string | null;
+  readonly address_line1: string | null;
+  readonly address_line2: string | null;
+  readonly postal_code: string | null;
+  readonly delivery_notes: string | null;
 }
 
 /**
@@ -122,5 +148,128 @@ export class TypeOrmPatientRepository implements PatientRepository {
       phone: row.phone,
       dateOfBirth: row.date_of_birth,
     }));
+  }
+
+  async findDetailById(officeId: Uuid, id: Uuid): Promise<PatientDetail | null> {
+    // patient_identifier and patient_address have no is_current/history
+    // flag (unlike patient_name) — at most one row per patient exists in
+    // practice today (create-only, and the planned edit path updates
+    // those rows in place rather than appending), so a plain LEFT JOIN
+    // can't multiply the patient row. patient_contact is scoped to
+    // is_preferred = true for the same reason search() uses it.
+    const rows: PatientDetailRow[] = await this.repository.manager.query(
+      `
+      SELECT
+        p."id",
+        p."patient_number",
+        p."status",
+        p."sex",
+        p."nationality",
+        p."contact_unavailable",
+        p."date_of_birth"::text AS date_of_birth,
+        p."version",
+        native."original_value" AS native_name,
+        latin."original_value" AS latin_name,
+        contact."original_value" AS phone,
+        identifier."original_value" AS identifier_number,
+        addr."province",
+        addr."city",
+        addr."district",
+        addr."address_line1",
+        addr."address_line2",
+        addr."postal_code",
+        addr."delivery_notes"
+      FROM "patient" p
+      LEFT JOIN "patient_name" native
+        ON native."patient_id" = p."id" AND native."name_type" = 'native' AND native."is_current" = true
+      LEFT JOIN "patient_name" latin
+        ON latin."patient_id" = p."id" AND latin."name_type" = 'latin' AND latin."is_current" = true
+      LEFT JOIN "patient_contact" contact
+        ON contact."patient_id" = p."id" AND contact."is_preferred" = true
+      LEFT JOIN "patient_identifier" identifier
+        ON identifier."patient_id" = p."id"
+      LEFT JOIN "patient_address" addr
+        ON addr."patient_id" = p."id"
+      WHERE p."office_id" = $1 AND p."id" = $2
+      `,
+      [officeId, id],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return {
+      id: asUuid(row.id),
+      patientNumber: row.patient_number,
+      status: row.status as PatientStatus,
+      nativeName: row.native_name,
+      latinName: row.latin_name,
+      phone: row.phone,
+      contactUnavailable: row.contact_unavailable,
+      dateOfBirth: row.date_of_birth,
+      sex: row.sex as PatientSex,
+      nationality: row.nationality as PatientNationality,
+      identifierNumber: row.identifier_number,
+      province: row.province,
+      city: row.city,
+      district: row.district,
+      addressLine1: row.address_line1,
+      addressLine2: row.address_line2,
+      postalCode: row.postal_code,
+      deliveryNotes: row.delivery_notes,
+      version: row.version,
+    };
+  }
+
+  async updateDemographics(
+    params: {
+      readonly officeId: Uuid;
+      readonly id: Uuid;
+      readonly expectedVersion: number;
+      readonly dateOfBirth: Date | null;
+      readonly sex: PatientSex;
+      readonly nationality: PatientNationality;
+      readonly contactUnavailable: boolean;
+      readonly updatedBy: Uuid;
+      readonly now: Date;
+    },
+    tx?: TransactionContext,
+  ): Promise<boolean> {
+    const manager = managerFor(this.repository.manager, tx);
+    // TypeORM's Postgres driver returns UPDATE/DELETE results as a
+    // [rows, rowCount] TUPLE from a raw manager.query() call — unlike a
+    // plain SELECT (search(), above) or an INSERT...RETURNING
+    // (nextPatientNumber, above), which both return the rows array
+    // directly. Destructuring `rows` out of that tuple (rather than
+    // treating the whole return value as the rows array) is the whole
+    // point: `[[], 0].length` is 2 and would always be truthy, silently
+    // reporting every version conflict as a success.
+    const [rows]: [Array<{ version: number }>, number] = await manager.query(
+      `
+      UPDATE "patient"
+      SET "date_of_birth" = $1,
+          "sex" = $2,
+          "nationality" = $3,
+          "contact_unavailable" = $4,
+          "updated_at" = $5,
+          "updated_by" = $6,
+          "version" = "version" + 1
+      WHERE "id" = $7 AND "office_id" = $8 AND "version" = $9
+      RETURNING "version"
+      `,
+      [
+        params.dateOfBirth ? params.dateOfBirth.toISOString().slice(0, 10) : null,
+        params.sex,
+        params.nationality,
+        params.contactUnavailable,
+        params.now,
+        params.updatedBy,
+        params.id,
+        params.officeId,
+        params.expectedVersion,
+      ],
+    );
+    return rows.length > 0;
   }
 }

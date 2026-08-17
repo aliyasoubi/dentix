@@ -143,6 +143,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/patients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single patient's full record */
+        get: operations["PatientsController_getById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Correct a patient's demographics (never their status — see the transition endpoints) */
+        patch: operations["PatientsController_updateDemographics"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -272,6 +290,77 @@ export interface components {
              * @description Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.
              */
             dateOfBirth: string | null;
+        };
+        PatientDetailResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Office-scoped sequential patient number. */
+            patientNumber: number;
+            /** @enum {string} */
+            status: "active" | "inactive" | "deceased" | "duplicate_candidate" | "archived";
+            nativeName: string;
+            latinName: string | null;
+            phone: string | null;
+            contactUnavailable: boolean;
+            /**
+             * Format: date
+             * @description Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.
+             */
+            dateOfBirth: string | null;
+            /** @enum {string} */
+            sex: "male" | "female" | "unspecified";
+            /** @enum {string} */
+            nationality: "iranian" | "foreign";
+            /** @description National code for an iranian patient, passport number for a foreign one — see nationality. */
+            identifierNumber: string | null;
+            province: string | null;
+            city: string | null;
+            district: string | null;
+            addressLine1: string | null;
+            addressLine2: string | null;
+            postalCode: string | null;
+            deliveryNotes: string | null;
+            /** @description Optimistic-concurrency version — also echoed as the response's ETag header. */
+            version: number;
+        };
+        UpdatePatientDemographicsRequestDto: {
+            /** @description Patient's name as entered, typically Persian. */
+            nativeName: string;
+            /** @description Optional Latin-script name, stored and displayed unmirrored in RTL. */
+            latinName?: string | null;
+            /** @description Iranian mobile number in any common display form (09…, +98…, Persian digits). */
+            phone?: string | null;
+            /** @description True only when the patient explicitly has no contact method. */
+            contactUnavailable?: boolean;
+            /** @enum {string} */
+            sex?: "male" | "female" | "unspecified";
+            /**
+             * Format: date
+             * @description Canonical Gregorian ISO date (YYYY-MM-DD) — converted from the Jalali picker at the UI boundary.
+             */
+            dateOfBirth?: string | null;
+            /**
+             * @description Determines whether identifierNumber is validated as a national code or a passport number.
+             * @default iranian
+             * @enum {string}
+             */
+            nationality: "iranian" | "foreign";
+            /** @description National code (کد ملی) for an iranian patient, or a passport number for a foreign one. */
+            identifierNumber?: string | null;
+            /** @description Address: province. */
+            province?: string | null;
+            /** @description Address: city. */
+            city?: string | null;
+            /** @description Address: district/locality. */
+            district?: string | null;
+            /** @description Address: street/address line 1. */
+            addressLine1?: string | null;
+            /** @description Address: street/address line 2. */
+            addressLine2?: string | null;
+            /** @description Address: postal code. */
+            postalCode?: string | null;
+            /** @description Address: free-form delivery notes. */
+            deliveryNotes?: string | null;
         };
     };
     responses: never;
@@ -498,6 +587,109 @@ export interface operations {
             };
             /** @description MISSING_PERMISSION — the caller's roles do not grant patient.view. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    PatientsController_getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDetailResponseDto"];
+                };
+            };
+            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.view. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description PATIENT_NOT_FOUND — unknown ID, or the patient belongs to another office. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    PatientsController_updateDemographics: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The `version` last read from GET /patients/:id's ETag. */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePatientDemographicsRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatientDetailResponseDto"];
+                };
+            };
+            /** @description Validation failure, e.g. INVALID_PHONE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description MISSING_PERMISSION — the caller's roles do not grant patient.edit-demographics. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description PATIENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description MISSING_IF_MATCH or VERSION_CONFLICT — the caller's copy is missing or stale; re-fetch and retry. */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };

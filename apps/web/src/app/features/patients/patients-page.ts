@@ -1,5 +1,6 @@
 import { Component, DestroyRef, inject, signal, viewChild } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { Router } from "@angular/router";
 import {
   Subject,
   catchError,
@@ -70,6 +71,7 @@ export class PatientsPage {
   private readonly translation = inject(TranslationService);
   private readonly errorMessages = inject(ApiErrorMessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   /** Needed to clear the form after a *successful* create — see the component's own reset() note. */
   private readonly registrationForm = viewChild.required(PatientRegistrationFormComponent);
@@ -167,6 +169,10 @@ export class PatientsPage {
   protected onQueryChange(value: string): void {
     this.searchQuery.set(value);
     this.typedQuery$.next(value);
+  }
+
+  protected onResultActivate(result: PatientSearchResult): void {
+    void this.router.navigate(["/patients", result.id]);
   }
 
   private describe(error: unknown): string {

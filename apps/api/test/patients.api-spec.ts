@@ -27,6 +27,7 @@ import { PatientAddressOrmEntity } from "../src/modules/patients/infrastructure/
 import { RoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/role.orm-entity";
 import { UserRoleOrmEntity } from "../src/modules/identity-access/infrastructure/persistence/user-role.orm-entity";
 import { SeedDefaultRolesUseCase } from "../src/modules/identity-access/public-api";
+import { AuditEventOrmEntity } from "../src/modules/audit/infrastructure/persistence/audit-event.orm-entity";
 
 interface ErrorResponseBody {
   readonly code?: string;
@@ -47,6 +48,28 @@ interface PatientSearchResultBody {
   readonly dateOfBirth: string | null;
 }
 
+interface PatientDetailResponseBody {
+  readonly id: string;
+  readonly patientNumber: number;
+  readonly status: string;
+  readonly nativeName: string;
+  readonly latinName: string | null;
+  readonly phone: string | null;
+  readonly contactUnavailable: boolean;
+  readonly dateOfBirth: string | null;
+  readonly sex: string;
+  readonly nationality: string;
+  readonly identifierNumber: string | null;
+  readonly province: string | null;
+  readonly city: string | null;
+  readonly district: string | null;
+  readonly addressLine1: string | null;
+  readonly addressLine2: string | null;
+  readonly postalCode: string | null;
+  readonly deliveryNotes: string | null;
+  readonly version: number;
+}
+
 // API-contract layer for S4 (02-slices-release-0.5.md). Same approach as
 // auth.api-spec.ts: seed state directly against the real repositories,
 // then assert on the HTTP mechanics (auth, CSRF, validation, response
@@ -62,6 +85,7 @@ describe("Patients (API contract)", () => {
   let patientAddressOrmRepo: Repository<PatientAddressOrmEntity>;
   let roleOrmRepo: Repository<RoleOrmEntity>;
   let userRoleOrmRepo: Repository<UserRoleOrmEntity>;
+  let auditEventOrmRepo: Repository<AuditEventOrmEntity>;
   let seedDefaultRoles: SeedDefaultRolesUseCase;
 
   beforeAll(async () => {
@@ -82,6 +106,7 @@ describe("Patients (API contract)", () => {
     patientAddressOrmRepo = moduleFixture.get(getRepositoryToken(PatientAddressOrmEntity));
     roleOrmRepo = moduleFixture.get(getRepositoryToken(RoleOrmEntity));
     userRoleOrmRepo = moduleFixture.get(getRepositoryToken(UserRoleOrmEntity));
+    auditEventOrmRepo = moduleFixture.get(getRepositoryToken(AuditEventOrmEntity));
     seedDefaultRoles = moduleFixture.get(SeedDefaultRolesUseCase);
   });
 
@@ -181,6 +206,30 @@ describe("Patients (API contract)", () => {
       )
       .set("X-CSRF-Token", credentials.csrfToken)
       .send(body);
+  }
+
+  async function createPatient(
+    credentials: { sessionToken: string; csrfToken: string },
+    body: Record<string, unknown>,
+  ): Promise<CreatePatientResponseBody> {
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/patients")
+      .set(
+        "Cookie",
+        `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+      )
+      .set("X-CSRF-Token", credentials.csrfToken)
+      .send(body);
+    return response.body as CreatePatientResponseBody;
+  }
+
+  function getById(credentials: { sessionToken: string; csrfToken: string }, id: string): request.Test {
+    return request(app.getHttpServer())
+      .get(`/api/v1/patients/${id}`)
+      .set(
+        "Cookie",
+        `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+      );
   }
 
   describe("POST /patients", () => {
@@ -791,6 +840,279 @@ describe("Patients (API contract)", () => {
         expect(response.status).toBe(400);
         expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
       });
+    });
+  });
+
+  describe("GET /patients/:id", () => {
+    it("returns 401 with no session cookie", async () => {
+      const response = await request(app.getHttpServer()).get(`/api/v1/patients/${randomUUID()}`);
+      expect(response.status).toBe(401);
+    });
+
+    it("returns the full record, with an ETag echoing the version, for a patient in the caller's office", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, {
+        nativeName: "زهرا کریمی",
+        latinName: "Zahra Karimi",
+        phone: "09123456789",
+        nationality: "iranian",
+        identifierNumber: "1234567891",
+        province: "تهران",
+      });
+
+      const response = await getById(credentials, created.id);
+      expect(response.status).toBe(200);
+      expect(response.headers.etag).toBe("1");
+      const body = response.body as PatientDetailResponseBody;
+      expect(body).toEqual({
+        id: created.id,
+        patientNumber: created.patientNumber,
+        status: "active",
+        nativeName: "زهرا کریمی",
+        latinName: "Zahra Karimi",
+        phone: "09123456789",
+        contactUnavailable: false,
+        dateOfBirth: null,
+        sex: "unspecified",
+        nationality: "iranian",
+        identifierNumber: "1234567891",
+        province: "تهران",
+        city: null,
+        district: null,
+        addressLine1: null,
+        addressLine2: null,
+        postalCode: null,
+        deliveryNotes: null,
+        version: 1,
+      });
+    });
+
+    it("returns 404 PATIENT_NOT_FOUND for an unknown ID", async () => {
+      const credentials = await seedActiveSession();
+      const response = await getById(credentials, randomUUID());
+      expect(response.status).toBe(404);
+      expect((response.body as ErrorResponseBody).code).toBe("PATIENT_NOT_FOUND");
+    });
+
+    // Object-level authorization, not just endpoint-level: a valid patient
+    // ID that simply belongs to someone else's office must not be
+    // distinguishable from an ID that doesn't exist at all.
+    it("returns 404 PATIENT_NOT_FOUND for a patient that belongs to another office", async () => {
+      const ownerCredentials = await seedActiveSession();
+      const created = await createPatient(ownerCredentials, {
+        nativeName: "رضا احمدی",
+        contactUnavailable: true,
+      });
+
+      const otherCredentials = await seedActiveSession();
+      const response = await getById(otherCredentials, created.id);
+      expect(response.status).toBe(404);
+      expect((response.body as ErrorResponseBody).code).toBe("PATIENT_NOT_FOUND");
+    });
+
+    // system_administrator deliberately carries no patient permissions at
+    // all by default (identity-access rule 6) — a clean 403 subject.
+    it("returns 403 MISSING_PERMISSION for a system_administrator", async () => {
+      const ownerCredentials = await seedActiveSession();
+      const created = await createPatient(ownerCredentials, {
+        nativeName: "رضا احمدی",
+        contactUnavailable: true,
+      });
+
+      const adminCredentials = await seedActiveSession("system_administrator");
+      const response = await getById(adminCredentials, created.id);
+      expect(response.status).toBe(403);
+      expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
+    });
+
+    it("returns 400 for a malformed ID rather than reaching the database", async () => {
+      const credentials = await seedActiveSession();
+      const response = await getById(credentials, "not-a-uuid");
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe("PATCH /patients/:id", () => {
+    function patchDemographics(
+      credentials: { sessionToken: string; csrfToken: string },
+      id: string,
+      body: Record<string, unknown>,
+      ifMatch?: string,
+    ): request.Test {
+      const req = request(app.getHttpServer())
+        .patch(`/api/v1/patients/${id}`)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken);
+      if (ifMatch !== undefined) {
+        req.set("If-Match", ifMatch);
+      }
+      return req.send(body);
+    }
+
+    it("returns 401 with no session cookie", async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/patients/${randomUUID()}`)
+        .send({ nativeName: "رضا احمدی" });
+      expect(response.status).toBe(401);
+    });
+
+    it("corrects demographics, returns the fresh record with a bumped ETag, and writes a PHI-safe audit event", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, {
+        nativeName: "زهرا کریمی",
+        phone: "09123456789",
+        province: "تهران",
+      });
+
+      const response = await patchDemographics(
+        credentials,
+        created.id,
+        {
+          nativeName: "زهرا کریمی‌نژاد",
+          phone: "09129999999",
+          province: "اصفهان",
+          city: "اصفهان",
+        },
+        "1",
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.etag).toBe("2");
+      const body = response.body as PatientDetailResponseBody;
+      expect(body.nativeName).toBe("زهرا کریمی‌نژاد");
+      expect(body.phone).toBe("09129999999");
+      expect(body.province).toBe("اصفهان");
+      expect(body.city).toBe("اصفهان");
+      expect(body.version).toBe(2);
+
+      const auditRows = await auditEventOrmRepo.find({ where: { entityId: created.id } });
+      const updateEvent = auditRows.find((row) => row.action === "patient_demographics_updated");
+      expect(updateEvent).toBeDefined();
+      expect(updateEvent?.detail).toContain("nativeName");
+      expect(updateEvent?.detail).toContain("phone");
+      expect(updateEvent?.detail).toContain("address");
+      // PHI-safe: field names only, never the actual new/old values.
+      expect(updateEvent?.detail).not.toContain("زهرا کریمی‌نژاد");
+      expect(updateEvent?.detail).not.toContain("09129999999");
+    });
+
+    it("preserves the prior native name as history rather than overwriting it", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, { nativeName: "رضا احمدی", contactUnavailable: true });
+
+      await patchDemographics(
+        credentials,
+        created.id,
+        { nativeName: "رضا احمدی‌نژاد", contactUnavailable: true },
+        "1",
+      );
+
+      const rows: Array<{ original_value: string; is_current: boolean }> =
+        await auditEventOrmRepo.manager.query(
+          'SELECT "original_value", "is_current" FROM "patient_name" WHERE "patient_id" = $1 AND "name_type" = \'native\' ORDER BY "created_at"',
+          [created.id],
+        );
+      expect(rows).toEqual([
+        { original_value: "رضا احمدی", is_current: false },
+        { original_value: "رضا احمدی‌نژاد", is_current: true },
+      ]);
+    });
+
+    it("returns 412 MISSING_IF_MATCH when the header is absent", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, { nativeName: "رضا احمدی", contactUnavailable: true });
+
+      const response = await patchDemographics(credentials, created.id, {
+        nativeName: "رضا احمدی‌نژاد",
+        contactUnavailable: true,
+      });
+      expect(response.status).toBe(412);
+      expect((response.body as ErrorResponseBody).code).toBe("MISSING_IF_MATCH");
+    });
+
+    it("returns 412 VERSION_CONFLICT for a stale If-Match, and leaves the record unchanged", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, { nativeName: "رضا احمدی", contactUnavailable: true });
+
+      const response = await patchDemographics(
+        credentials,
+        created.id,
+        { nativeName: "رضا احمدی‌نژاد", contactUnavailable: true },
+        "99",
+      );
+      expect(response.status).toBe(412);
+      expect((response.body as ErrorResponseBody).code).toBe("VERSION_CONFLICT");
+
+      const stillOriginal = await getById(credentials, created.id);
+      expect((stillOriginal.body as PatientDetailResponseBody).nativeName).toBe("رضا احمدی");
+    });
+
+    it("returns 404 PATIENT_NOT_FOUND for an unknown ID", async () => {
+      const credentials = await seedActiveSession();
+      const response = await patchDemographics(
+        credentials,
+        randomUUID(),
+        { nativeName: "رضا احمدی", contactUnavailable: true },
+        "1",
+      );
+      expect(response.status).toBe(404);
+      expect((response.body as ErrorResponseBody).code).toBe("PATIENT_NOT_FOUND");
+    });
+
+    it("returns 404 PATIENT_NOT_FOUND for a patient in another office", async () => {
+      const ownerCredentials = await seedActiveSession();
+      const created = await createPatient(ownerCredentials, {
+        nativeName: "رضا احمدی",
+        contactUnavailable: true,
+      });
+
+      const otherCredentials = await seedActiveSession();
+      const response = await patchDemographics(
+        otherCredentials,
+        created.id,
+        { nativeName: "دستکاری", contactUnavailable: true },
+        "1",
+      );
+      expect(response.status).toBe(404);
+      expect((response.body as ErrorResponseBody).code).toBe("PATIENT_NOT_FOUND");
+    });
+
+    // cashier carries patient.view but deliberately not patient.edit-demographics
+    // (01-product/04-roles-and-permissions.md) — proves the guard checks the
+    // specific code, the same distinction POST /patients's own test makes.
+    it("returns 403 MISSING_PERMISSION for a cashier", async () => {
+      const ownerCredentials = await seedActiveSession();
+      const created = await createPatient(ownerCredentials, {
+        nativeName: "رضا احمدی",
+        contactUnavailable: true,
+      });
+
+      const cashierCredentials = await seedActiveSession("cashier");
+      const response = await patchDemographics(
+        cashierCredentials,
+        created.id,
+        { nativeName: "دستکاری", contactUnavailable: true },
+        "1",
+      );
+      expect(response.status).toBe(403);
+      expect((response.body as ErrorResponseBody).code).toBe("MISSING_PERMISSION");
+    });
+
+    it("returns 400 INVALID_PHONE for an unrecognizable phone number", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, { nativeName: "رضا احمدی", contactUnavailable: true });
+
+      const response = await patchDemographics(
+        credentials,
+        created.id,
+        { nativeName: "رضا احمدی", phone: "02112345678" },
+        "1",
+      );
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_PHONE");
     });
   });
 });

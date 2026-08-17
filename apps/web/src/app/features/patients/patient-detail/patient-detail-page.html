@@ -1,0 +1,112 @@
+@if (loading()) {
+<p class="patient-detail__loading ds-text-supporting">{{ "patients.detail.loading" | translate }}</p>
+} @else if (loadError(); as message) {
+<app-ds-alert variant="danger">{{ message }}</app-ds-alert>
+<app-ds-button tier="tertiary" [routerLink]="'/patients'"
+  >{{ "patients.detail.back" | translate }}</app-ds-button
+>
+} @else if (detail(); as patient) {
+<app-ds-page-header
+  [title]="patient.nativeName"
+  [description]="patientNumberDescription(patient.patientNumber)"
+>
+  @if (!editing()) {
+  <app-ds-button tier="secondary" (pressed)="startEdit()"
+    >{{ "patients.detail.edit.start" | translate }}</app-ds-button
+  >
+  }
+  <app-ds-button tier="tertiary" [routerLink]="'/patients'"
+    >{{ "patients.detail.back" | translate }}</app-ds-button
+  >
+</app-ds-page-header>
+
+@if (editing()) {
+<app-ds-section [heading]="'patients.detail.edit.heading' | translate">
+  <app-patient-registration-form
+    submitLabelKey="patients.detail.edit.save"
+    [submitting]="saving()"
+    [errorMessage]="saveError()"
+    (submitted)="save($event)"
+  />
+  <div class="patient-detail__edit-actions">
+    <app-ds-button tier="tertiary" [disabled]="saving()" (pressed)="cancelEdit()"
+      >{{ "patients.detail.edit.cancel" | translate }}</app-ds-button
+    >
+  </div>
+</app-ds-section>
+} @else {
+<app-ds-section [heading]="'patients.detail.section.basic' | translate">
+  <div class="patient-detail__grid">
+    <div class="patient-detail__status">
+      <span class="patient-detail__status-label">{{ "patients.detail.field.status" | translate }}</span>
+      <app-ds-status-chip
+        [label]="('patients.detail.status.' + patient.status) | translate"
+        [tone]="statusTone(patient.status)"
+      />
+    </div>
+    <app-ds-detail-field
+      [label]="'patients.form.sex.label' | translate"
+      [value]="('patients.form.sex.' + patient.sex) | translate"
+    />
+    <app-ds-detail-field
+      [label]="'patients.list.column.dateOfBirth' | translate"
+      [value]="formatDateOfBirth(patient.dateOfBirth)"
+    />
+    <app-ds-detail-field
+      [label]="'patients.form.nationality.label' | translate"
+      [value]="('patients.form.nationality.' + patient.nationality) | translate"
+    />
+    <app-ds-detail-field
+      [label]="identifierLabel()"
+      [value]="patient.identifierNumber"
+      [isolateLatin]="true"
+    />
+  </div>
+</app-ds-section>
+
+<app-ds-section [heading]="'patients.detail.section.contact' | translate">
+  <div class="patient-detail__grid">
+    <app-ds-detail-field
+      [label]="'patients.list.column.latinName' | translate"
+      [value]="patient.latinName"
+      [isolateLatin]="true"
+    />
+    <app-ds-detail-field
+      [label]="'patients.list.column.phone' | translate"
+      [value]="patient.contactUnavailable ? ('patients.detail.field.contactUnavailable' | translate) : patient.phone"
+      [isolateLatin]="true"
+    />
+  </div>
+</app-ds-section>
+
+<app-ds-section [heading]="'patients.detail.section.address' | translate">
+  <div class="patient-detail__grid">
+    <app-ds-detail-field
+      [label]="'patients.form.address.province.label' | translate"
+      [value]="patient.province"
+    />
+    <app-ds-detail-field [label]="'patients.form.address.city.label' | translate" [value]="patient.city" />
+    <app-ds-detail-field
+      [label]="'patients.form.address.district.label' | translate"
+      [value]="patient.district"
+    />
+    <app-ds-detail-field
+      [label]="'patients.form.address.addressLine1.label' | translate"
+      [value]="patient.addressLine1"
+    />
+    <app-ds-detail-field
+      [label]="'patients.form.address.addressLine2.label' | translate"
+      [value]="patient.addressLine2"
+    />
+    <app-ds-detail-field
+      [label]="'patients.form.address.postalCode.label' | translate"
+      [value]="patient.postalCode"
+      [isolateLatin]="true"
+    />
+    <app-ds-detail-field
+      [label]="'patients.form.address.deliveryNotes.label' | translate"
+      [value]="patient.deliveryNotes"
+    />
+  </div>
+</app-ds-section>
+} }

@@ -231,4 +231,135 @@ describe("PatientRegistrationFormComponent", () => {
       expect(component["isForeignNationality"]()).toBe(true);
     });
   });
+
+  describe("loadValue", () => {
+    // The patient detail page's edit mode reuses this form instead of a
+    // second one — loadValue is its equivalent of reset(), real values
+    // instead of blanks.
+    it("patches every control from an existing patient's stored demographics", () => {
+      component.loadValue({
+        id: "11111111-1111-1111-1111-111111111111",
+        patientNumber: 7,
+        status: "active",
+        nativeName: "زهرا کریمی",
+        latinName: "Zahra Karimi",
+        phone: "09123456789",
+        contactUnavailable: false,
+        dateOfBirth: "2024-03-20",
+        sex: "female",
+        nationality: "foreign",
+        identifierNumber: "AB1234567",
+        province: "تهران",
+        city: "تهران",
+        district: null,
+        addressLine1: "خیابان ولیعصر",
+        addressLine2: null,
+        postalCode: "1234567890",
+        deliveryNotes: null,
+        version: 3,
+      });
+
+      const value = form().getRawValue();
+      expect(value.nativeName).toBe("زهرا کریمی");
+      expect(value.latinName).toBe("Zahra Karimi");
+      expect(value.phone).toBe("09123456789");
+      expect(value.sex).toBe("female");
+      expect(value.nationality).toBe("foreign");
+      expect(value.identifierNumber).toBe("AB1234567");
+      expect(value.province).toBe("تهران");
+      expect(value.addressLine1).toBe("خیابان ولیعصر");
+      // The same adapter round trip submit() itself uses in reverse
+      // (toIso8601) — the Nowruz-boundary fixture other specs use.
+      expect(
+        value.dateOfBirth && TestBed.inject<DateAdapter<Date>>(DateAdapter).toIso8601(value.dateOfBirth),
+      ).toBe("2024-03-20");
+    });
+
+    it("maps null optional fields to empty strings, not null, matching every text control's own type", () => {
+      component.loadValue({
+        id: "11111111-1111-1111-1111-111111111111",
+        patientNumber: 1,
+        status: "active",
+        nativeName: "رضا احمدی",
+        latinName: null,
+        phone: null,
+        contactUnavailable: true,
+        dateOfBirth: null,
+        sex: "unspecified",
+        nationality: "iranian",
+        identifierNumber: null,
+        province: null,
+        city: null,
+        district: null,
+        addressLine1: null,
+        addressLine2: null,
+        postalCode: null,
+        deliveryNotes: null,
+        version: 1,
+      });
+
+      const value = form().getRawValue();
+      expect(value.latinName).toBe("");
+      expect(value.phone).toBe("");
+      expect(value.identifierNumber).toBe("");
+      expect(value.province).toBe("");
+      expect(value.dateOfBirth).toBeNull();
+    });
+
+    it("makes the loaded value submittable, round-tripping back through submit()", () => {
+      component.loadValue({
+        id: "11111111-1111-1111-1111-111111111111",
+        patientNumber: 1,
+        status: "active",
+        nativeName: "رضا احمدی",
+        latinName: null,
+        phone: "09123456789",
+        contactUnavailable: false,
+        dateOfBirth: null,
+        sex: "unspecified",
+        nationality: "iranian",
+        identifierNumber: null,
+        province: null,
+        city: null,
+        district: null,
+        addressLine1: null,
+        addressLine2: null,
+        postalCode: null,
+        deliveryNotes: null,
+        version: 1,
+      });
+
+      submit();
+      expect(emitted).toEqual([
+        {
+          nativeName: "رضا احمدی",
+          latinName: null,
+          phone: "09123456789",
+          contactUnavailable: false,
+          sex: "unspecified",
+          dateOfBirth: null,
+          nationality: "iranian",
+          identifierNumber: null,
+          province: null,
+          city: null,
+          district: null,
+          addressLine1: null,
+          addressLine2: null,
+          postalCode: null,
+          deliveryNotes: null,
+        },
+      ]);
+    });
+  });
+
+  describe("submitLabelKey", () => {
+    it("defaults to the registration label", () => {
+      expect(component.submitLabelKey()).toBe("patients.form.submit");
+    });
+
+    it("is overridable, e.g. for the detail page's edit mode", () => {
+      fixture.componentRef.setInput("submitLabelKey", "patients.detail.edit.save");
+      expect(component.submitLabelKey()).toBe("patients.detail.edit.save");
+    });
+  });
 });

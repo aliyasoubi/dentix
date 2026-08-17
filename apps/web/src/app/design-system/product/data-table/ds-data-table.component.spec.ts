@@ -34,11 +34,18 @@ const ROWS: Row[] = [
 
 @Component({
   imports: [DsDataTableComponent],
-  template: `<app-ds-data-table [columns]="columns" [rows]="rows()" />`,
+  template: `<app-ds-data-table
+    [columns]="columns"
+    [rows]="rows()"
+    [activatable]="activatable()"
+    (rowActivate)="activated.push($event)"
+  />`,
 })
 class HostComponent {
   readonly columns = COLUMNS;
   readonly rows = signal<readonly Row[]>(ROWS);
+  readonly activatable = signal(false);
+  readonly activated: Row[] = [];
 }
 
 describe("DsDataTableComponent", () => {
@@ -99,5 +106,37 @@ describe("DsDataTableComponent", () => {
 
     expect(text("th")).toHaveLength(3);
     expect((fixture.nativeElement as HTMLElement).querySelectorAll("tbody tr")).toHaveLength(0);
+  });
+
+  describe("row activation", () => {
+    function firstRow(): HTMLElement {
+      return (fixture.nativeElement as HTMLElement).querySelector("tbody tr") as HTMLElement;
+    }
+
+    it("does not emit on click when activatable is false (the default)", () => {
+      firstRow().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(fixture.componentInstance.activated).toEqual([]);
+    });
+
+    it("emits the row's own data on click once activatable", async () => {
+      fixture.componentInstance.activatable.set(true);
+      await fixture.whenStable();
+
+      firstRow().click();
+      expect(fixture.componentInstance.activated).toEqual([ROWS[0]]);
+    });
+
+    it("marks activatable rows as a keyboard-focusable button for screen readers", async () => {
+      fixture.componentInstance.activatable.set(true);
+      await fixture.whenStable();
+
+      expect(firstRow().getAttribute("role")).toBe("button");
+      expect(firstRow().getAttribute("tabindex")).toBe("0");
+    });
+
+    it("leaves non-activatable rows out of the tab order", () => {
+      expect(firstRow().getAttribute("role")).toBeNull();
+      expect(firstRow().getAttribute("tabindex")).toBeNull();
+    });
   });
 });

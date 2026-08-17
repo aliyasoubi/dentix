@@ -12,6 +12,8 @@ import { components } from "../../core/http/api-types.gen";
 export type CreatePatientRequest = components["schemas"]["CreatePatientRequestDto"];
 export type CreatePatientResponse = components["schemas"]["CreatePatientResponseDto"];
 export type PatientSearchResult = components["schemas"]["PatientSearchResultDto"];
+export type PatientDetail = components["schemas"]["PatientDetailResponseDto"];
+export type UpdatePatientDemographicsRequest = components["schemas"]["UpdatePatientDemographicsRequestDto"];
 
 /** Thin wrapper over PatientsController (apps/api) — no business logic here, that's the backend's job. */
 @Injectable({ providedIn: "root" })
@@ -33,5 +35,28 @@ export class PatientsApiService {
   // underlying HttpClient call, not just discard an already-settled Promise.
   search(query: string): Observable<PatientSearchResult[]> {
     return this.http.post<PatientSearchResult[]>("/api/v1/patients/search", query ? { query } : {});
+  }
+
+  /** `version` on the response body doubles as the future edit's `If-Match` — no need to read the ETag header separately. */
+  getById(id: string): Promise<PatientDetail> {
+    return firstValueFrom(this.http.get<PatientDetail>(`/api/v1/patients/${id}`));
+  }
+
+  /**
+   * `expectedVersion` is the `version` last read from getById()'s response —
+   * sent as `If-Match` per 05-api-guidelines.md's optimistic-concurrency
+   * contract, not in the body. A 412 means someone else changed the record
+   * first; the caller is expected to re-fetch and let the user retry.
+   */
+  updateDemographics(
+    id: string,
+    request: UpdatePatientDemographicsRequest,
+    expectedVersion: number,
+  ): Promise<PatientDetail> {
+    return firstValueFrom(
+      this.http.patch<PatientDetail>(`/api/v1/patients/${id}`, request, {
+        headers: { "If-Match": String(expectedVersion) },
+      }),
+    );
   }
 }
