@@ -102,7 +102,7 @@ Presented plans and completed procedures snapshot the catalog code/name/fee need
 
 | Table | Key fields and constraints |
 |---|---|
-| `patient` | office patient number, canonical status, birth date, clinical sex/policy field, preferred communication language; unique `(office_id, patient_number)` |
+| `patient` | office patient number, canonical status, birth date, clinical sex/policy field, nationality, occupation, referral source, preferred communication language; unique `(office_id, patient_number)` |
 | `patient_name` | patient, name type, script, original value, normalized value, current flag |
 | `patient_identifier` | patient, identifier type, original/normalized value; uniqueness is policy-controlled |
 | `patient_contact` | patient, contact type, original/normalized value, preferred and unavailable flags |

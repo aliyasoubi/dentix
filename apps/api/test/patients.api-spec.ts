@@ -56,6 +56,7 @@ interface PatientDetailResponseBody {
   readonly latinName: string | null;
   readonly phone: string | null;
   readonly contactUnavailable: boolean;
+  readonly email: string | null;
   readonly dateOfBirth: string | null;
   readonly sex: string;
   readonly nationality: string;
@@ -67,6 +68,9 @@ interface PatientDetailResponseBody {
   readonly addressLine2: string | null;
   readonly postalCode: string | null;
   readonly deliveryNotes: string | null;
+  readonly occupation: string | null;
+  readonly referralSource: string | null;
+  readonly preferredLanguage: string;
   readonly version: number;
 }
 
@@ -311,6 +315,17 @@ describe("Patients (API contract)", () => {
       expect((response.body as ErrorResponseBody).code).toBe("INVALID_PHONE");
     });
 
+    it("returns 400 INVALID_EMAIL for an unrecognizable email address", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, email: "not-an-email" });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_EMAIL");
+    });
+
     it("returns 400 CONTACT_REQUIRED when no phone is given and contactUnavailable isn't set", async () => {
       const { sessionToken, csrfToken } = await seedActiveSession();
       const response = await request(app.getHttpServer())
@@ -344,6 +359,39 @@ describe("Patients (API contract)", () => {
         .set("X-CSRF-Token", csrfToken)
         .send({ nativeName: "رضا احمدی", contactUnavailable: true });
       expect(response.status).toBe(201);
+    });
+
+    it("accepts email, occupation, and referralSource, all visible on the detail page afterward", async () => {
+      const credentials = await seedActiveSession();
+      const create = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        )
+        .set("X-CSRF-Token", credentials.csrfToken)
+        .send({
+          nativeName: "زهرا کریمی",
+          contactUnavailable: true,
+          email: "Zahra.Karimi@Example.com",
+          occupation: "دندانپزشک",
+          referralSource: "اینستاگرام",
+        });
+      expect(create.status).toBe(201);
+      const created = create.body as CreatePatientResponseBody;
+
+      const detail = await request(app.getHttpServer())
+        .get(`/api/v1/patients/${created.id}`)
+        .set(
+          "Cookie",
+          `${SESSION_COOKIE_NAME}=${credentials.sessionToken}; ${CSRF_COOKIE_NAME}=${credentials.csrfToken}`,
+        );
+      expect(detail.status).toBe(200);
+      const body = detail.body as PatientDetailResponseBody;
+      expect(body.email).toBe("Zahra.Karimi@Example.com");
+      expect(body.occupation).toBe("دندانپزشک");
+      expect(body.referralSource).toBe("اینستاگرام");
+      expect(body.preferredLanguage).toBe("fa-IR");
     });
 
     it("accepts a well-formed national code, optional and checksum-validated", async () => {
@@ -872,6 +920,7 @@ describe("Patients (API contract)", () => {
         latinName: "Zahra Karimi",
         phone: "09123456789",
         contactUnavailable: false,
+        email: null,
         dateOfBirth: null,
         sex: "unspecified",
         nationality: "iranian",
@@ -883,6 +932,9 @@ describe("Patients (API contract)", () => {
         addressLine2: null,
         postalCode: null,
         deliveryNotes: null,
+        occupation: null,
+        referralSource: null,
+        preferredLanguage: "fa-IR",
         version: 1,
       });
     });
@@ -997,6 +1049,68 @@ describe("Patients (API contract)", () => {
       // PHI-safe: field names only, never the actual new/old values.
       expect(updateEvent?.detail).not.toContain("زهرا کریمی‌نژاد");
       expect(updateEvent?.detail).not.toContain("09129999999");
+    });
+
+    it("adds email, occupation, and referralSource as a correction, and updates the same email row rather than duplicating it on a second edit", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, {
+        nativeName: "زهرا کریمی",
+        contactUnavailable: true,
+      });
+
+      const first = await patchDemographics(
+        credentials,
+        created.id,
+        {
+          nativeName: "زهرا کریمی",
+          contactUnavailable: true,
+          email: "zahra@example.com",
+          occupation: "دندانپزشک",
+          referralSource: "اینستاگرام",
+        },
+        "1",
+      );
+      expect(first.status).toBe(200);
+      let body = first.body as PatientDetailResponseBody;
+      expect(body.email).toBe("zahra@example.com");
+      expect(body.occupation).toBe("دندانپزشک");
+      expect(body.referralSource).toBe("اینستاگرام");
+
+      const second = await patchDemographics(
+        credentials,
+        created.id,
+        {
+          nativeName: "زهرا کریمی",
+          contactUnavailable: true,
+          email: "zahra.new@example.com",
+          occupation: "دندانپزشک",
+          referralSource: "اینستاگرام",
+        },
+        "2",
+      );
+      expect(second.status).toBe(200);
+      body = second.body as PatientDetailResponseBody;
+      expect(body.email).toBe("zahra.new@example.com");
+
+      const rows: unknown[] = await auditEventOrmRepo.manager.query(
+        'SELECT 1 FROM "patient_contact" WHERE "patient_id" = $1 AND "contact_type" = \'email\'',
+        [created.id],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it("returns 400 INVALID_EMAIL for an unrecognizable email address", async () => {
+      const credentials = await seedActiveSession();
+      const created = await createPatient(credentials, { nativeName: "رضا احمدی", contactUnavailable: true });
+
+      const response = await patchDemographics(
+        credentials,
+        created.id,
+        { nativeName: "رضا احمدی", contactUnavailable: true, email: "not-an-email" },
+        "1",
+      );
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("INVALID_EMAIL");
     });
 
     it("preserves the prior native name as history rather than overwriting it", async () => {

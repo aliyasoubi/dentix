@@ -86,6 +86,14 @@
         [latin]="true"
         [inputMode]="isForeignNationality() ? 'text' : 'numeric'"
       />
+
+      <app-ds-text-field
+        [label]="'patients.form.email.label' | translate"
+        [control]="form.controls.email"
+        [errors]="EMAIL_ERRORS"
+        [latin]="true"
+        inputMode="email"
+      />
     </div>
 
     <div class="patients-form__row">
@@ -130,6 +138,18 @@
       <app-ds-text-field
         [label]="'patients.form.address.deliveryNotes.label' | translate"
         [control]="form.controls.deliveryNotes"
+      />
+    </div>
+
+    <div class="patients-form__row">
+      <app-ds-text-field
+        [label]="'patients.form.occupation.label' | translate"
+        [control]="form.controls.occupation"
+      />
+
+      <app-ds-text-field
+        [label]="'patients.form.referralSource.label' | translate"
+        [control]="form.controls.referralSource"
       />
     </div>
   </app-ds-disclosure>

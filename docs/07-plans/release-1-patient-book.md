@@ -46,6 +46,12 @@ search).
   never touches `status` (a future transition endpoint's job) (exists, added 2026-08-17)
 - View and edit address, identifier (national code/passport), contacts (exists, added 2026-08-17)
 - Mobile, national-code, and passport-number validation (exists)
+- Email, occupation, and referral source — added 2026-08-17 at the product owner's direction,
+  entered/validated/stored/displayed/edited/tested from day one alongside the fields above rather
+  than write-only (exists)
+- Preferred communication language — stored with a fixed `fa-IR` default and displayed on the
+  detail page; no edit control exists because there is exactly one valid value today (ADR-012's
+  hedge for a second locale someday) (exists, added 2026-08-17)
 - Duplicate warning on create (does not exist)
 - Birth date, sex (exist)
 - Important medical alerts (does not exist)

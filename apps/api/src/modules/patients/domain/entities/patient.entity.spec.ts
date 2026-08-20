@@ -54,4 +54,50 @@ describe("Patient", () => {
     });
     expect(patient.nationality).toBe("foreign");
   });
+
+  it("defaults preferredLanguage to fa-IR — there is no control to choose it yet", () => {
+    const patient = Patient.create({
+      id,
+      officeId,
+      patientNumber: 1,
+      dateOfBirth: null,
+      sex: "unspecified",
+      contactUnavailable: false,
+      createdBy,
+      now,
+    });
+    expect(patient.preferredLanguage).toBe("fa-IR");
+  });
+
+  it("trims occupation and referralSource, mapping blank input to null", () => {
+    const patient = Patient.create({
+      id,
+      officeId,
+      patientNumber: 1,
+      dateOfBirth: null,
+      sex: "unspecified",
+      contactUnavailable: false,
+      occupation: "  دندانپزشک  ",
+      referralSource: "   ",
+      createdBy,
+      now,
+    });
+    expect(patient.occupation).toBe("دندانپزشک");
+    expect(patient.referralSource).toBeNull();
+  });
+
+  it("leaves occupation and referralSource null when omitted", () => {
+    const patient = Patient.create({
+      id,
+      officeId,
+      patientNumber: 1,
+      dateOfBirth: null,
+      sex: "unspecified",
+      contactUnavailable: false,
+      createdBy,
+      now,
+    });
+    expect(patient.occupation).toBeNull();
+    expect(patient.referralSource).toBeNull();
+  });
 });

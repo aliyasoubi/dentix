@@ -18,8 +18,8 @@ const PATIENT_NATIONALITY_VALUES: readonly PatientNationality[] = ["iranian", "f
  * date, and an invalid national code/passport number all stay the use
  * case's job, so those keep returning their own stable domain codes
  * (NATIVE_NAME_REQUIRED, INVALID_PHONE, CONTACT_REQUIRED,
- * INVALID_DATE_OF_BIRTH, INVALID_NATIONAL_CODE, INVALID_PASSPORT_NUMBER)
- * rather than collapsing into one generic validation error. One rule, one
+ * INVALID_DATE_OF_BIRTH, INVALID_NATIONAL_CODE, INVALID_PASSPORT_NUMBER,
+ * INVALID_EMAIL) rather than collapsing into one generic validation error. One rule, one
  * owner. Which of the last two error codes applies is `nationality`'s
  * call, not this DTO's — see CreatePatientUseCase.
  *
@@ -97,6 +97,16 @@ export class CreatePatientRequestDto {
   @MaxLength(30)
   readonly identifierNumber?: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "Optional email address, validated when provided.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(254)
+  readonly email?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: province." })
   @IsOptional()
   @IsString()
@@ -138,4 +148,20 @@ export class CreatePatientRequestDto {
   @IsString()
   @MaxLength(500)
   readonly deliveryNotes?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Patient's occupation, free text." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  readonly occupation?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "How the patient found the office, free text.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  readonly referralSource?: string | null;
 }

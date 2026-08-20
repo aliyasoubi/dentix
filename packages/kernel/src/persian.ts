@@ -163,3 +163,23 @@ export function canonicalizePassportNumber(rawInput: string): string | null {
   }
   return PASSPORT_ALLOWED_CHARS.test(cleaned) ? cleaned : null;
 }
+
+// A deliberately loose shape check (local@domain, at least one dot in the
+// domain part), not full RFC 5322 — this is a dental office's optional
+// contact field, not a mail-server's inbound validator, so the same
+// pragmatic-over-spec-purist choice canonicalizePassportNumber makes above.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Lowercased for the canonical/search value — almost every real mail
+ * provider treats the whole address case-insensitively in practice, even
+ * though the local part is technically case-sensitive per spec, and this
+ * codebase already favors pragmatic matching over spec purism elsewhere
+ * (see canonicalizeIranianMobile). Trims surrounding whitespace only;
+ * unlike phone/national-code/passport there are no Persian-digit or
+ * punctuation variants to normalize away.
+ */
+export function canonicalizeEmail(rawInput: string): string | null {
+  const trimmed = rawInput.trim().toLowerCase();
+  return EMAIL_SHAPE.test(trimmed) ? trimmed : null;
+}

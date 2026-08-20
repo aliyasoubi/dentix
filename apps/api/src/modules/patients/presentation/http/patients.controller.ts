@@ -107,6 +107,7 @@ export class PatientsController {
       dateOfBirth: body.dateOfBirth,
       nationality: body.nationality,
       identifierNumber: body.identifierNumber,
+      email: body.email,
       province: body.province,
       city: body.city,
       district: body.district,
@@ -114,6 +115,8 @@ export class PatientsController {
       addressLine2: body.addressLine2,
       postalCode: body.postalCode,
       deliveryNotes: body.deliveryNotes,
+      occupation: body.occupation,
+      referralSource: body.referralSource,
     });
     if (!result.ok) {
       throw new BadRequestException(result.code);
@@ -233,6 +236,7 @@ export class PatientsController {
       dateOfBirth: body.dateOfBirth,
       nationality: body.nationality,
       identifierNumber: body.identifierNumber,
+      email: body.email,
       province: body.province,
       city: body.city,
       district: body.district,
@@ -240,6 +244,8 @@ export class PatientsController {
       addressLine2: body.addressLine2,
       postalCode: body.postalCode,
       deliveryNotes: body.deliveryNotes,
+      occupation: body.occupation,
+      referralSource: body.referralSource,
     });
     if (!result.ok) {
       if (result.code === "PATIENT_NOT_FOUND") {

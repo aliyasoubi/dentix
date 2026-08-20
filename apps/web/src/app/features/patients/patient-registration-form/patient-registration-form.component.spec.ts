@@ -51,6 +51,7 @@ describe("PatientRegistrationFormComponent", () => {
       sex: "unspecified",
       nationality: "iranian",
       identifierNumber: "",
+      email: "",
       province: "",
       city: "",
       district: "",
@@ -58,6 +59,8 @@ describe("PatientRegistrationFormComponent", () => {
       addressLine2: "",
       postalCode: "",
       deliveryNotes: "",
+      occupation: "",
+      referralSource: "",
       ...overrides,
     });
   }
@@ -80,6 +83,7 @@ describe("PatientRegistrationFormComponent", () => {
         dateOfBirth: null,
         nationality: "iranian",
         identifierNumber: null,
+        email: null,
         province: null,
         city: null,
         district: null,
@@ -87,6 +91,8 @@ describe("PatientRegistrationFormComponent", () => {
         addressLine2: null,
         postalCode: null,
         deliveryNotes: null,
+        occupation: null,
+        referralSource: null,
       },
     ]);
   });
@@ -189,6 +195,7 @@ describe("PatientRegistrationFormComponent", () => {
         sex: "unspecified",
         nationality: "iranian",
         identifierNumber: "",
+        email: "",
         province: "",
         city: "",
         district: "",
@@ -196,6 +203,8 @@ describe("PatientRegistrationFormComponent", () => {
         addressLine2: "",
         postalCode: "",
         deliveryNotes: "",
+        occupation: "",
+        referralSource: "",
       });
     });
 
@@ -249,6 +258,7 @@ describe("PatientRegistrationFormComponent", () => {
         sex: "female",
         nationality: "foreign",
         identifierNumber: "AB1234567",
+        email: "zahra@example.com",
         province: "تهران",
         city: "تهران",
         district: null,
@@ -256,6 +266,9 @@ describe("PatientRegistrationFormComponent", () => {
         addressLine2: null,
         postalCode: "1234567890",
         deliveryNotes: null,
+        occupation: "دندانپزشک",
+        referralSource: "اینستاگرام",
+        preferredLanguage: "fa-IR",
         version: 3,
       });
 
@@ -266,8 +279,11 @@ describe("PatientRegistrationFormComponent", () => {
       expect(value.sex).toBe("female");
       expect(value.nationality).toBe("foreign");
       expect(value.identifierNumber).toBe("AB1234567");
+      expect(value.email).toBe("zahra@example.com");
       expect(value.province).toBe("تهران");
       expect(value.addressLine1).toBe("خیابان ولیعصر");
+      expect(value.occupation).toBe("دندانپزشک");
+      expect(value.referralSource).toBe("اینستاگرام");
       // The same adapter round trip submit() itself uses in reverse
       // (toIso8601) — the Nowruz-boundary fixture other specs use.
       expect(
@@ -288,6 +304,7 @@ describe("PatientRegistrationFormComponent", () => {
         sex: "unspecified",
         nationality: "iranian",
         identifierNumber: null,
+        email: null,
         province: null,
         city: null,
         district: null,
@@ -295,6 +312,9 @@ describe("PatientRegistrationFormComponent", () => {
         addressLine2: null,
         postalCode: null,
         deliveryNotes: null,
+        occupation: null,
+        referralSource: null,
+        preferredLanguage: "fa-IR",
         version: 1,
       });
 
@@ -302,7 +322,10 @@ describe("PatientRegistrationFormComponent", () => {
       expect(value.latinName).toBe("");
       expect(value.phone).toBe("");
       expect(value.identifierNumber).toBe("");
+      expect(value.email).toBe("");
       expect(value.province).toBe("");
+      expect(value.occupation).toBe("");
+      expect(value.referralSource).toBe("");
       expect(value.dateOfBirth).toBeNull();
     });
 
@@ -319,6 +342,7 @@ describe("PatientRegistrationFormComponent", () => {
         sex: "unspecified",
         nationality: "iranian",
         identifierNumber: null,
+        email: null,
         province: null,
         city: null,
         district: null,
@@ -326,6 +350,9 @@ describe("PatientRegistrationFormComponent", () => {
         addressLine2: null,
         postalCode: null,
         deliveryNotes: null,
+        occupation: null,
+        referralSource: null,
+        preferredLanguage: "fa-IR",
         version: 1,
       });
 
@@ -340,6 +367,7 @@ describe("PatientRegistrationFormComponent", () => {
           dateOfBirth: null,
           nationality: "iranian",
           identifierNumber: null,
+          email: null,
           province: null,
           city: null,
           district: null,
@@ -347,6 +375,8 @@ describe("PatientRegistrationFormComponent", () => {
           addressLine2: null,
           postalCode: null,
           deliveryNotes: null,
+          occupation: null,
+          referralSource: null,
         },
       ]);
     });

@@ -675,6 +675,11 @@
             "nullable": true,
             "description": "National code (کد ملی) for an iranian patient, or a passport number for a foreign one — see `nationality`. Only when legally and operationally justified. Optional; never blocks registration when omitted."
           },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional email address, validated when provided."
+          },
           "province": {
             "type": "string",
             "nullable": true,
@@ -709,6 +714,16 @@
             "type": "string",
             "nullable": true,
             "description": "Address: free-form delivery notes."
+          },
+          "occupation": {
+            "type": "string",
+            "nullable": true,
+            "description": "Patient's occupation, free text."
+          },
+          "referralSource": {
+            "type": "string",
+            "nullable": true,
+            "description": "How the patient found the office, free text."
           }
         },
         "required": [
@@ -819,6 +834,10 @@
           "contactUnavailable": {
             "type": "boolean"
           },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
           "dateOfBirth": {
             "type": "string",
             "description": "Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.",
@@ -873,6 +892,21 @@
             "type": "string",
             "nullable": true
           },
+          "occupation": {
+            "type": "string",
+            "nullable": true
+          },
+          "referralSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "fa-IR"
+            ],
+            "description": "No edit control exists for this yet — there is exactly one valid value today."
+          },
           "version": {
             "type": "number",
             "description": "Optimistic-concurrency version — also echoed as the response's ETag header."
@@ -886,6 +920,7 @@
           "latinName",
           "phone",
           "contactUnavailable",
+          "email",
           "dateOfBirth",
           "sex",
           "nationality",
@@ -897,6 +932,9 @@
           "addressLine2",
           "postalCode",
           "deliveryNotes",
+          "occupation",
+          "referralSource",
+          "preferredLanguage",
           "version"
         ]
       },
@@ -949,6 +987,11 @@
             "nullable": true,
             "description": "National code (کد ملی) for an iranian patient, or a passport number for a foreign one."
           },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional email address, validated when provided."
+          },
           "province": {
             "type": "string",
             "nullable": true,
@@ -983,6 +1026,16 @@
             "type": "string",
             "nullable": true,
             "description": "Address: free-form delivery notes."
+          },
+          "occupation": {
+            "type": "string",
+            "nullable": true,
+            "description": "Patient's occupation, free text."
+          },
+          "referralSource": {
+            "type": "string",
+            "nullable": true,
+            "description": "How the patient found the office, free text."
           }
         },
         "required": [

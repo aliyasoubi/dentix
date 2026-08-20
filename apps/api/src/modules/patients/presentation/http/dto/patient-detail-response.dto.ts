@@ -1,5 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
-import type { PatientNationality, PatientSex, PatientStatus } from "../../../domain/entities/patient.entity";
+import type {
+  PatientNationality,
+  PatientPreferredLanguage,
+  PatientSex,
+  PatientStatus,
+} from "../../../domain/entities/patient.entity";
 
 export class PatientDetailResponseDto {
   @ApiProperty({ format: "uuid" })
@@ -22,6 +27,9 @@ export class PatientDetailResponseDto {
 
   @ApiProperty()
   readonly contactUnavailable!: boolean;
+
+  @ApiProperty({ nullable: true, type: String })
+  readonly email!: string | null;
 
   @ApiProperty({
     description: "Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.",
@@ -64,6 +72,18 @@ export class PatientDetailResponseDto {
 
   @ApiProperty({ nullable: true, type: String })
   readonly deliveryNotes!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  readonly occupation!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  readonly referralSource!: string | null;
+
+  @ApiProperty({
+    enum: ["fa-IR"],
+    description: "No edit control exists for this yet — there is exactly one valid value today.",
+  })
+  readonly preferredLanguage!: PatientPreferredLanguage;
 
   @ApiProperty({ description: "Optimistic-concurrency version — also echoed as the response's ETag header." })
   readonly version!: number;

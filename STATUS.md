@@ -38,13 +38,14 @@ Two caveats on that, both real:
   exact patient number — debounced, and a slow response for an old search can no longer overwrite
   results for a newer one
 - Pick a birth date on a Persian (Jalali) calendar
-- Optionally record a national code/passport number (validated) and a structured address
+- Optionally record a national code/passport number (validated), an email address (validated), an
+  occupation, a referral source, and a structured address
 - Click through from a search result to a **patient detail page** — status, identifier, address,
   and contact details, all now visible in one place (still can't be searched by the identifier's
   own value — only by name/phone/patient number)
-- **Correct a patient's demographics** from that detail page — name, phone, identifier, address —
-  with the change recorded in the audit trail; a stale copy is rejected rather than silently
-  overwriting someone else's concurrent edit
+- **Correct a patient's demographics** from that detail page — name, phone, email, identifier,
+  address, occupation, referral source — with the change recorded in the audit trail; a stale copy
+  is rejected rather than silently overwriting someone else's concurrent edit
 - Add another office user and assign them one of the six roles, which now actually governs what
   they can do
 - See rial/toman amounts formatted correctly in Storybook (not wired into a real screen yet —

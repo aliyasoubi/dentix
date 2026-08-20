@@ -50,6 +50,7 @@ function detail(overrides: Partial<PatientDetail> = {}): PatientDetail {
     latinName: "Zahra Karimi",
     phone: "09123456789",
     contactUnavailable: false,
+    email: null,
     dateOfBirth: null,
     sex: "unspecified",
     nationality: "iranian",
@@ -61,6 +62,9 @@ function detail(overrides: Partial<PatientDetail> = {}): PatientDetail {
     addressLine2: null,
     postalCode: null,
     deliveryNotes: null,
+    occupation: null,
+    referralSource: null,
+    preferredLanguage: "fa-IR",
     version: 1,
     ...overrides,
   };

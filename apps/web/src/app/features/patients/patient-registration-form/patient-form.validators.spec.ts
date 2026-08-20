@@ -1,6 +1,7 @@
 import { FormControl, FormGroup } from "@angular/forms";
 import {
   contactRequired,
+  email,
   identifierNumber,
   iranianMobile,
   iranianNationalCode,
@@ -83,6 +84,24 @@ describe("patient form validators", () => {
 
     it("treats empty as valid — the passport number is always optional", () => {
       expect(passportNumber(new FormControl("", { nonNullable: true }))).toBeNull();
+    });
+  });
+
+  describe("email", () => {
+    it.each(["reza@example.com", "  reza@example.com  ", "Reza.Ahmadi@Example.com"])(
+      "accepts %j — a form the backend canonicalizes",
+      (value) => {
+        expect(email(new FormControl(value, { nonNullable: true }))).toBeNull();
+      },
+    );
+
+    it.each(["not-an-email", "reza@", "reza example.com"])("rejects %j", (value) => {
+      expect(email(new FormControl(value, { nonNullable: true }))).toEqual({ email: true });
+    });
+
+    it("treats empty as valid — email is always optional", () => {
+      expect(email(new FormControl("", { nonNullable: true }))).toBeNull();
+      expect(email(new FormControl("   ", { nonNullable: true }))).toBeNull();
     });
   });
 

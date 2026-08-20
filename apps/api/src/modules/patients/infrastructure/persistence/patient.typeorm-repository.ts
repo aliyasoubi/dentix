@@ -2,7 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { asUuid, TransactionContext, Uuid } from "@dentix/kernel";
-import { Patient, PatientNationality, PatientSex, PatientStatus } from "../../domain/entities/patient.entity";
+import {
+  Patient,
+  PatientNationality,
+  PatientPreferredLanguage,
+  PatientSex,
+  PatientStatus,
+} from "../../domain/entities/patient.entity";
 import {
   PatientDetail,
   PatientRepository,
@@ -33,6 +39,7 @@ interface PatientDetailRow {
   readonly native_name: string;
   readonly latin_name: string | null;
   readonly phone: string | null;
+  readonly email: string | null;
   readonly identifier_number: string | null;
   readonly province: string | null;
   readonly city: string | null;
@@ -41,6 +48,9 @@ interface PatientDetailRow {
   readonly address_line2: string | null;
   readonly postal_code: string | null;
   readonly delivery_notes: string | null;
+  readonly occupation: string | null;
+  readonly referral_source: string | null;
+  readonly preferred_language: string;
 }
 
 /**
@@ -103,6 +113,11 @@ export class TypeOrmPatientRepository implements PatientRepository {
     // directly against Postgres — and reading that back with
     // toISOString() rolls the date backward a day in any timezone west
     // of UTC. Casting in SQL sidesteps the Date object entirely.
+    //
+    // preferred_contact is scoped to contact_type = 'mobile_phone', not
+    // just is_preferred = true: since an email row can also carry
+    // is_preferred = true (PatientContact's own comment), an unscoped
+    // join could match two rows per patient and multiply the result set.
     const rows: PatientSearchRow[] = await this.repository.manager.query(
       `
       SELECT
@@ -118,7 +133,9 @@ export class TypeOrmPatientRepository implements PatientRepository {
       LEFT JOIN "patient_name" latin
         ON latin."patient_id" = p."id" AND latin."name_type" = 'latin' AND latin."is_current" = true
       LEFT JOIN "patient_contact" preferred_contact
-        ON preferred_contact."patient_id" = p."id" AND preferred_contact."is_preferred" = true
+        ON preferred_contact."patient_id" = p."id"
+        AND preferred_contact."contact_type" = 'mobile_phone'
+        AND preferred_contact."is_preferred" = true
       WHERE p."office_id" = $1
         AND (
           $2 = ''
@@ -153,10 +170,12 @@ export class TypeOrmPatientRepository implements PatientRepository {
   async findDetailById(officeId: Uuid, id: Uuid): Promise<PatientDetail | null> {
     // patient_identifier and patient_address have no is_current/history
     // flag (unlike patient_name) — at most one row per patient exists in
-    // practice today (create-only, and the planned edit path updates
-    // those rows in place rather than appending), so a plain LEFT JOIN
-    // can't multiply the patient row. patient_contact is scoped to
-    // is_preferred = true for the same reason search() uses it.
+    // practice today (create-only, and the edit path updates those rows
+    // in place rather than appending), so a plain LEFT JOIN can't
+    // multiply the patient row. patient_contact is scoped to
+    // (contact_type, is_preferred = true) — same reasoning as search()'s
+    // own comment — with a separate join per type so a phone row and an
+    // email row coexisting can't multiply it either.
     const rows: PatientDetailRow[] = await this.repository.manager.query(
       `
       SELECT
@@ -170,7 +189,8 @@ export class TypeOrmPatientRepository implements PatientRepository {
         p."version",
         native."original_value" AS native_name,
         latin."original_value" AS latin_name,
-        contact."original_value" AS phone,
+        phone_contact."original_value" AS phone,
+        email_contact."original_value" AS email,
         identifier."original_value" AS identifier_number,
         addr."province",
         addr."city",
@@ -178,14 +198,23 @@ export class TypeOrmPatientRepository implements PatientRepository {
         addr."address_line1",
         addr."address_line2",
         addr."postal_code",
-        addr."delivery_notes"
+        addr."delivery_notes",
+        p."occupation",
+        p."referral_source",
+        p."preferred_language"
       FROM "patient" p
       LEFT JOIN "patient_name" native
         ON native."patient_id" = p."id" AND native."name_type" = 'native' AND native."is_current" = true
       LEFT JOIN "patient_name" latin
         ON latin."patient_id" = p."id" AND latin."name_type" = 'latin' AND latin."is_current" = true
-      LEFT JOIN "patient_contact" contact
-        ON contact."patient_id" = p."id" AND contact."is_preferred" = true
+      LEFT JOIN "patient_contact" phone_contact
+        ON phone_contact."patient_id" = p."id"
+        AND phone_contact."contact_type" = 'mobile_phone'
+        AND phone_contact."is_preferred" = true
+      LEFT JOIN "patient_contact" email_contact
+        ON email_contact."patient_id" = p."id"
+        AND email_contact."contact_type" = 'email'
+        AND email_contact."is_preferred" = true
       LEFT JOIN "patient_identifier" identifier
         ON identifier."patient_id" = p."id"
       LEFT JOIN "patient_address" addr
@@ -207,6 +236,7 @@ export class TypeOrmPatientRepository implements PatientRepository {
       latinName: row.latin_name,
       phone: row.phone,
       contactUnavailable: row.contact_unavailable,
+      email: row.email,
       dateOfBirth: row.date_of_birth,
       sex: row.sex as PatientSex,
       nationality: row.nationality as PatientNationality,
@@ -218,6 +248,9 @@ export class TypeOrmPatientRepository implements PatientRepository {
       addressLine2: row.address_line2,
       postalCode: row.postal_code,
       deliveryNotes: row.delivery_notes,
+      occupation: row.occupation,
+      referralSource: row.referral_source,
+      preferredLanguage: row.preferred_language as PatientPreferredLanguage,
       version: row.version,
     };
   }
@@ -231,6 +264,8 @@ export class TypeOrmPatientRepository implements PatientRepository {
       readonly sex: PatientSex;
       readonly nationality: PatientNationality;
       readonly contactUnavailable: boolean;
+      readonly occupation: string | null;
+      readonly referralSource: string | null;
       readonly updatedBy: Uuid;
       readonly now: Date;
     },
@@ -252,10 +287,12 @@ export class TypeOrmPatientRepository implements PatientRepository {
           "sex" = $2,
           "nationality" = $3,
           "contact_unavailable" = $4,
-          "updated_at" = $5,
-          "updated_by" = $6,
+          "occupation" = $5,
+          "referral_source" = $6,
+          "updated_at" = $7,
+          "updated_by" = $8,
           "version" = "version" + 1
-      WHERE "id" = $7 AND "office_id" = $8 AND "version" = $9
+      WHERE "id" = $9 AND "office_id" = $10 AND "version" = $11
       RETURNING "version"
       `,
       [
@@ -263,6 +300,8 @@ export class TypeOrmPatientRepository implements PatientRepository {
         params.sex,
         params.nationality,
         params.contactUnavailable,
+        params.occupation,
+        params.referralSource,
         params.now,
         params.updatedBy,
         params.id,

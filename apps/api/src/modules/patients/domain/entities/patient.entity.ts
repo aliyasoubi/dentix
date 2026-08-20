@@ -12,6 +12,16 @@ export type PatientSex = "male" | "female" | "unspecified";
  */
 export type PatientNationality = "iranian" | "foreign";
 
+/**
+ * ADR-012's hedge: the UI is Farsi-only today, but the domain shouldn't
+ * hard-code that as an unstated assumption. A single-member union is
+ * deliberate — there is exactly one valid value until a second locale is
+ * ever built, so there is nothing for a form control to choose between
+ * yet (see CreatePatientRequestDto's own comment on why no UI exists for
+ * this field).
+ */
+export type PatientPreferredLanguage = "fa-IR";
+
 export interface PatientProps {
   readonly id: Uuid;
   readonly officeId: Uuid;
@@ -23,6 +33,9 @@ export interface PatientProps {
   readonly nationality: PatientNationality;
   /** True only when the patient explicitly has no contact method — never true merely because one wasn't entered. */
   readonly contactUnavailable: boolean;
+  readonly occupation: string | null;
+  readonly referralSource: string | null;
+  readonly preferredLanguage: PatientPreferredLanguage;
   readonly createdAt: Date;
   readonly createdBy: Uuid;
   readonly updatedAt: Date;
@@ -52,9 +65,15 @@ export class Patient {
     /** Defaults to "iranian" — the predominant case for this office; a foreign patient is the explicit choice, not the default. */
     readonly nationality?: PatientNationality;
     readonly contactUnavailable: boolean;
+    readonly occupation?: string | null;
+    readonly referralSource?: string | null;
     readonly createdBy: Uuid;
     readonly now: Date;
   }): Patient {
+    const trimOrNull = (value: string | null | undefined): string | null => {
+      const trimmed = value?.trim();
+      return trimmed ? trimmed : null;
+    };
     return new Patient({
       id: params.id,
       officeId: params.officeId,
@@ -64,6 +83,10 @@ export class Patient {
       sex: params.sex,
       nationality: params.nationality ?? "iranian",
       contactUnavailable: params.contactUnavailable,
+      occupation: trimOrNull(params.occupation),
+      referralSource: trimOrNull(params.referralSource),
+      // No parameter to set this — see PatientPreferredLanguage's own comment.
+      preferredLanguage: "fa-IR",
       createdAt: params.now,
       createdBy: params.createdBy,
       updatedAt: params.now,
@@ -104,6 +127,18 @@ export class Patient {
 
   get contactUnavailable(): boolean {
     return this.props.contactUnavailable;
+  }
+
+  get occupation(): string | null {
+    return this.props.occupation;
+  }
+
+  get referralSource(): string | null {
+    return this.props.referralSource;
+  }
+
+  get preferredLanguage(): PatientPreferredLanguage {
+    return this.props.preferredLanguage;
   }
 
   get createdAt(): Date {

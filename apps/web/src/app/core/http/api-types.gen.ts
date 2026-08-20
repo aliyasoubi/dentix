@@ -251,6 +251,8 @@ export interface components {
             nationality: "iranian" | "foreign";
             /** @description National code (کد ملی) for an iranian patient, or a passport number for a foreign one — see `nationality`. Only when legally and operationally justified. Optional; never blocks registration when omitted. */
             identifierNumber?: string | null;
+            /** @description Optional email address, validated when provided. */
+            email?: string | null;
             /** @description Address: province. */
             province?: string | null;
             /** @description Address: city. */
@@ -265,6 +267,10 @@ export interface components {
             postalCode?: string | null;
             /** @description Address: free-form delivery notes. */
             deliveryNotes?: string | null;
+            /** @description Patient's occupation, free text. */
+            occupation?: string | null;
+            /** @description How the patient found the office, free text. */
+            referralSource?: string | null;
         };
         CreatePatientResponseDto: {
             /** Format: uuid */
@@ -302,6 +308,7 @@ export interface components {
             latinName: string | null;
             phone: string | null;
             contactUnavailable: boolean;
+            email: string | null;
             /**
              * Format: date
              * @description Canonical Gregorian ISO date (YYYY-MM-DD), or null where not recorded.
@@ -320,6 +327,13 @@ export interface components {
             addressLine2: string | null;
             postalCode: string | null;
             deliveryNotes: string | null;
+            occupation: string | null;
+            referralSource: string | null;
+            /**
+             * @description No edit control exists for this yet — there is exactly one valid value today.
+             * @enum {string}
+             */
+            preferredLanguage: "fa-IR";
             /** @description Optimistic-concurrency version — also echoed as the response's ETag header. */
             version: number;
         };
@@ -347,6 +361,8 @@ export interface components {
             nationality: "iranian" | "foreign";
             /** @description National code (کد ملی) for an iranian patient, or a passport number for a foreign one. */
             identifierNumber?: string | null;
+            /** @description Optional email address, validated when provided. */
+            email?: string | null;
             /** @description Address: province. */
             province?: string | null;
             /** @description Address: city. */
@@ -361,6 +377,10 @@ export interface components {
             postalCode?: string | null;
             /** @description Address: free-form delivery notes. */
             deliveryNotes?: string | null;
+            /** @description Patient's occupation, free text. */
+            occupation?: string | null;
+            /** @description How the patient found the office, free text. */
+            referralSource?: string | null;
         };
     };
     responses: never;

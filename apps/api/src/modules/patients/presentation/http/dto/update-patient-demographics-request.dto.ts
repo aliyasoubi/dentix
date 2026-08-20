@@ -80,6 +80,16 @@ export class UpdatePatientDemographicsRequestDto {
   @MaxLength(30)
   readonly identifierNumber?: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "Optional email address, validated when provided.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(254)
+  readonly email?: string | null;
+
   @ApiPropertyOptional({ type: String, nullable: true, description: "Address: province." })
   @IsOptional()
   @IsString()
@@ -121,4 +131,20 @@ export class UpdatePatientDemographicsRequestDto {
   @IsString()
   @MaxLength(500)
   readonly deliveryNotes?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "Patient's occupation, free text." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  readonly occupation?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "How the patient found the office, free text.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  readonly referralSource?: string | null;
 }

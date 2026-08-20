@@ -1,5 +1,6 @@
 import { AbstractControl, ValidationErrors } from "@angular/forms";
 import {
+  canonicalizeEmail,
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
   canonicalizePassportNumber,
@@ -74,6 +75,15 @@ export function passportNumber(control: AbstractControl<string>): ValidationErro
 export function identifierNumber(control: AbstractControl<string>): ValidationErrors | null {
   const nationality = (control.parent?.get("nationality")?.value as string | undefined) ?? "iranian";
   return nationality === "foreign" ? passportNumber(control) : iranianNationalCode(control);
+}
+
+/** Same shape as iranianMobile above, calling the backend's canonicalizeEmail instead. Always optional. */
+export function email(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value.trim();
+  if (value.length === 0) {
+    return null;
+  }
+  return canonicalizeEmail(value) === null ? { email: true } : null;
 }
 
 /**

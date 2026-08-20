@@ -35,6 +35,15 @@ export class PatientOrmEntity {
   @Column({ name: "contact_unavailable", type: "boolean", default: false })
   contactUnavailable!: boolean;
 
+  @Column({ type: "varchar", nullable: true })
+  occupation!: string | null;
+
+  @Column({ name: "referral_source", type: "varchar", nullable: true })
+  referralSource!: string | null;
+
+  @Column({ name: "preferred_language", type: "varchar", default: "fa-IR" })
+  preferredLanguage!: string;
+
   @Column({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 

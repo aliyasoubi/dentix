@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
   asUuid,
+  canonicalizeEmail,
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
   canonicalizePassportNumber,
@@ -36,7 +37,8 @@ export type CreatePatientErrorCode =
   | "CONTACT_REQUIRED"
   | "INVALID_DATE_OF_BIRTH"
   | "INVALID_NATIONAL_CODE"
-  | "INVALID_PASSPORT_NUMBER";
+  | "INVALID_PASSPORT_NUMBER"
+  | "INVALID_EMAIL";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;
@@ -60,6 +62,8 @@ export interface CreatePatientCommand {
    * digits too).
    */
   readonly identifierNumber?: string | null;
+  /** Optional; validated when provided, never required. A second contact row alongside phone — see PatientContact's own comment on why the two never collide. */
+  readonly email?: string | null;
   /** All optional free text (01-patient-management.md: "remains usable for foreign or nonstandard addresses"); a row is only created if at least one is non-blank. */
   readonly province?: string | null;
   readonly city?: string | null;
@@ -68,6 +72,9 @@ export interface CreatePatientCommand {
   readonly addressLine2?: string | null;
   readonly postalCode?: string | null;
   readonly deliveryNotes?: string | null;
+  /** Plain optional free text — same shape as the address fields above. */
+  readonly occupation?: string | null;
+  readonly referralSource?: string | null;
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -156,6 +163,11 @@ export class CreatePatientUseCase {
       }
     }
 
+    const email = command.email?.trim() || null;
+    if (email && !canonicalizeEmail(email)) {
+      return fail("INVALID_EMAIL");
+    }
+
     const now = new Date();
     const patientId = asUuid(randomUUID());
 
@@ -169,6 +181,8 @@ export class CreatePatientUseCase {
         sex: command.sex ?? "unspecified",
         nationality,
         contactUnavailable: !phone,
+        occupation: command.occupation,
+        referralSource: command.referralSource,
         createdBy: command.actorUserId,
         now,
       });
@@ -205,7 +219,22 @@ export class CreatePatientUseCase {
           PatientContact.create({
             id: asUuid(randomUUID()),
             patientId,
-            rawMobileNumber: phone,
+            contactType: "mobile_phone",
+            rawValue: phone,
+            createdBy: command.actorUserId,
+            now,
+          }),
+          tx,
+        );
+      }
+
+      if (email) {
+        await this.patientContacts.create(
+          PatientContact.create({
+            id: asUuid(randomUUID()),
+            patientId,
+            contactType: "email",
+            rawValue: email,
             createdBy: command.actorUserId,
             now,
           }),

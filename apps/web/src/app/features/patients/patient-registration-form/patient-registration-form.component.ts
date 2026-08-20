@@ -17,6 +17,7 @@ import { TranslatePipe } from "../../../core/i18n/translate.pipe";
 import { CreatePatientRequest, PatientDetail } from "../patients-api.service";
 import {
   contactRequired,
+  email as emailValidator,
   identifierNumber,
   iranianMobile,
   requiredNonBlank,
@@ -91,6 +92,7 @@ export class PatientRegistrationFormComponent {
       // a foreign one — identifierNumber (patient-form.validators.ts) reads
       // the sibling `nationality` control above to know which.
       identifierNumber: ["", [identifierNumber]],
+      email: ["", [emailValidator]],
       province: [""],
       city: [""],
       district: [""],
@@ -98,6 +100,8 @@ export class PatientRegistrationFormComponent {
       addressLine2: [""],
       postalCode: [""],
       deliveryNotes: [""],
+      occupation: [""],
+      referralSource: [""],
     },
     { validators: [contactRequired] },
   );
@@ -129,6 +133,10 @@ export class PatientRegistrationFormComponent {
   protected readonly IDENTIFIER_NUMBER_ERRORS: DsFieldErrorKeys = {
     iranianNationalCode: "patients.form.error.INVALID_NATIONAL_CODE",
     passportNumber: "patients.form.error.INVALID_PASSPORT_NUMBER",
+  };
+
+  protected readonly EMAIL_ERRORS: DsFieldErrorKeys = {
+    email: "patients.form.error.INVALID_EMAIL",
   };
 
   protected readonly SEX_OPTIONS: readonly DsSelectOption[] = [
@@ -169,6 +177,7 @@ export class PatientRegistrationFormComponent {
           : null,
       nationality: value.nationality,
       identifierNumber: value.identifierNumber || null,
+      email: value.email || null,
       province: value.province || null,
       city: value.city || null,
       district: value.district || null,
@@ -176,6 +185,8 @@ export class PatientRegistrationFormComponent {
       addressLine2: value.addressLine2 || null,
       postalCode: value.postalCode || null,
       deliveryNotes: value.deliveryNotes || null,
+      occupation: value.occupation || null,
+      referralSource: value.referralSource || null,
     });
   }
 
@@ -195,6 +206,7 @@ export class PatientRegistrationFormComponent {
       sex: "unspecified",
       nationality: "iranian",
       identifierNumber: "",
+      email: "",
       province: "",
       city: "",
       district: "",
@@ -202,6 +214,8 @@ export class PatientRegistrationFormComponent {
       addressLine2: "",
       postalCode: "",
       deliveryNotes: "",
+      occupation: "",
+      referralSource: "",
     });
   }
 
@@ -223,6 +237,7 @@ export class PatientRegistrationFormComponent {
       sex: value.sex,
       nationality: value.nationality,
       identifierNumber: value.identifierNumber ?? "",
+      email: value.email ?? "",
       province: value.province ?? "",
       city: value.city ?? "",
       district: value.district ?? "",
@@ -230,6 +245,8 @@ export class PatientRegistrationFormComponent {
       addressLine2: value.addressLine2 ?? "",
       postalCode: value.postalCode ?? "",
       deliveryNotes: value.deliveryNotes ?? "",
+      occupation: value.occupation ?? "",
+      referralSource: value.referralSource ?? "",
     });
   }
 }

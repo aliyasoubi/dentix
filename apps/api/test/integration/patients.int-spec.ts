@@ -174,7 +174,8 @@ describe("Patients persistence (integration)", () => {
       const contact = PatientContact.create({
         id: asUuid(randomUUID()),
         patientId: patient.id,
-        rawMobileNumber: "09123456789",
+        contactType: "mobile_phone",
+        rawValue: "09123456789",
         createdBy: actorUserId,
         now,
       });
@@ -370,6 +371,61 @@ describe("Patients persistence (integration)", () => {
       });
       await patientRepo.create(first);
       await expect(patientRepo.create(second)).rejects.toThrow(/duplicate key value/i);
+    });
+
+    it("persists email alongside phone as a second patient_contact row, plus occupation/referralSource, all visible via findDetailById", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const now = new Date();
+      const patientId = asUuid(randomUUID());
+      await patientRepo.create(
+        Patient.create({
+          id: patientId,
+          officeId,
+          patientNumber: await patientRepo.nextPatientNumber(officeId),
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: false,
+          occupation: "دندانپزشک",
+          referralSource: "اینستاگرام",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientContactRepo.create(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          contactType: "mobile_phone",
+          rawValue: "09123456789",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+      await patientContactRepo.create(
+        PatientContact.create({
+          id: asUuid(randomUUID()),
+          patientId,
+          contactType: "email",
+          rawValue: "Zahra@Example.com",
+          createdBy: actorUserId,
+          now,
+        }),
+      );
+
+      const detail = await patientRepo.findDetailById(officeId, patientId);
+      expect(detail?.phone).toBe("09123456789");
+      expect(detail?.email).toBe("Zahra@Example.com");
+      expect(detail?.occupation).toBe("دندانپزشک");
+      expect(detail?.referralSource).toBe("اینستاگرام");
+      expect(detail?.preferredLanguage).toBe("fa-IR");
+
+      // Two rows for one patient — the whole point of the widened CHECK
+      // constraint and the per-type join in findDetailById.
+      const rows: unknown[] = await dataSource!.query(
+        'SELECT 1 FROM "patient_contact" WHERE "patient_id" = $1',
+        [patientId],
+      );
+      expect(rows).toHaveLength(2);
     });
   });
 
@@ -583,7 +639,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09123456789",
+          contactType: "mobile_phone",
+          rawValue: "09123456789",
           createdBy: actorUserId,
           now,
         }),
@@ -710,7 +767,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09123456789",
+          contactType: "mobile_phone",
+          rawValue: "09123456789",
           createdBy: actorUserId,
           now,
         }),
@@ -750,6 +808,7 @@ describe("Patients persistence (integration)", () => {
         latinName: "Zahra Karimi",
         phone: "09123456789",
         contactUnavailable: false,
+        email: null,
         dateOfBirth: null,
         sex: "female",
         nationality: "iranian",
@@ -761,6 +820,9 @@ describe("Patients persistence (integration)", () => {
         addressLine2: null,
         postalCode: "1234567890",
         deliveryNotes: null,
+        occupation: null,
+        referralSource: null,
+        preferredLanguage: "fa-IR",
         version: 1,
       });
     });
@@ -937,7 +999,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09123456789",
+          contactType: "mobile_phone",
+          rawValue: "09123456789",
           createdBy: actorUserId,
           now,
         }),
@@ -947,7 +1010,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09129999999",
+          contactType: "mobile_phone",
+          rawValue: "09129999999",
           createdBy: actorUserId,
           now,
         }),
@@ -966,7 +1030,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09121234567",
+          contactType: "mobile_phone",
+          rawValue: "09121234567",
           createdBy: actorUserId,
           now: new Date(),
         }),
@@ -985,7 +1050,8 @@ describe("Patients persistence (integration)", () => {
         PatientContact.create({
           id: asUuid(randomUUID()),
           patientId,
-          rawMobileNumber: "09123456789",
+          contactType: "mobile_phone",
+          rawValue: "09123456789",
           createdBy: actorUserId,
           now: new Date(),
         }),

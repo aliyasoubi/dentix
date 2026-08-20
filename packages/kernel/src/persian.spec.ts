@@ -1,4 +1,5 @@
 import {
+  canonicalizeEmail,
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
   canonicalizePassportNumber,
@@ -188,5 +189,36 @@ describe("canonicalizePassportNumber", () => {
   it("returns null for empty input", () => {
     expect(canonicalizePassportNumber("")).toBeNull();
     expect(canonicalizePassportNumber("   ")).toBeNull();
+  });
+});
+
+describe("canonicalizeEmail", () => {
+  it("lowercases a well-formed address", () => {
+    expect(canonicalizeEmail("Zahra.Karimi@Example.com")).toBe("zahra.karimi@example.com");
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(canonicalizeEmail("  reza@example.com  ")).toBe("reza@example.com");
+  });
+
+  it("rejects a value with no @", () => {
+    expect(canonicalizeEmail("reza-example.com")).toBeNull();
+  });
+
+  it("rejects a value with no dot in the domain part", () => {
+    expect(canonicalizeEmail("reza@example")).toBeNull();
+  });
+
+  it("rejects a value containing whitespace", () => {
+    expect(canonicalizeEmail("reza ahmadi@example.com")).toBeNull();
+  });
+
+  it("rejects a value with more than one @", () => {
+    expect(canonicalizeEmail("reza@a@example.com")).toBeNull();
+  });
+
+  it("returns null for empty input", () => {
+    expect(canonicalizeEmail("")).toBeNull();
+    expect(canonicalizeEmail("   ")).toBeNull();
   });
 });

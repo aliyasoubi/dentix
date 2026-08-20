@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
   asUuid,
+  canonicalizeEmail,
   canonicalizeIranianMobile,
   canonicalizeIranianNationalCode,
   canonicalizePassportNumber,
@@ -39,7 +40,8 @@ export type UpdatePatientDemographicsErrorCode =
   | "CONTACT_REQUIRED"
   | "INVALID_DATE_OF_BIRTH"
   | "INVALID_NATIONAL_CODE"
-  | "INVALID_PASSPORT_NUMBER";
+  | "INVALID_PASSPORT_NUMBER"
+  | "INVALID_EMAIL";
 
 /** Same shape as CreatePatientCommand, plus `expectedVersion` (the client's last-known `version`, from `If-Match`) — see that command's own field comments. Never carries `status`: a state change is a future transition endpoint's job (CLAUDE.md invariant 8), not this one's. */
 export interface UpdatePatientDemographicsCommand {
@@ -55,6 +57,7 @@ export interface UpdatePatientDemographicsCommand {
   readonly dateOfBirth?: string | null;
   readonly nationality?: PatientNationality;
   readonly identifierNumber?: string | null;
+  readonly email?: string | null;
   readonly province?: string | null;
   readonly city?: string | null;
   readonly district?: string | null;
@@ -62,6 +65,8 @@ export interface UpdatePatientDemographicsCommand {
   readonly addressLine2?: string | null;
   readonly postalCode?: string | null;
   readonly deliveryNotes?: string | null;
+  readonly occupation?: string | null;
+  readonly referralSource?: string | null;
 }
 
 type TransactionOutcome = { readonly ok: true } | { readonly ok: false; readonly code: "VERSION_CONFLICT" };
@@ -136,6 +141,11 @@ export class UpdatePatientDemographicsUseCase {
       }
     }
 
+    const email = command.email?.trim() || null;
+    if (email && !canonicalizeEmail(email)) {
+      return fail("INVALID_EMAIL");
+    }
+
     const now = new Date();
     const changedFields: string[] = [];
 
@@ -149,6 +159,8 @@ export class UpdatePatientDemographicsUseCase {
           sex: command.sex ?? "unspecified",
           nationality,
           contactUnavailable: !phone,
+          occupation: command.occupation?.trim() || null,
+          referralSource: command.referralSource?.trim() || null,
           updatedBy: command.actorUserId,
           now,
         },
@@ -203,7 +215,8 @@ export class UpdatePatientDemographicsUseCase {
             PatientContact.create({
               id: asUuid(randomUUID()),
               patientId: command.patientId,
-              rawMobileNumber: phone,
+              contactType: "mobile_phone",
+              rawValue: phone,
               createdBy: command.actorUserId,
               now,
             }),
@@ -211,6 +224,25 @@ export class UpdatePatientDemographicsUseCase {
           );
         } else {
           await this.patientContacts.remove(command.patientId, "mobile_phone", tx);
+        }
+      }
+
+      if (email !== current.email) {
+        changedFields.push("email");
+        if (email) {
+          await this.patientContacts.upsert(
+            PatientContact.create({
+              id: asUuid(randomUUID()),
+              patientId: command.patientId,
+              contactType: "email",
+              rawValue: email,
+              createdBy: command.actorUserId,
+              now,
+            }),
+            tx,
+          );
+        } else {
+          await this.patientContacts.remove(command.patientId, "email", tx);
         }
       }
 

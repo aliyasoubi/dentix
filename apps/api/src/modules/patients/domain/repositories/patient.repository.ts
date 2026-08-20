@@ -1,5 +1,11 @@
 import { TransactionContext, Uuid } from "@dentix/kernel";
-import { Patient, PatientNationality, PatientSex, PatientStatus } from "../entities/patient.entity";
+import {
+  Patient,
+  PatientNationality,
+  PatientPreferredLanguage,
+  PatientSex,
+  PatientStatus,
+} from "../entities/patient.entity";
 
 /** Flat read shape for list/search — not the full aggregate, just what a result row needs. */
 export interface PatientSearchResult {
@@ -28,6 +34,7 @@ export interface PatientDetail {
   readonly latinName: string | null;
   readonly phone: string | null;
   readonly contactUnavailable: boolean;
+  readonly email: string | null;
   /** Canonical Gregorian ISO date string ("YYYY-MM-DD"), or null — where known. */
   readonly dateOfBirth: string | null;
   readonly sex: PatientSex;
@@ -40,7 +47,11 @@ export interface PatientDetail {
   readonly addressLine2: string | null;
   readonly postalCode: string | null;
   readonly deliveryNotes: string | null;
-  /** Surfaced as the response's `ETag` — required by an eventual PATCH's `If-Match`. */
+  readonly occupation: string | null;
+  readonly referralSource: string | null;
+  /** No edit control exists for this yet — see PatientPreferredLanguage's own comment. */
+  readonly preferredLanguage: PatientPreferredLanguage;
+  /** Surfaced as the response's `ETag` — required by the edit endpoint's `If-Match`. */
   readonly version: number;
 }
 
@@ -86,6 +97,8 @@ export interface PatientRepository {
       readonly sex: PatientSex;
       readonly nationality: PatientNationality;
       readonly contactUnavailable: boolean;
+      readonly occupation: string | null;
+      readonly referralSource: string | null;
       readonly updatedBy: Uuid;
       readonly now: Date;
     },

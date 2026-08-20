@@ -1,5 +1,11 @@
 import { asUuid } from "@dentix/kernel";
-import { Patient, PatientNationality, PatientSex, PatientStatus } from "../../domain/entities/patient.entity";
+import {
+  Patient,
+  PatientNationality,
+  PatientPreferredLanguage,
+  PatientSex,
+  PatientStatus,
+} from "../../domain/entities/patient.entity";
 import { PatientOrmEntity } from "../persistence/patient.orm-entity";
 
 export class PatientMapper {
@@ -13,6 +19,9 @@ export class PatientMapper {
       sex: record.sex as PatientSex,
       nationality: record.nationality as PatientNationality,
       contactUnavailable: record.contactUnavailable,
+      occupation: record.occupation,
+      referralSource: record.referralSource,
+      preferredLanguage: record.preferredLanguage as PatientPreferredLanguage,
       createdAt: record.createdAt,
       createdBy: asUuid(record.createdBy),
       updatedAt: record.updatedAt,
@@ -34,6 +43,9 @@ export class PatientMapper {
     record.sex = patient.sex;
     record.nationality = patient.nationality;
     record.contactUnavailable = patient.contactUnavailable;
+    record.occupation = patient.occupation;
+    record.referralSource = patient.referralSource;
+    record.preferredLanguage = patient.preferredLanguage;
     record.createdAt = patient.createdAt;
     record.createdBy = patient.createdBy;
     record.updatedAt = patient.createdAt;
