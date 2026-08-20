@@ -38,11 +38,22 @@ export type CreatePatientErrorCode =
   | "INVALID_DATE_OF_BIRTH"
   | "INVALID_NATIONAL_CODE"
   | "INVALID_PASSPORT_NUMBER"
-  | "INVALID_EMAIL";
+  | "INVALID_EMAIL"
+  | "PATIENT_NUMBER_TAKEN";
 
 export interface CreatePatientCommand {
   readonly officeId: Uuid;
   readonly actorUserId: Uuid;
+  /**
+   * Almost always omitted — auto-assigned via `nextPatientNumber`'s atomic
+   * sequence. Exists for the office's transition off its prior paper/
+   * legacy system, where ~2,500 patients already have an assigned medical
+   * record number: a receptionist entering one of those patients for the
+   * first time in Dentix types their already-known number here instead of
+   * getting a new one. Must not collide with an existing patient in the
+   * same office — see PATIENT_NUMBER_TAKEN.
+   */
+  readonly patientNumber?: number;
   readonly nativeName: string;
   readonly latinName?: string | null;
   readonly phone?: string | null;
@@ -168,11 +179,25 @@ export class CreatePatientUseCase {
       return fail("INVALID_EMAIL");
     }
 
+    // Checked ahead of the transaction so a colliding legacy number comes
+    // back as a clean, expected error rather than a raw constraint
+    // violation surfacing from the insert below. The UNIQUE(office_id,
+    // patient_number) constraint remains the real backstop against a
+    // same-millisecond race between two receptionists typing the same
+    // number — this check just makes the common case a good error message.
+    if (
+      command.patientNumber !== undefined &&
+      (await this.patients.existsByPatientNumber(command.officeId, command.patientNumber))
+    ) {
+      return fail("PATIENT_NUMBER_TAKEN");
+    }
+
     const now = new Date();
     const patientId = asUuid(randomUUID());
 
     const success = await this.unitOfWork.runInTransaction(async (tx) => {
-      const patientNumber = await this.patients.nextPatientNumber(command.officeId, tx);
+      const patientNumber =
+        command.patientNumber ?? (await this.patients.nextPatientNumber(command.officeId, tx));
       const patient = Patient.create({
         id: patientId,
         officeId: command.officeId,

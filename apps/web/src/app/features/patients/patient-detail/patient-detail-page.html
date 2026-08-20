@@ -24,6 +24,7 @@
 <app-ds-section [heading]="'patients.detail.edit.heading' | translate">
   <app-patient-registration-form
     submitLabelKey="patients.detail.edit.save"
+    [showPatientNumberField]="false"
     [submitting]="saving()"
     [errorMessage]="saveError()"
     (submitted)="save($event)"

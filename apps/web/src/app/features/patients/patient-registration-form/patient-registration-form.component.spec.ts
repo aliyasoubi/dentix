@@ -43,6 +43,7 @@ describe("PatientRegistrationFormComponent", () => {
     overrides: Partial<ReturnType<PatientRegistrationFormComponent["form"]["getRawValue"]>> = {},
   ) {
     form().setValue({
+      patientNumber: "",
       nativeName: "زهرا کریمی",
       latinName: "",
       phone: "09123456789",
@@ -187,6 +188,7 @@ describe("PatientRegistrationFormComponent", () => {
       component.reset();
 
       expect(form().getRawValue()).toEqual({
+        patientNumber: "",
         nativeName: "",
         latinName: "",
         phone: "",
@@ -390,6 +392,36 @@ describe("PatientRegistrationFormComponent", () => {
     it("is overridable, e.g. for the detail page's edit mode", () => {
       fixture.componentRef.setInput("submitLabelKey", "patients.detail.edit.save");
       expect(component.submitLabelKey()).toBe("patients.detail.edit.save");
+    });
+  });
+
+  describe("patientNumber", () => {
+    it("omits it from the emitted request when left blank — auto-assign is the ordinary case", () => {
+      fill({});
+      submit();
+      expect(emitted[0]?.patientNumber).toBeUndefined();
+    });
+
+    it("emits it as a real number, not a string, when the office's transition period needs it", () => {
+      fill({ patientNumber: "2501" });
+      submit();
+      expect(emitted[0]?.patientNumber).toBe(2501);
+    });
+
+    it("blocks submission for a non-positive or non-integer value", () => {
+      fill({ patientNumber: "0" });
+      expect(form().controls.patientNumber.hasError("patientNumber")).toBe(true);
+      submit();
+      expect(emitted).toEqual([]);
+    });
+
+    it("defaults to visible (create mode)", () => {
+      expect(component.showPatientNumberField()).toBe(true);
+    });
+
+    it("is hidden in the detail page's edit mode", () => {
+      fixture.componentRef.setInput("showPatientNumberField", false);
+      expect(component.showPatientNumberField()).toBe(false);
     });
   });
 });

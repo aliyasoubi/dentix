@@ -33,6 +33,12 @@ const KNOWN_ERROR_CODES = new Set([
   "INVALID_DATE_OF_BIRTH",
   "INVALID_NATIONAL_CODE",
   "INVALID_PASSPORT_NUMBER",
+  "INVALID_EMAIL",
+  // The explicit-patientNumber path (patient-form.validators.ts's own
+  // client-side check normally blocks a malformed value; this is the
+  // server's real backstop — a same-millisecond race between two
+  // receptionists, or a number reused after the client validated it).
+  "PATIENT_NUMBER_TAKEN",
   // Returned by the API's global ValidationPipe for a body that is the wrong
   // shape. With the form's own validators, a user working through the UI
   // should never see it — it means something bypassed the form.

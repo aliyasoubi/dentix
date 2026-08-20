@@ -63,6 +63,8 @@ export interface PatientRepository {
    * concurrent creates in the same office can't collide.
    */
   nextPatientNumber(officeId: Uuid, tx?: TransactionContext): Promise<number>;
+  /** For the explicit-patientNumber path (CreatePatientUseCase's own comment) — never called on the auto-assign path, which can't collide by construction. */
+  existsByPatientNumber(officeId: Uuid, patientNumber: number): Promise<boolean>;
   findById(id: Uuid): Promise<Patient | null>;
   /**
    * `normalizedQuery` empty returns the most recently created patients

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   Headers,
@@ -92,6 +93,11 @@ export class PatientsController {
     type: ErrorResponseDto,
     description: "Validation failure, e.g. NATIVE_NAME_REQUIRED",
   })
+  @ApiResponse({
+    status: 409,
+    type: ErrorResponseDto,
+    description: "PATIENT_NUMBER_TAKEN — the explicit patientNumber is already in use in this office.",
+  })
   async create(
     @CurrentSession() session: UserSession,
     @Body() body: CreatePatientRequestDto,
@@ -99,6 +105,7 @@ export class PatientsController {
     const result = await this.createPatient.execute({
       officeId: session.officeId,
       actorUserId: session.userId,
+      patientNumber: body.patientNumber,
       nativeName: body.nativeName ?? "",
       latinName: body.latinName,
       phone: body.phone,
@@ -119,6 +126,9 @@ export class PatientsController {
       referralSource: body.referralSource,
     });
     if (!result.ok) {
+      if (result.code === "PATIENT_NUMBER_TAKEN") {
+        throw new ConflictException(result.code);
+      }
       throw new BadRequestException(result.code);
     }
     return { id: result.value.id, patientNumber: result.value.patientNumber };

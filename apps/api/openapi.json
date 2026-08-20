@@ -224,6 +224,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "PATIENT_NUMBER_TAKEN — the explicit patientNumber is already in use in this office.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -629,6 +639,10 @@
       "CreatePatientRequestDto": {
         "type": "object",
         "properties": {
+          "patientNumber": {
+            "type": "number",
+            "description": "Almost always omitted (auto-assigned). Set only when entering a patient already known from the office's prior paper/legacy system, to preserve their existing medical record number instead of assigning a new one."
+          },
           "nativeName": {
             "type": "string",
             "description": "Patient's name as entered, typically Persian."

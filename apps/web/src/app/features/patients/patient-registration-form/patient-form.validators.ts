@@ -86,6 +86,26 @@ export function email(control: AbstractControl<string>): ValidationErrors | null
   return canonicalizeEmail(value) === null ? { email: true } : null;
 }
 
+const POSITIVE_INTEGER = /^[1-9]\d*$/;
+
+/**
+ * Mirrors CreatePatientRequestDto's `@IsInt() @Min(1)` on patientNumber —
+ * a shape check, not a kernel canonicalizer, since there's no domain
+ * normalization involved (unlike phone/national-code/email). Blocking a
+ * malformed value here matters more than for most fields: submit() parses
+ * this with `Number()`, and an unvalidated non-numeric string would parse
+ * to NaN, which `JSON.stringify` silently turns into `null` — indistinguishable
+ * from "not provided" and capable of reaching the server as a bad value.
+ * Always optional — emptiness means "auto-assign", the ordinary case.
+ */
+export function patientNumber(control: AbstractControl<string>): ValidationErrors | null {
+  const value = control.value.trim();
+  if (value.length === 0) {
+    return null;
+  }
+  return POSITIVE_INTEGER.test(value) ? null : { patientNumber: true };
+}
+
 /**
  * The client-side twin of the backend's CONTACT_REQUIRED rule: a patient
  * needs either a phone number or an explicit "no contact method" flag.

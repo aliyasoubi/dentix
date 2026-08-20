@@ -144,6 +144,49 @@ describe("Patients persistence (integration)", () => {
     });
   });
 
+  describe("existsByPatientNumber", () => {
+    it("returns false for a number nothing has used yet", async () => {
+      const { officeId } = await seedOfficeAndActor();
+      expect(await patientRepo.existsByPatientNumber(officeId, 2501)).toBe(false);
+    });
+
+    it("returns true once a patient holds that number, whether auto-assigned or explicit", async () => {
+      const { officeId, actorUserId } = await seedOfficeAndActor();
+      const patientNumber = await patientRepo.nextPatientNumber(officeId);
+      await patientRepo.create(
+        Patient.create({
+          id: asUuid(randomUUID()),
+          officeId,
+          patientNumber,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+      expect(await patientRepo.existsByPatientNumber(officeId, patientNumber)).toBe(true);
+    });
+
+    it("scopes the check to the office — the same number is free in a different office", async () => {
+      const { officeId: officeA, actorUserId } = await seedOfficeAndActor();
+      const { officeId: officeB } = await seedOfficeAndActor();
+      await patientRepo.create(
+        Patient.create({
+          id: asUuid(randomUUID()),
+          officeId: officeA,
+          patientNumber: 7,
+          dateOfBirth: null,
+          sex: "unspecified",
+          contactUnavailable: true,
+          createdBy: actorUserId,
+          now: new Date(),
+        }),
+      );
+      expect(await patientRepo.existsByPatientNumber(officeB, 7)).toBe(false);
+    });
+  });
+
   describe("create + round trip", () => {
     it("persists a patient with its native name and phone contact, original values preserved", async () => {
       const { officeId, actorUserId } = await seedOfficeAndActor();

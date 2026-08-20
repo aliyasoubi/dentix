@@ -94,6 +94,11 @@ export class TypeOrmPatientRepository implements PatientRepository {
     return row.next_number;
   }
 
+  async existsByPatientNumber(officeId: Uuid, patientNumber: number): Promise<boolean> {
+    const count = await this.repository.count({ where: { officeId, patientNumber } });
+    return count > 0;
+  }
+
   async findById(id: Uuid): Promise<Patient | null> {
     const record = await this.repository.findOne({ where: { id } });
     return record ? PatientMapper.toDomain(record) : null;

@@ -20,6 +20,7 @@ import {
   email as emailValidator,
   identifierNumber,
   iranianMobile,
+  patientNumber as patientNumberValidator,
   requiredNonBlank,
 } from "./patient-form.validators";
 
@@ -70,11 +71,17 @@ export class PatientRegistrationFormComponent {
   readonly successMessage = input<string | null>(null);
   /** Overridable so the patient detail page's edit mode can say "Save" instead of "Register" — same form, a different verb for the action it's taking. */
   readonly submitLabelKey = input("patients.form.submit");
+  /** False in edit mode: PATCH /patients/:id never accepts patientNumber — renumbering an existing patient is a separate, unbuilt feature, not a demographics correction. */
+  readonly showPatientNumberField = input(true);
 
   readonly submitted = output<CreatePatientRequest>();
 
   protected readonly form = this.formBuilder.nonNullable.group(
     {
+      // Almost always blank (auto-assigned) — see the field's own error-key
+      // comment below and CreatePatientRequestDto's own comment on the wire
+      // field this maps to.
+      patientNumber: ["", [patientNumberValidator]],
       nativeName: ["", [Validators.required, requiredNonBlank]],
       latinName: [""],
       phone: ["", [iranianMobile]],
@@ -139,6 +146,11 @@ export class PatientRegistrationFormComponent {
     email: "patients.form.error.INVALID_EMAIL",
   };
 
+  /** Client-only — this never reaches the server as an invalid value, form.invalid blocks submission first. */
+  protected readonly PATIENT_NUMBER_ERRORS: DsFieldErrorKeys = {
+    patientNumber: "patients.form.error.INVALID_PATIENT_NUMBER",
+  };
+
   protected readonly SEX_OPTIONS: readonly DsSelectOption[] = [
     { value: "unspecified", label: "patients.form.sex.unspecified" },
     { value: "male", label: "patients.form.sex.male" },
@@ -166,6 +178,14 @@ export class PatientRegistrationFormComponent {
 
     const value = this.form.getRawValue();
     this.submitted.emit({
+      // Deliberately `undefined`, not `|| null` like every field below:
+      // patientNumber's wire type is `number | undefined` (no null variant
+      // — "not provided" is the only absent state, there's no meaningful
+      // "explicitly no number"), and the control's own validator already
+      // guarantees a non-empty value here parses cleanly, so this can never
+      // become NaN → JSON `null` (see the validator's own comment on why
+      // that specific failure mode matters).
+      patientNumber: value.patientNumber ? Number(value.patientNumber) : undefined,
       nativeName: value.nativeName,
       latinName: value.latinName || null,
       phone: value.phone || null,
@@ -198,6 +218,7 @@ export class PatientRegistrationFormComponent {
    */
   reset(): void {
     this.form.reset({
+      patientNumber: "",
       nativeName: "",
       latinName: "",
       phone: "",

@@ -6,6 +6,7 @@ import {
   iranianMobile,
   iranianNationalCode,
   passportNumber,
+  patientNumber,
   requiredNonBlank,
 } from "./patient-form.validators";
 
@@ -102,6 +103,23 @@ describe("patient form validators", () => {
     it("treats empty as valid — email is always optional", () => {
       expect(email(new FormControl("", { nonNullable: true }))).toBeNull();
       expect(email(new FormControl("   ", { nonNullable: true }))).toBeNull();
+    });
+  });
+
+  describe("patientNumber", () => {
+    it.each(["1", "2501", "999999"])("accepts %j", (value) => {
+      expect(patientNumber(new FormControl(value, { nonNullable: true }))).toBeNull();
+    });
+
+    it.each(["0", "-1", "01", "1.5", "abc", "2501x"])("rejects %j", (value) => {
+      expect(patientNumber(new FormControl(value, { nonNullable: true }))).toEqual({
+        patientNumber: true,
+      });
+    });
+
+    it("treats empty as valid — omitting it means auto-assign", () => {
+      expect(patientNumber(new FormControl("", { nonNullable: true }))).toBeNull();
+      expect(patientNumber(new FormControl("   ", { nonNullable: true }))).toBeNull();
     });
   });
 

@@ -351,6 +351,50 @@ describe("Patients (API contract)", () => {
       expect(body.patientNumber).toBeGreaterThan(0);
     });
 
+    // The office's transition off its prior paper/legacy system — a
+    // receptionist entering an already-known patient types their existing
+    // number instead of getting a new one auto-assigned.
+    it("uses an explicit patientNumber instead of auto-assigning one", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, patientNumber: 2501 });
+
+      expect(response.status).toBe(201);
+      expect((response.body as CreatePatientResponseBody).patientNumber).toBe(2501);
+    });
+
+    it("returns 409 PATIENT_NUMBER_TAKEN when the explicit patientNumber is already in use in this office", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const first = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, patientNumber: 2502 });
+      expect(first.status).toBe(201);
+
+      const second = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "زهرا کریمی", contactUnavailable: true, patientNumber: 2502 });
+      expect(second.status).toBe(409);
+      expect((second.body as ErrorResponseBody).code).toBe("PATIENT_NUMBER_TAKEN");
+    });
+
+    it("rejects a non-positive patientNumber with 400 VALIDATION_FAILED", async () => {
+      const { sessionToken, csrfToken } = await seedActiveSession();
+      const response = await request(app.getHttpServer())
+        .post("/api/v1/patients")
+        .set("Cookie", `${SESSION_COOKIE_NAME}=${sessionToken}; ${CSRF_COOKIE_NAME}=${csrfToken}`)
+        .set("X-CSRF-Token", csrfToken)
+        .send({ nativeName: "رضا احمدی", contactUnavailable: true, patientNumber: 0 });
+      expect(response.status).toBe(400);
+      expect((response.body as ErrorResponseBody).code).toBe("VALIDATION_FAILED");
+    });
+
     it("accepts contactUnavailable in place of a phone", async () => {
       const { sessionToken, csrfToken } = await seedActiveSession();
       const response = await request(app.getHttpServer())

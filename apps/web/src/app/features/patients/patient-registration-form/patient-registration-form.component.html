@@ -152,6 +152,21 @@
         [control]="form.controls.referralSource"
       />
     </div>
+
+    @if (showPatientNumberField()) {
+      <div class="patients-form__row">
+        <div>
+          <app-ds-text-field
+            [label]="'patients.form.patientNumber.label' | translate"
+            [control]="form.controls.patientNumber"
+            [errors]="PATIENT_NUMBER_ERRORS"
+            [latin]="true"
+            inputMode="numeric"
+          />
+          <p class="ds-text-supporting">{{ "patients.form.patientNumber.helper" | translate }}</p>
+        </div>
+      </div>
+    }
   </app-ds-disclosure>
 
   @if (errorMessage(); as message) {

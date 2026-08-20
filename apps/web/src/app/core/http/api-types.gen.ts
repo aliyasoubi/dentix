@@ -228,6 +228,8 @@ export interface components {
             officeUserId: string;
         };
         CreatePatientRequestDto: {
+            /** @description Almost always omitted (auto-assigned). Set only when entering a patient already known from the office's prior paper/legacy system, to preserve their existing medical record number instead of assigning a new one. */
+            patientNumber?: number;
             /** @description Patient's name as entered, typically Persian. */
             nativeName: string;
             /** @description Optional Latin-script name, stored and displayed unmirrored in RTL. */
@@ -575,6 +577,15 @@ export interface operations {
             };
             /** @description MISSING_PERMISSION — the caller's roles do not grant patient.create. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            /** @description PATIENT_NUMBER_TAKEN — the explicit patientNumber is already in use in this office. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

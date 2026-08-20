@@ -52,6 +52,10 @@ search).
 - Preferred communication language — stored with a fixed `fa-IR` default and displayed on the
   detail page; no edit control exists because there is exactly one valid value today (ADR-012's
   hedge for a second locale someday) (exists, added 2026-08-17)
+- **Patient-number continuity with the office's prior paper/legacy system** — an optional explicit
+  `patientNumber` on registration preserves an already-known medical record number instead of
+  always auto-assigning the next one; a one-time deployment script seeds an office's counter above
+  its existing legacy range so the two ranges never collide (exists, added 2026-08-20)
 - Duplicate warning on create (does not exist)
 - Birth date, sex (exist)
 - Important medical alerts (does not exist)

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import type { PatientNationality, PatientSex } from "../../../domain/entities/patient.entity";
 
 const PATIENT_SEX_VALUES: readonly PatientSex[] = ["male", "female", "unspecified"];
@@ -21,7 +21,9 @@ const PATIENT_NATIONALITY_VALUES: readonly PatientNationality[] = ["iranian", "f
  * INVALID_DATE_OF_BIRTH, INVALID_NATIONAL_CODE, INVALID_PASSPORT_NUMBER,
  * INVALID_EMAIL) rather than collapsing into one generic validation error. One rule, one
  * owner. Which of the last two error codes applies is `nationality`'s
- * call, not this DTO's — see CreatePatientUseCase.
+ * call, not this DTO's — see CreatePatientUseCase. A colliding explicit
+ * `patientNumber` returns PATIENT_NUMBER_TAKEN — a domain-state conflict
+ * (05-api-guidelines.md), mapped to 409 by the controller, not 400.
  *
  * MaxLength IS a type-level concern despite bounding content, not a domain
  * rule: every column behind these fields is an unbounded `varchar` (no DB
@@ -30,6 +32,15 @@ const PATIENT_NATIONALITY_VALUES: readonly PatientNationality[] = ["iranian", "f
  * breaks. The numbers are generous ceilings, not formatting opinions.
  */
 export class CreatePatientRequestDto {
+  @ApiPropertyOptional({
+    description:
+      "Almost always omitted (auto-assigned). Set only when entering a patient already known from the office's prior paper/legacy system, to preserve their existing medical record number instead of assigning a new one.",
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  readonly patientNumber?: number;
+
   @ApiProperty({ description: "Patient's name as entered, typically Persian." })
   @IsString()
   @MaxLength(200)

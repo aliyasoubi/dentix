@@ -40,6 +40,11 @@ Two caveats on that, both real:
 - Pick a birth date on a Persian (Jalali) calendar
 - Optionally record a national code/passport number (validated), an email address (validated), an
   occupation, a referral source, and a structured address
+- **Preserve a patient's already-known medical record number** when entering them for the first
+  time from the office's prior paper/legacy system — an optional field on registration, instead of
+  always auto-assigning the next number. A one-time deployment script
+  (`apps/api/scripts/seed-patient-number-sequence.ts`) seeds an office's counter to start above its
+  existing legacy range, so new registrations never collide with numbers already on paper.
 - Click through from a search result to a **patient detail page** — status, identifier, address,
   and contact details, all now visible in one place (still can't be searched by the identifier's
   own value — only by name/phone/patient number)
